@@ -389,7 +389,7 @@
           }
         },
         {
-          "title": "Recent warnings and errors (click a row for full detail)",
+          "title": "Warnings and errors, 24h (click a row for full detail)",
           "layout": { "column": 7, "row": 22, "width": 6, "height": 4 },
           "visualization": { "id": "logger.log-table-widget" },
           "rawConfiguration": {
