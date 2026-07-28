@@ -75,6 +75,45 @@ public class PriceChartingClientTests
         Assert.Null(result.Html);
     }
 
+    private sealed class ThrowingHandler(Exception exception) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) => throw exception;
+    }
+
+    [Fact]
+    public async Task A_dead_site_is_a_failed_fetch_not_an_exception()
+    {
+        // Connection refused/DNS/timeouts must flow through the same AIMD,
+        // pause, and canary machinery as server errors — a hard-down site
+        // must never be quieter than a half-down one.
+        var http = new HttpClient(new ThrowingHandler(new HttpRequestException("connection refused")))
+        {
+            BaseAddress = new Uri("https://www.pricecharting.com"),
+        };
+        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+
+        var result = await client.GetAsync("/game/x", CancellationToken.None);
+
+        Assert.Equal(0, result.StatusCode);
+        Assert.Null(result.Html);
+    }
+
+    [Fact]
+    public async Task Cancellation_still_propagates()
+    {
+        var http = new HttpClient(new ThrowingHandler(new OperationCanceledException()))
+        {
+            BaseAddress = new Uri("https://www.pricecharting.com"),
+        };
+        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+        using var cts = new CancellationTokenSource();
+        cts.Cancel();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => client.GetAsync("/game/x", cts.Token));
+    }
+
     [Fact]
     public async Task Successful_fetches_return_the_html()
     {

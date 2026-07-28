@@ -39,7 +39,25 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
             "User-Agent", $"PokemonInvestBatch/0.1 (+mailto:{contactEmail})");
 
         var started = time.GetTimestamp();
-        using var response = await http.SendAsync(request, cancellationToken);
+        HttpResponseMessage response;
+        try
+        {
+            response = await http.SendAsync(request, cancellationToken);
+        }
+        catch (Exception e) when (
+            e is HttpRequestException
+            || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+        {
+            // Connection refused, DNS failure, timeout: status 0 so a dead
+            // site trips the same backoff/pause/canary alarms as a 5xx.
+            return new FetchResult
+            {
+                StatusCode = 0,
+                Latency = time.GetElapsedTime(started),
+            };
+        }
+
+        using var _ = response;
         var latency = time.GetElapsedTime(started);
 
         return new FetchResult
