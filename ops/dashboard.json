@@ -431,42 +431,54 @@
           }
         },
         {
-          "title": "Pi CPU (%)",
+          "title": "Pi CPU (%): host vs scraper",
           "layout": { "column": 3, "row": 16, "width": 4, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(cpuPercent) AS 'cpu' FROM SystemSample TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(cpuPercent) AS 'host' FROM SystemSample TIMESERIES SINCE 1 day ago"
+              },
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(cpuPercent) AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
           }
         },
         {
-          "title": "Pi memory (%)",
+          "title": "Pi memory (MB): host vs scraper",
           "layout": { "column": 7, "row": 16, "width": 3, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(memoryUsedBytes) / average(memoryTotalBytes) * 100 AS 'memory' FROM SystemSample TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(memoryUsedBytes) / 1e6 AS 'host' FROM SystemSample TIMESERIES SINCE 1 day ago"
+              },
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(memoryResidentSizeBytes) / 1e6 AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
           }
         },
         {
-          "title": "Pi disk busy (%) — delete if empty",
+          "title": "Pi disk I/O (KB/s): host vs scraper",
           "layout": { "column": 10, "row": 16, "width": 3, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(diskUtilizationPercent) AS 'busy' FROM SystemSample TIMESERIES SINCE 1 day ago"
+                "query": "SELECT (average(readBytesPerSecond) + average(writeBytesPerSecond)) / 1000 AS 'host' FROM StorageSample TIMESERIES SINCE 1 day ago"
+              },
+              {
+                "accountIds": [6565679],
+                "query": "SELECT (average(ioReadBytesPerSecond) + average(ioWriteBytesPerSecond)) / 1000 AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
