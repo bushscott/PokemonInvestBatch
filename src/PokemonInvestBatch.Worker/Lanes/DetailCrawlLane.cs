@@ -160,11 +160,18 @@ public sealed class DetailCrawlLane(
             ? []
             : ChangeOnlyPlanner.NewPopulationCells(card.Id, page.Population, lastPops, now);
 
-        foreach (var violation in GradeMonotonicity.Violations(page.Chart))
+        var violations = GradeMonotonicity.Violations(page.Chart);
+        metrics.RecordMonotonicityViolations(violations.Count);
+        foreach (var violation in violations)
         {
             logger.LogWarning(
                 "Monotonicity violation on card {CardId}: {Lower} {LowerCents}c > {Higher} {HigherCents}c",
                 card.Id, violation.Lower, violation.LowerCents, violation.Higher, violation.HigherCents);
+        }
+
+        if (page.Population is not null)
+        {
+            await FlagPopulationAnomaliesAsync(card, page.Population, lastPops, ct);
         }
 
         var observation = SalesObservation.From(page.Sales, card.LastVisitedAt, now);
@@ -189,6 +196,38 @@ public sealed class DetailCrawlLane(
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
             card.Id, card.Name, newPrices.Count, newPops.Count, newSales,
             observation.SalesPerDay, observation.AnyBucketAtCap ? ", AT CAP" : "");
+    }
+
+    /// <summary>The census rows are appended regardless — history is
+    /// append-only and the restated numbers are what the source now says —
+    /// but a restatement must never be read as market demand, so it is
+    /// flagged loudly: metric, warning, and one alert per incident.</summary>
+    private async Task FlagPopulationAnomaliesAsync(
+        Card card,
+        PopulationReport population,
+        IReadOnlyDictionary<(string Grader, short Grade), int> lastPops,
+        CancellationToken ct)
+    {
+        var anomalies = PopulationRestatement.Anomalies(population, lastPops);
+        foreach (var anomaly in anomalies)
+        {
+            metrics.RecordPopAnomaly(anomaly.Grader, anomaly.Kind == PopulationAnomalyKind.Spike ? "spike" : "decrease");
+            logger.LogWarning(
+                "Population {Kind} on card {CardId}: {Grader} grade {Grade} went {Previous} -> {Current}",
+                anomaly.Kind, card.Id, anomaly.Grader, anomaly.Grade, anomaly.Previous, anomaly.Current);
+        }
+
+        if (anomalies.Count > 0 && throttle.ShouldAlert("pop-restatement", time.GetUtcNow()))
+        {
+            var lines = anomalies.Select(a =>
+                $"  {a.Grader} grade {a.Grade}: {a.Previous} -> {a.Current} ({a.Kind})");
+            await alerter.RaiseAsync(
+                "Population census restatement",
+                $"Card {card.Id} ({card.Name}) census moved beyond grading pace — the grader "
+                + "changed its counting, not the market. Rows are appended; treat the jump as a "
+                + $"source change in analytics.\n{string.Join('\n', lines)}",
+                ct);
+        }
     }
 
     /// <summary>Unvisited first; otherwise the tested priority score over the

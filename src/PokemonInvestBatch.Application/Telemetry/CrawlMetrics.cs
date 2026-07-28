@@ -17,6 +17,8 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _rowsAppended;
     private readonly Counter<long> _cardsVisited;
     private readonly Counter<long> _canaryFailures;
+    private readonly Counter<long> _monotonicityViolations;
+    private readonly Counter<long> _popAnomalies;
     private readonly Histogram<double> _visitDuration;
 
     private double _queueStalenessDays;
@@ -33,6 +35,8 @@ public sealed class CrawlMetrics : IDisposable
         _rowsAppended = Meter.CreateCounter<long>("crawl.rows_appended", description: "History rows appended, by kind");
         _cardsVisited = Meter.CreateCounter<long>("crawl.cards_visited", description: "Card detail visits completed");
         _canaryFailures = Meter.CreateCounter<long>("crawl.canary_failures", description: "Canary assertion failures, by path");
+        _monotonicityViolations = Meter.CreateCounter<long>("crawl.monotonicity_violations", description: "Grade-price monotonicity violations; a step change is a silent tier remap");
+        _popAnomalies = Meter.CreateCounter<long>("crawl.pop_anomalies", description: "Population cells that spiked or shrank beyond grading pace, by grader and kind");
         _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
 
         Meter.CreateObservableGauge(
@@ -55,6 +59,8 @@ public sealed class CrawlMetrics : IDisposable
         _parseFailures.Add(0);
         _cardsVisited.Add(0);
         _canaryFailures.Add(0);
+        _monotonicityViolations.Add(0);
+        _popAnomalies.Add(0);
     }
 
     /// <summary>Exposed for MetricCollector-based tests and host registration.</summary>
@@ -78,6 +84,11 @@ public sealed class CrawlMetrics : IDisposable
 
     /// <summary>Fetch through commit — excludes the polite-gate wait.</summary>
     public void RecordVisitDuration(TimeSpan duration) => _visitDuration.Record(duration.TotalSeconds);
+
+    public void RecordMonotonicityViolations(int count) => _monotonicityViolations.Add(count);
+
+    public void RecordPopAnomaly(string grader, string kind) =>
+        _popAnomalies.Add(1, new KeyValuePair<string, object?>("grader", grader), new KeyValuePair<string, object?>("kind", kind));
 
     public void RecordCanaryFailure(string path) =>
         _canaryFailures.Add(1, new KeyValuePair<string, object?>("path", path));

@@ -13,6 +13,12 @@ git config core.hooksPath ops/git-hooks   # blocks committing appsettings.Produc
 - **Pi 5 gotcha:** NR's fluent-bit crashes on the default 16K-page kernel
   (`jemalloc: Unsupported system page size`). Fix: `kernel=kernel8.img` in
   /boot/firmware/config.txt (4K pages) + reboot.
+- Integrity metrics: `crawl.monotonicity_violations` (single hits are market
+  noise — alert on a step change in the rate, the signature of a silent tier
+  remap) and `crawl.pop_anomalies` by grader/kind (spike = census restatement
+  like PSA's June 2026 one, decrease = census shrank). A real restatement hits
+  hundreds of cards in one sweep; suggested condition:
+  `SELECT sum(`crawl.pop_anomalies`) FROM Metric` above ~20 for 30 min sliding.
 
 # Pi setup
 

@@ -96,6 +96,33 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Monotonicity_violations_feed_a_corpus_wide_counter()
+    {
+        // One violation is market noise; the counter exists so New Relic can
+        // see a corpus-wide step change — the signature of a silent tier remap.
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.monotonicity_violations");
+
+        metrics.RecordMonotonicityViolations(2);
+
+        Assert.Equal(2, collector.GetMeasurementSnapshot().Sum(m => m.Value));
+    }
+
+    [Fact]
+    public void Pop_anomalies_count_by_grader_and_kind()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.pop_anomalies");
+
+        metrics.RecordPopAnomaly(grader: "psa", kind: "spike");
+
+        var m = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(1, m.Value);
+        Assert.Equal("psa", m.Tags["grader"]);
+        Assert.Equal("spike", m.Tags["kind"]);
+    }
+
+    [Fact]
     public void Canary_failures_count_by_path()
     {
         var (metrics, _) = NewMetrics();
