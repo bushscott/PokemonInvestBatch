@@ -4,6 +4,16 @@
 git config core.hooksPath ops/git-hooks   # blocks committing appsettings.Production.json
 ```
 
+# New Relic (as deployed 2026-07-28)
+
+- Worker → OTLP via `NewRelic:LicenseKey` in appsettings.Production.json (US endpoint otlp.nr-data.net).
+- Host: `newrelic-infra` via NR apt repo; `/etc/newrelic-infra.yml` (license_key, display_name).
+- Postgres: `pg_stat_statements` in shared_preload_libraries + `CREATE EXTENSION`; role `newrelic` with `pg_monitor`; `nri-postgresql` config in `/etc/newrelic-infra/integrations.d/` with ENABLE_QUERY_MONITORING.
+- Logs: `/etc/newrelic-infra/logging.d/pokemon.yml` forwards the worker's systemd unit + postgres log.
+- **Pi 5 gotcha:** NR's fluent-bit crashes on the default 16K-page kernel
+  (`jemalloc: Unsupported system page size`). Fix: `kernel=kernel8.img` in
+  /boot/firmware/config.txt (4K pages) + reboot.
+
 # Pi setup
 
 Target: 16GB Raspberry Pi 5, 64-bit Raspberry Pi OS (Debian 12/13), SSD.
