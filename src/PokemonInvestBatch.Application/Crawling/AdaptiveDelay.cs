@@ -26,15 +26,57 @@ public sealed record AdaptiveDelayOptions
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {
-    public TimeSpan Current { get; private set; }
+    private int _consecutiveFailures;
+
+    /// <summary>Starts at the ceiling: a cold start is never a thundering herd.</summary>
+    public TimeSpan Current { get; private set; } = options.Ceiling;
 
     public bool ShouldPause { get; private set; }
 
-    public void RecordSuccess(TimeSpan latency) => throw new NotImplementedException();
+    public void RecordSuccess(TimeSpan latency)
+    {
+        if (latency >= options.SlowResponseThreshold)
+        {
+            // Their server straining is partly us — back off unasked.
+            BackOff(retryAfter: null);
+            return;
+        }
+
+        _consecutiveFailures = 0;
+        ShouldPause = false;
+        var tightened = Current - options.DecreaseStep;
+        Current = tightened < options.Floor ? options.Floor : tightened;
+    }
 
     /// <summary>Timeouts and 5xx (other than 503).</summary>
-    public void RecordFailure(TimeSpan? retryAfter = null) => throw new NotImplementedException();
+    public void RecordFailure(TimeSpan? retryAfter = null)
+    {
+        BackOff(retryAfter);
+        CountFailure();
+    }
 
     /// <summary>429/503 — an explicit "stop", answered with the ceiling.</summary>
-    public void RecordRateLimited(TimeSpan? retryAfter = null) => throw new NotImplementedException();
+    public void RecordRateLimited(TimeSpan? retryAfter = null)
+    {
+        Current = MaxWithRetryAfter(options.Ceiling, retryAfter);
+        CountFailure();
+    }
+
+    private void BackOff(TimeSpan? retryAfter)
+    {
+        var increased = TimeSpan.FromTicks((long)(Current.Ticks * options.IncreaseFactor));
+        var capped = increased > options.Ceiling ? options.Ceiling : increased;
+        Current = MaxWithRetryAfter(capped, retryAfter);
+    }
+
+    private static TimeSpan MaxWithRetryAfter(TimeSpan computed, TimeSpan? retryAfter) =>
+        retryAfter is { } demanded && demanded > computed ? demanded : computed;
+
+    private void CountFailure()
+    {
+        if (++_consecutiveFailures >= options.FailuresBeforePause)
+        {
+            ShouldPause = true;
+        }
+    }
 }

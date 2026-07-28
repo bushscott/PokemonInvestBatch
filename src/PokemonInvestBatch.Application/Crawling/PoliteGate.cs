@@ -7,5 +7,30 @@ namespace PokemonInvestBatch.Application.Crawling;
 /// </summary>
 public sealed class PoliteGate(AdaptiveDelay delay, TimeProvider time)
 {
-    public Task WaitTurnAsync(CancellationToken cancellationToken) => throw new NotImplementedException();
+    private readonly SemaphoreSlim _turnstile = new(1, 1);
+
+    private long? _lastReleaseTimestamp;
+
+    public async Task WaitTurnAsync(CancellationToken cancellationToken)
+    {
+        await _turnstile.WaitAsync(cancellationToken);
+        try
+        {
+            if (_lastReleaseTimestamp is { } last)
+            {
+                var elapsed = time.GetElapsedTime(last);
+                var remaining = delay.Current - elapsed;
+                if (remaining > TimeSpan.Zero)
+                {
+                    await Task.Delay(remaining, time, cancellationToken);
+                }
+            }
+
+            _lastReleaseTimestamp = time.GetTimestamp();
+        }
+        finally
+        {
+            _turnstile.Release();
+        }
+    }
 }
