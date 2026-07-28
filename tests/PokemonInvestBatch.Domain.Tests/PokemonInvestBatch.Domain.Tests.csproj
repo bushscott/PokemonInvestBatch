@@ -22,4 +22,8 @@
     <ProjectReference Include="..\..\src\PokemonInvestBatch.Domain\PokemonInvestBatch.Domain.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Fixtures\*.html.gz" />
+  </ItemGroup>
+
 </Project>
