@@ -301,7 +301,7 @@
         },
         {
           "title": "Pi disk used (%)",
-          "layout": { "column": 1, "row": 16, "width": 6, "height": 3 },
+          "layout": { "column": 1, "row": 16, "width": 2, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -319,7 +319,7 @@
         },
         {
           "title": "Worker GC heap by generation (delete if empty)",
-          "layout": { "column": 7, "row": 16, "width": 6, "height": 3 },
+          "layout": { "column": 1, "row": 29, "width": 6, "height": 3 },
           "visualization": { "id": "viz.area" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -432,7 +432,7 @@
         },
         {
           "title": "Pi CPU (%)",
-          "layout": { "column": 1, "row": 29, "width": 4, "height": 3 },
+          "layout": { "column": 3, "row": 16, "width": 4, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -446,7 +446,7 @@
         },
         {
           "title": "Pi memory (%)",
-          "layout": { "column": 5, "row": 29, "width": 4, "height": 3 },
+          "layout": { "column": 7, "row": 16, "width": 3, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -460,7 +460,7 @@
         },
         {
           "title": "Pi disk busy (%) — delete if empty",
-          "layout": { "column": 9, "row": 29, "width": 4, "height": 3 },
+          "layout": { "column": 10, "row": 16, "width": 3, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
