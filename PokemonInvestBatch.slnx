@@ -7,5 +7,6 @@
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/PokemonInvestBatch.Domain.Tests/PokemonInvestBatch.Domain.Tests.csproj" />
+    <Project Path="tests/PokemonInvestBatch.Infrastructure.Tests/PokemonInvestBatch.Infrastructure.Tests.csproj" />
   </Folder>
 </Solution>
