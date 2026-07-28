@@ -158,17 +158,24 @@ public sealed class DetailCrawlLane(
     private async Task WritePageAsync(
         PokemonDbContext db, Card card, CardDetailPage page, string shapeHash, DateTimeOffset now, CancellationToken ct)
     {
-        var priceRows = await db.PriceMonths.AsNoTracking()
-            .Where(p => p.CardId == card.Id).ToListAsync(ct);
-        var lastPrices = priceRows
-            .GroupBy(p => (p.Tier, p.Month))
-            .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.PriceCents);
+        // Phase span: this is the visit's only O(card history) section, so it
+        // gets its own band in the where-time-goes stack to watch it grow.
+        Dictionary<(PriceTier Tier, DateOnly Month), int> lastPrices;
+        Dictionary<(string Grader, short Grade), int> lastPops;
+        using (CrawlTracing.Source.StartActivity("card.load_history"))
+        {
+            var priceRows = await db.PriceMonths.AsNoTracking()
+                .Where(p => p.CardId == card.Id).ToListAsync(ct);
+            lastPrices = priceRows
+                .GroupBy(p => (p.Tier, p.Month))
+                .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.PriceCents);
 
-        var popRows = await db.Populations.AsNoTracking()
-            .Where(p => p.CardId == card.Id).ToListAsync(ct);
-        var lastPops = popRows
-            .GroupBy(p => (p.Grader, p.Grade))
-            .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.Population);
+            var popRows = await db.Populations.AsNoTracking()
+                .Where(p => p.CardId == card.Id).ToListAsync(ct);
+            lastPops = popRows
+                .GroupBy(p => (p.Grader, p.Grade))
+                .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.Population);
+        }
 
         var newPrices = ChangeOnlyPlanner.NewPricePoints(card.Id, page.Chart, lastPrices, now);
         var newPops = page.Population is null
@@ -191,22 +198,27 @@ public sealed class DetailCrawlLane(
 
         var observation = SalesObservation.From(page.Sales, card.LastVisitedAt, now);
 
-        await using var transaction = await db.Database.BeginTransactionAsync(ct);
-        db.PriceMonths.AddRange(newPrices);
-        db.Populations.AddRange(newPops);
-        var newSales = await new SaleWriter(db).AppendNewAsync(card.Id, page.Sales, now, ct);
-        db.Visits.Add(NewVisit(card, 200, VisitOutcome.Parsed, shapeHash, now));
+        int newSales;
+        using (CrawlTracing.Source.StartActivity("card.write"))
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync(ct);
+            db.PriceMonths.AddRange(newPrices);
+            db.Populations.AddRange(newPops);
+            newSales = await new SaleWriter(db).AppendNewAsync(card.Id, page.Sales, now, ct);
+            db.Visits.Add(NewVisit(card, 200, VisitOutcome.Parsed, shapeHash, now));
 
-        card.LastVisitedAt = now;
-        card.LastSeenAt = now;
-        card.ObservedSalesPerDay = observation.SalesPerDay;
-        card.AnyBucketAtCap = observation.AnyBucketAtCap;
-        card.ImageHash ??= page.ImageHash;
-        card.FailureStreak = 0;
-        card.QuarantinedUntil = null;
+            card.LastVisitedAt = now;
+            card.LastSeenAt = now;
+            card.ObservedSalesPerDay = observation.SalesPerDay;
+            card.AnyBucketAtCap = observation.AnyBucketAtCap;
+            card.ImageHash ??= page.ImageHash;
+            card.FailureStreak = 0;
+            card.QuarantinedUntil = null;
 
-        await db.SaveChangesAsync(ct);
-        await transaction.CommitAsync(ct);
+            await db.SaveChangesAsync(ct);
+            await transaction.CommitAsync(ct);
+        }
+
         metrics.RecordRowsAppended(newPrices.Count, newPops.Count, newSales);
 
         logger.LogInformation(
