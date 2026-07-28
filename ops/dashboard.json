@@ -206,7 +206,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT sum(`crawl.canary_failures`) AS 'failures' FROM Metric SINCE 24 hours ago"
+                "query": "SELECT sum(`crawl.canary_failures`) AS 'count' FROM Metric SINCE 24 hours ago"
               }
             ],
             "thresholds": [{ "alertSeverity": "CRITICAL", "value": 1 }],
@@ -221,7 +221,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT sum(`crawl.cards_quarantined`) AS 'benched' FROM Metric SINCE 24 hours ago"
+                "query": "SELECT sum(`crawl.cards_quarantined`) AS 'count' FROM Metric SINCE 24 hours ago"
               }
             ],
             "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
@@ -236,7 +236,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT sum(`crawl.pop_anomalies`) AS 'anomalies' FROM Metric SINCE 24 hours ago"
+                "query": "SELECT sum(`crawl.pop_anomalies`) AS 'count' FROM Metric SINCE 24 hours ago"
               }
             ],
             "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
