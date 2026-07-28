@@ -1,3 +1,7 @@
+using System.Globalization;
+using AngleSharp.Dom;
+using AngleSharp.Html.Parser;
+
 namespace PokemonInvestBatch.Domain.Parsing;
 
 /// <summary>
@@ -20,12 +24,135 @@ public static class CardDetailParser
         ["manualonly"] = PriceTier.Psa10,
     };
 
-    public static CardDetailPage Parse(string html) =>
-        new()
+    private static readonly string[] KnownSources = ["ebay", "tcgplayer", "goldin", "heritage", "pwcc"];
+
+    // The default-visible sales table has no completed-auctions-* wrapper;
+    // it corresponds to this option in the condition selector.
+    private const string DefaultTierToken = "completed-auctions-used";
+
+    public static CardDetailPage Parse(string html)
+    {
+        var chart = ParseChart(html);
+        var population = ParsePopulation(html);
+
+        var document = new HtmlParser().ParseDocument(html);
+        return new CardDetailPage
         {
-            Chart = ParseChart(html),
-            Population = ParsePopulation(html),
+            Chart = chart,
+            Population = population,
+            Sales = ParseSales(document),
         };
+    }
+
+    private static IReadOnlyList<SaleRecord> ParseSales(IDocument document)
+    {
+        var tables = document.QuerySelectorAll("table.hoverable-rows.sortable");
+        if (tables.Length == 0)
+        {
+            return [];
+        }
+
+        var tierLabels = ReadTierLabels(document);
+        return
+        [
+            .. tables.SelectMany(table =>
+            {
+                var label = TierLabelFor(table, tierLabels);
+                return table.QuerySelectorAll("tr[id]").Select(row => ReadSale(row, label));
+            }),
+        ];
+    }
+
+    /// <summary>Tier names come from the page's own condition selector, never from code.</summary>
+    private static Dictionary<string, string> ReadTierLabels(IDocument document)
+    {
+        var options = document.QuerySelectorAll("select#completed-auctions-condition option");
+        if (options.Length == 0)
+        {
+            throw new SchemaDriftException(
+                "Sales tables are present but select#completed-auctions-condition is missing — " +
+                "grade tiers cannot be labeled.");
+        }
+
+        return options
+            .Where(o => !string.IsNullOrWhiteSpace(o.GetAttribute("value")))
+            .ToDictionary(
+                o => o.GetAttribute("value")!,
+                o => StripCount(o.TextContent));
+    }
+
+    /// <summary>Turns "PSA 10 (30)" into "PSA 10".</summary>
+    private static string StripCount(string label)
+    {
+        var text = label.Trim();
+        var paren = text.LastIndexOf(" (", StringComparison.Ordinal);
+        return paren > 0 ? text[..paren] : text;
+    }
+
+    private static string TierLabelFor(IElement table, Dictionary<string, string> tierLabels)
+    {
+        var token = Ancestors(table)
+            .SelectMany(a => a.ClassList)
+            .FirstOrDefault(c => c.StartsWith("completed-auctions-", StringComparison.Ordinal))
+            ?? DefaultTierToken;
+
+        return tierLabels.TryGetValue(token, out var label)
+            ? label
+            : throw new SchemaDriftException(
+                $"Sales table wrapper '{token}' has no matching option in the condition selector. " +
+                "The tier scheme has drifted.");
+    }
+
+    private static IEnumerable<IElement> Ancestors(IElement element)
+    {
+        for (var parent = element.ParentElement; parent is not null; parent = parent.ParentElement)
+        {
+            yield return parent;
+        }
+    }
+
+    private static SaleRecord ReadSale(IElement row, string gradeTier)
+    {
+        // AngleSharp has already decoded HTML entities in the attribute value.
+        var id = row.Id!;
+        var separator = id.IndexOf('-');
+        var source = separator > 0 ? id[..separator] : id;
+        if (!KnownSources.Contains(source))
+        {
+            throw new SchemaDriftException(
+                $"Sale row id '{id}' has unknown marketplace prefix '{source}'; " +
+                $"known: [{string.Join(", ", KnownSources)}]. A new marketplace must be mapped, not dropped.");
+        }
+
+        var date = row.QuerySelector("td.date")?.TextContent.Trim()
+            ?? throw new SchemaDriftException($"Sale row '{id}' has no date cell.");
+        var price = row.QuerySelector("td.numeric:not(.listed-price) span.js-price")?.TextContent
+            ?? throw new SchemaDriftException($"Sale row '{id}' has no price cell.");
+
+        return new SaleRecord
+        {
+            Source = source,
+            SourceId = id[(separator + 1)..],
+            SoldOn = DateOnly.ParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+            GradeTier = gradeTier,
+            PriceCents = ParseCents(price)!.Value,
+            ListedPriceCents = ParseCents(row.QuerySelector("td.listed-price")?.TextContent),
+            Title = (row.QuerySelector("td.title a")?.TextContent ?? string.Empty).Trim(),
+        };
+    }
+
+    /// <summary>Parses "$1,234.56" to cents; blank/nbsp-only cells yield null.</summary>
+    private static int? ParseCents(string? text)
+    {
+        var cleaned = text?.Trim().Trim(' ').TrimStart('$').Replace(",", "");
+        if (string.IsNullOrWhiteSpace(cleaned))
+        {
+            return null;
+        }
+
+        return (int)Math.Round(
+            decimal.Parse(cleaned, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture) * 100);
+    }
 
     private static IReadOnlyDictionary<PriceTier, IReadOnlyList<PricePoint>> ParseChart(string html)
     {

@@ -8,4 +8,7 @@ public sealed record CardDetailPage
 
     /// <summary>Graded census, absent on cards with no population report.</summary>
     public PopulationReport? Population { get; init; }
+
+    /// <summary>Completed sales across all marketplaces and grade buckets.</summary>
+    public required IReadOnlyList<SaleRecord> Sales { get; init; }
 }
