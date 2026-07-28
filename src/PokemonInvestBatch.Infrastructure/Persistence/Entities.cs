@@ -13,7 +13,13 @@ public class CardSet
 
     public DateTimeOffset DiscoveredAt { get; set; }
 
+    /// <summary>Last time the category page listed this set.</summary>
     public DateTimeOffset LastSeenAt { get; set; }
+
+    /// <summary>Last time this set's card pages were walked to completion.
+    /// Null = never walked — an interrupted enumeration resumes here instead
+    /// of sleeping out the weekly interval.</summary>
+    public DateTimeOffset? LastWalkedAt { get; set; }
 }
 
 /// <summary>

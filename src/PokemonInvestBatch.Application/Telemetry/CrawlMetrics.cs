@@ -21,6 +21,8 @@ public sealed class CrawlMetrics : IDisposable
 
     private double _queueStalenessDays;
 
+    private int _setsPendingWalk;
+
     public CrawlMetrics(AdaptiveDelay delay)
     {
         Meter = new Meter(MeterName);
@@ -42,6 +44,17 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.queue_staleness_days", () => _queueStalenessDays,
             description: "Staleness of the oldest card the scheduler saw");
+        Meter.CreateObservableGauge(
+            "crawl.sets_pending", () => _setsPendingWalk,
+            description: "Sets awaiting their card walk; zero is the only healthy steady state");
+
+        // Alarm-bearing counters emit a zero at startup so their series exist
+        // from boot — absence is then always detectable (loss-of-signal), and
+        // alert conditions validate against real data.
+        _pagesParsed.Add(0);
+        _parseFailures.Add(0);
+        _cardsVisited.Add(0);
+        _canaryFailures.Add(0);
     }
 
     /// <summary>Exposed for MetricCollector-based tests and host registration.</summary>
@@ -71,6 +84,9 @@ public sealed class CrawlMetrics : IDisposable
 
     /// <summary>Set each scheduler pick from the stalest candidate observed.</summary>
     public void SetQueueStaleness(TimeSpan staleness) => _queueStalenessDays = staleness.TotalDays;
+
+    /// <summary>Refreshed by the enumeration lane each cycle check.</summary>
+    public void SetPendingSets(int pending) => _setsPendingWalk = pending;
 
     public void Dispose() => Meter.Dispose();
 }
