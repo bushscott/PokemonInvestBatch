@@ -34,6 +34,8 @@ public sealed class CrawlMetrics : IDisposable
     private long _totalPriceRows;
     private long _totalPopulationRows;
     private long _totalSaleRows;
+    private long _cardsAtCap;
+    private long _cardsQuarantinedNow;
 
     public CrawlMetrics(AdaptiveDelay delay)
     {
@@ -71,6 +73,12 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.images_pending", () => _imagesPending,
             description: "Images discovered but not yet fetched");
+        Meter.CreateObservableGauge(
+            "crawl.cards_at_cap", () => _cardsAtCap,
+            description: "Cards with a sale bucket at cap — the scheduler's hard-override watchlist");
+        Meter.CreateObservableGauge(
+            "crawl.cards_quarantined_now", () => _cardsQuarantinedNow,
+            description: "Cards currently benched; the counter shows events, this shows the standing population");
         Meter.CreateObservableGauge(
             "crawl.total_rows", () =>
             new[]
@@ -138,6 +146,13 @@ public sealed class CrawlMetrics : IDisposable
         _corpusSize = corpusSize;
         _corpusVisited = corpusVisited;
         _imagesPending = imagesPending;
+    }
+
+    /// <summary>Refreshed by the stats sweep each interval.</summary>
+    public void SetSchedulerStats(long cardsAtCap, long quarantinedNow)
+    {
+        _cardsAtCap = cardsAtCap;
+        _cardsQuarantinedNow = quarantinedNow;
     }
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>

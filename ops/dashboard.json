@@ -331,6 +331,91 @@
             ],
             "platformOptions": { "ignoreTimeRange": false }
           }
+        },
+        {
+          "title": "Cards at sale-cap (scheduler override watchlist)",
+          "layout": { "column": 1, "row": 19, "width": 3, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT latest(`crawl.cards_at_cap`) AS 'cards' FROM Metric"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Quarantined right now",
+          "layout": { "column": 4, "row": 19, "width": 3, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT latest(`crawl.cards_quarantined_now`) AS 'benched' FROM Metric"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "WARNING", "value": 10 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "New cards discovered per day",
+          "layout": { "column": 7, "row": 19, "width": 6, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT derivative(`crawl.corpus_size`, 1 day) AS 'cards/day' FROM Metric TIMESERIES SINCE 7 days ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Live visit ticker",
+          "layout": { "column": 1, "row": 22, "width": 6, "height": 4 },
+          "visualization": { "id": "viz.table" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT message FROM Log WHERE message LIKE '%price rows%' SINCE 3 hours ago LIMIT 20"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Recent warnings (the detail behind the zero-billboards)",
+          "layout": { "column": 7, "row": 22, "width": 6, "height": 4 },
+          "visualization": { "id": "viz.table" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT message FROM Log WHERE LogLevel = 'Warning' SINCE 1 day ago LIMIT 50"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Slowest card visits, 24h",
+          "layout": { "column": 1, "row": 26, "width": 12, "height": 3 },
+          "visualization": { "id": "viz.bar" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT max(duration.ms) AS 'ms' FROM Span WHERE name = 'card.visit' FACET `card.name` SINCE 1 day ago LIMIT 10"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
         }
       ]
     }

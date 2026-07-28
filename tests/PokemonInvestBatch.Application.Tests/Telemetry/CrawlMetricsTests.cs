@@ -114,6 +114,21 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Scheduler_gauges_report_watchlist_and_bench_sizes()
+    {
+        var (metrics, _) = NewMetrics();
+        using var atCap = new MetricCollector<long>(metrics.Meter, "crawl.cards_at_cap");
+        using var benched = new MetricCollector<long>(metrics.Meter, "crawl.cards_quarantined_now");
+
+        metrics.SetSchedulerStats(cardsAtCap: 12, quarantinedNow: 3);
+        atCap.RecordObservableInstruments();
+        benched.RecordObservableInstruments();
+
+        Assert.Equal(12, atCap.LastMeasurement!.Value);
+        Assert.Equal(3, benched.LastMeasurement!.Value);
+    }
+
+    [Fact]
     public void Total_rows_gauge_reports_by_kind()
     {
         var (metrics, _) = NewMetrics();

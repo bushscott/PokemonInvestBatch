@@ -48,6 +48,11 @@ public sealed class StatsLane(
             corpusVisited: await db.Cards.LongCountAsync(c => c.LastVisitedAt != null, ct),
             imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct));
 
+        var now = time.GetUtcNow();
+        metrics.SetSchedulerStats(
+            cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),
+            quarantinedNow: await db.Cards.LongCountAsync(c => c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct));
+
         metrics.SetTotalRows(
             prices: await db.PriceMonths.LongCountAsync(ct),
             populations: await db.Populations.LongCountAsync(ct),
