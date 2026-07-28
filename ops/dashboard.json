@@ -89,7 +89,7 @@
         },
         {
           "title": "HTTP responses by class, 24h",
-          "layout": { "column": 1, "row": 4, "width": 4, "height": 3 },
+          "layout": { "column": 1, "row": 4, "width": 3, "height": 3 },
           "visualization": { "id": "viz.bar" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -103,7 +103,7 @@
         },
         {
           "title": "Requests by lane, 24h",
-          "layout": { "column": 5, "row": 4, "width": 4, "height": 3 },
+          "layout": { "column": 4, "row": 4, "width": 3, "height": 3 },
           "visualization": { "id": "viz.pie" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -117,7 +117,7 @@
         },
         {
           "title": "Rows appended by kind",
-          "layout": { "column": 9, "row": 4, "width": 4, "height": 3 },
+          "layout": { "column": 7, "row": 4, "width": 6, "height": 3 },
           "visualization": { "id": "viz.area" },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -130,14 +130,14 @@
           }
         },
         {
-          "title": "Corpus coverage",
+          "title": "Corpus coverage (%)",
           "layout": { "column": 1, "row": 7, "width": 3, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.corpus_visited`) / latest(`crawl.corpus_size`) * 100 AS '% of known cards visited' FROM Metric"
+                "query": "SELECT latest(`crawl.corpus_visited`) / latest(`crawl.corpus_size`) * 100 AS 'visited' FROM Metric"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
@@ -186,14 +186,14 @@
           }
         },
         {
-          "title": "Parse success, 24h",
+          "title": "Parse success (%), 24h",
           "layout": { "column": 1, "row": 10, "width": 2, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT sum(`crawl.pages_parsed`) / (sum(`crawl.pages_parsed`) + sum(`crawl.parse_failures`)) * 100 AS '% parsed' FROM Metric SINCE 24 hours ago"
+                "query": "SELECT sum(`crawl.pages_parsed`) / (sum(`crawl.pages_parsed`) + sum(`crawl.parse_failures`)) * 100 AS 'parsed' FROM Metric SINCE 24 hours ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
@@ -301,14 +301,14 @@
           }
         },
         {
-          "title": "Pi disk used % (infra agent — delete if empty)",
+          "title": "Pi disk used (%)",
           "layout": { "column": 1, "row": 16, "width": 6, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(diskUsedPercent) AS '% used' FROM SystemSample"
+                "query": "SELECT latest(diskUsedPercent) AS 'used' FROM SystemSample"
               }
             ],
             "thresholds": [
@@ -405,13 +405,69 @@
         },
         {
           "title": "Slowest card visits, 24h",
-          "layout": { "column": 1, "row": 26, "width": 12, "height": 3 },
+          "layout": { "column": 1, "row": 26, "width": 6, "height": 3 },
           "visualization": { "id": "viz.bar" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
                 "query": "SELECT max(duration.ms) AS 'ms' FROM Span WHERE name = 'card.visit' FACET `card.name` SINCE 1 day ago LIMIT 10"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Where visit time goes: fetch vs Postgres vs total",
+          "layout": { "column": 7, "row": 26, "width": 6, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(duration.ms) FROM Span FACET cases(WHERE name = 'card.visit' AS 'visit total', WHERE `db.system` = 'postgresql' AS 'postgres', WHERE `http.url` LIKE '%pricecharting.com%' OR `url.full` LIKE '%pricecharting.com%' AS 'site fetch') TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Pi CPU (%)",
+          "layout": { "column": 1, "row": 29, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(cpuPercent) AS 'cpu' FROM SystemSample TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Pi memory (%)",
+          "layout": { "column": 5, "row": 29, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(memoryUsedBytes) / average(memoryTotalBytes) * 100 AS 'memory' FROM SystemSample TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Pi disk busy (%) — delete if empty",
+          "layout": { "column": 9, "row": 29, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [6565679],
+                "query": "SELECT average(diskUtilizationPercent) AS 'busy' FROM SystemSample TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }

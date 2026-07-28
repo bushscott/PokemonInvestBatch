@@ -75,6 +75,11 @@ public sealed class DetailCrawlLane(
             return;
         }
 
+        // The polite wait happens outside the span: card.visit measures work
+        // (fetch through commit), not the voluntary sleep before it — same
+        // boundary as the visit-duration histogram.
+        await gate.WaitTurnAsync(ct);
+
         using var visit = CrawlTracing.Source.StartActivity("card.visit");
         visit?.SetTag("card.id", card.Id);
         visit?.SetTag("card.name", card.Name);
@@ -94,7 +99,6 @@ public sealed class DetailCrawlLane(
 
     private async Task VisitAsync(PokemonDbContext db, Card card, Activity? visit, CancellationToken ct)
     {
-        await gate.WaitTurnAsync(ct);
         var started = time.GetTimestamp();
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
