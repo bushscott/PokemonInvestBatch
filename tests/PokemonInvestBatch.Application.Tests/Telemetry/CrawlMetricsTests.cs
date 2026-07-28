@@ -96,6 +96,19 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Quarantines_count_by_reason()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.cards_quarantined");
+
+        metrics.RecordCardQuarantined(reason: "parse");
+
+        var m = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(1, m.Value);
+        Assert.Equal("parse", m.Tags["reason"]);
+    }
+
+    [Fact]
     public void Monotonicity_violations_feed_a_corpus_wide_counter()
     {
         // One violation is market noise; the counter exists so New Relic can

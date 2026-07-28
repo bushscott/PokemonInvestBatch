@@ -57,6 +57,14 @@ public class Card
     /// <summary>A grade bucket came back full with its oldest row newer than our
     /// previous visit — proof sales were missed; hard override for the queue.</summary>
     public bool AnyBucketAtCap { get; set; }
+
+    /// <summary>Consecutive card-attributable failures (parse drift, 4xx).
+    /// Site trouble never counts. Reset by any successful visit.</summary>
+    public int FailureStreak { get; set; }
+
+    /// <summary>While set and in the future, the scheduler skips this card —
+    /// a poisoned page must not wedge the crawl. See QuarantinePolicy.</summary>
+    public DateTimeOffset? QuarantinedUntil { get; set; }
 }
 
 /// <summary>

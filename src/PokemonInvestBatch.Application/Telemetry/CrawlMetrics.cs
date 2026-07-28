@@ -19,6 +19,7 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _canaryFailures;
     private readonly Counter<long> _monotonicityViolations;
     private readonly Counter<long> _popAnomalies;
+    private readonly Counter<long> _cardsQuarantined;
     private readonly Histogram<double> _visitDuration;
 
     private double _queueStalenessDays;
@@ -37,6 +38,7 @@ public sealed class CrawlMetrics : IDisposable
         _canaryFailures = Meter.CreateCounter<long>("crawl.canary_failures", description: "Canary assertion failures, by path");
         _monotonicityViolations = Meter.CreateCounter<long>("crawl.monotonicity_violations", description: "Grade-price monotonicity violations; a step change is a silent tier remap");
         _popAnomalies = Meter.CreateCounter<long>("crawl.pop_anomalies", description: "Population cells that spiked or shrank beyond grading pace, by grader and kind");
+        _cardsQuarantined = Meter.CreateCounter<long>("crawl.cards_quarantined", description: "Cards benched after repeated card-attributable failures, by reason");
         _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
 
         Meter.CreateObservableGauge(
@@ -61,6 +63,7 @@ public sealed class CrawlMetrics : IDisposable
         _canaryFailures.Add(0);
         _monotonicityViolations.Add(0);
         _popAnomalies.Add(0);
+        _cardsQuarantined.Add(0);
     }
 
     /// <summary>Exposed for MetricCollector-based tests and host registration.</summary>
@@ -86,6 +89,9 @@ public sealed class CrawlMetrics : IDisposable
     public void RecordVisitDuration(TimeSpan duration) => _visitDuration.Record(duration.TotalSeconds);
 
     public void RecordMonotonicityViolations(int count) => _monotonicityViolations.Add(count);
+
+    public void RecordCardQuarantined(string reason) =>
+        _cardsQuarantined.Add(1, new KeyValuePair<string, object?>("reason", reason));
 
     public void RecordPopAnomaly(string grader, string kind) =>
         _popAnomalies.Add(1, new KeyValuePair<string, object?>("grader", grader), new KeyValuePair<string, object?>("kind", kind));

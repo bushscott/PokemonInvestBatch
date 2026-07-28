@@ -105,6 +105,11 @@ public sealed class DetailCrawlLane(
             RecordHttpTrouble(fetched);
             visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, shapeHash: null, now));
+            if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))
+            {
+                await RecordStrikeAsync(card, $"http-{fetched.StatusCode}", now, ct);
+            }
+
             await db.SaveChangesAsync(ct);
             return;
         }
@@ -129,6 +134,7 @@ public sealed class DetailCrawlLane(
                 ShapeHash = shapeHash,
             });
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.ParseFailed, shapeHash, now));
+            await RecordStrikeAsync(card, "parse", now, ct);
             await db.SaveChangesAsync(ct);
             await CheckFailureRateAsync(db, ct);
             return;
@@ -187,6 +193,8 @@ public sealed class DetailCrawlLane(
         card.ObservedSalesPerDay = observation.SalesPerDay;
         card.AnyBucketAtCap = observation.AnyBucketAtCap;
         card.ImageHash ??= page.ImageHash;
+        card.FailureStreak = 0;
+        card.QuarantinedUntil = null;
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
@@ -196,6 +204,34 @@ public sealed class DetailCrawlLane(
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
             card.Id, card.Name, newPrices.Count, newPops.Count, newSales,
             observation.SalesPerDay, observation.AnyBucketAtCap ? ", AT CAP" : "");
+    }
+
+    /// <summary>Caller saves; the card is tracked, so the streak rides the
+    /// same SaveChanges as the visit row that earned it.</summary>
+    private async Task RecordStrikeAsync(Card card, string reason, DateTimeOffset now, CancellationToken ct)
+    {
+        card.FailureStreak++;
+        var until = QuarantinePolicy.QuarantineUntil(card.FailureStreak, now);
+        if (until is null)
+        {
+            return;
+        }
+
+        card.QuarantinedUntil = until;
+        metrics.RecordCardQuarantined(reason);
+        logger.LogWarning(
+            "Card {CardId} ({Name}) quarantined until {Until:u} after {Streak} consecutive failures ({Reason})",
+            card.Id, card.Name, until.Value, card.FailureStreak, reason);
+
+        if (throttle.ShouldAlert("card-quarantined", now))
+        {
+            await alerter.RaiseAsync(
+                "Card quarantined",
+                $"Card {card.Id} ({card.Name}) failed {card.FailureStreak} visits in a row ({reason}) "
+                + $"and is benched until {until.Value:u}. Its page is broken in a way the rest of the "
+                + $"corpus is not — see parse_failures/visits for {card.Url}.",
+                ct);
+        }
     }
 
     /// <summary>The census rows are appended regardless — history is
@@ -231,10 +267,15 @@ public sealed class DetailCrawlLane(
     }
 
     /// <summary>Unvisited first; otherwise the tested priority score over the
-    /// stalest 500 plus every cap-hit card.</summary>
+    /// stalest 500 plus every cap-hit card. Quarantined cards are invisible
+    /// until their sentence lapses.</summary>
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
-        var unvisited = await db.Cards
+        var now = time.GetUtcNow();
+        var eligible = db.Cards
+            .Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
+
+        var unvisited = await eligible
             .Where(c => c.LastVisitedAt == null)
             .OrderBy(c => c.Id)
             .FirstOrDefaultAsync(ct);
@@ -243,17 +284,15 @@ public sealed class DetailCrawlLane(
             return unvisited;
         }
 
-        var candidates = await db.Cards
+        var candidates = await eligible
             .OrderBy(c => c.LastVisitedAt)
             .Take(500)
             .ToListAsync(ct);
-        var capHits = await db.Cards
+        var capHits = await eligible
             .Where(c => c.AnyBucketAtCap)
             .OrderBy(c => c.LastVisitedAt)
             .Take(50)
             .ToListAsync(ct);
-
-        var now = time.GetUtcNow();
         if (candidates.Count > 0 && candidates[0].LastVisitedAt is { } oldest)
         {
             metrics.SetQueueStaleness(now - oldest);

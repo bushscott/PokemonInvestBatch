@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Infrastructure.Persistence;
 
 namespace PokemonInvestBatch.Worker.Lanes;
@@ -55,34 +56,62 @@ public sealed class ImageLane(
         }
 
         var http = httpFactory.CreateClient(HttpClientName);
+        var done = 0;
+        var deferred = 0;
         foreach (var card in pending)
         {
             ct.ThrowIfCancellationRequested();
             var directory = Path.Combine(options.Value.ImageDirectory, card.ImageHash!);
             var file = Path.Combine(directory, "1600.jpg");
 
-            if (!File.Exists(file))
+            if (File.Exists(file))
+            {
+                card.ImageFetchedAt = time.GetUtcNow();
+                done++;
+                continue;
+            }
+
+            try
             {
                 using var response = await http.GetAsync($"{CdnBase}/{card.ImageHash}/1600.jpg", ct);
                 if (response.IsSuccessStatusCode)
                 {
                     Directory.CreateDirectory(directory);
                     await File.WriteAllBytesAsync(file, await response.Content.ReadAsByteArrayAsync(ct), ct);
+                    card.ImageFetchedAt = time.GetUtcNow();
+                    done++;
                 }
-                else
+                else if (ImageRetryPolicy.GiveUp((int)response.StatusCode))
                 {
                     // Fetch-once still applies: a 404 is recorded so we never
                     // hammer the CDN for an image that does not exist.
                     logger.LogWarning(
-                        "Image {Hash} for card {CardId} returned {Status}",
+                        "Image {Hash} for card {CardId} does not exist ({Status}) — giving up",
                         card.ImageHash, card.Id, (int)response.StatusCode);
+                    card.ImageFetchedAt = time.GetUtcNow();
+                    done++;
+                }
+                else
+                {
+                    // Transient CDN trouble: leave the card pending for the
+                    // next sweep instead of losing the image forever.
+                    logger.LogWarning(
+                        "Image {Hash} for card {CardId} returned {Status} — will retry next sweep",
+                        card.ImageHash, card.Id, (int)response.StatusCode);
+                    deferred++;
                 }
             }
-
-            card.ImageFetchedAt = time.GetUtcNow();
+            catch (HttpRequestException e)
+            {
+                // One flaky fetch must not abort the sweep and discard the
+                // progress marks of the cards before it.
+                logger.LogWarning(e, "Image {Hash} for card {CardId} failed transport — will retry next sweep",
+                    card.ImageHash, card.Id);
+                deferred++;
+            }
         }
 
         await db.SaveChangesAsync(ct);
-        logger.LogInformation("Fetched {Count} card images", pending.Count);
+        logger.LogInformation("Fetched {Done} card images ({Deferred} deferred to next sweep)", done, deferred);
     }
 }
