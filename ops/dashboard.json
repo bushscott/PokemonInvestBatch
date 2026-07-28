@@ -145,7 +145,7 @@
         {
           "title": "Total rows in Postgres (only goes up)",
           "layout": { "column": 4, "row": 7, "width": 5, "height": 3 },
-          "visualization": { "id": "viz.line" },
+          "visualization": { "id": "viz.area" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
