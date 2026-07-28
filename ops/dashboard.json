@@ -129,14 +129,14 @@
           }
         },
         {
-          "title": "Corpus coverage (%)",
+          "title": "Corpus coverage",
           "layout": { "column": 1, "row": 7, "width": 3, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.corpus_visited`) / latest(`crawl.corpus_size`) * 100 AS 'visited' FROM Metric"
+                "query": "SELECT latest(`crawl.corpus_visited`) AS 'visited', latest(`crawl.corpus_size`) AS 'of cards' FROM Metric"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
