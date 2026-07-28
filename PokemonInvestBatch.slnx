@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PokemonInvestBatch.Application/PokemonInvestBatch.Application.csproj" />
+    <Project Path="src/PokemonInvestBatch.Domain/PokemonInvestBatch.Domain.csproj" />
+    <Project Path="src/PokemonInvestBatch.Infrastructure/PokemonInvestBatch.Infrastructure.csproj" />
+    <Project Path="src/PokemonInvestBatch.Worker/PokemonInvestBatch.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PokemonInvestBatch.Domain.Tests/PokemonInvestBatch.Domain.Tests.csproj" />
+  </Folder>
+</Solution>
