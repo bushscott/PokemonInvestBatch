@@ -136,7 +136,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.corpus_visited`) AS 'cards visited', latest(`crawl.corpus_size`) AS 'of cards known' FROM Metric"
+                "query": "SELECT latest(`crawl.corpus_visited`) AS 'cards visited', latest(`crawl.corpus_size`) AS 'cards known' FROM Metric"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
