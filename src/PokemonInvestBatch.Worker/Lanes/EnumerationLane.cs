@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Domain.Parsing;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -19,6 +20,7 @@ public sealed class EnumerationLane(
     AdaptiveDelay delay,
     TimeProvider time,
     IOptions<ScraperOptions> options,
+    CrawlMetrics metrics,
     ILogger<EnumerationLane> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -60,6 +62,7 @@ public sealed class EnumerationLane(
 
         await gate.WaitTurnAsync(ct);
         var category = await client.GetAsync(options.Value.CategoryPath, ct);
+        metrics.RecordRequest("enumeration", category.StatusCode);
         if (category.Html is null)
         {
             delay.RecordFailure(category.RetryAfter);
@@ -122,6 +125,7 @@ public sealed class EnumerationLane(
             var fetched = form is null
                 ? await client.GetAsync(path, ct)
                 : await client.PostFormAsync(path, form, ct);
+            metrics.RecordRequest("enumeration", fetched.StatusCode);
             if (fetched.Html is null)
             {
                 delay.RecordFailure(fetched.RetryAfter);

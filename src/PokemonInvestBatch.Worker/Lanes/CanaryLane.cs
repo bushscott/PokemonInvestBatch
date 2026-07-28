@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Domain.Parsing;
 using PokemonInvestBatch.Infrastructure.Http;
 
@@ -19,6 +20,7 @@ public sealed class CanaryLane(
     IAlerter alerter,
     TimeProvider time,
     IOptions<ScraperOptions> options,
+    CrawlMetrics metrics,
     ILogger<CanaryLane> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -47,8 +49,12 @@ public sealed class CanaryLane(
 
     private async Task CheckCanaryAsync(string path, CancellationToken ct)
     {
+        using var check = CrawlTracing.Source.StartActivity("canary.check");
+        check?.SetTag("canary.path", path);
+
         await gate.WaitTurnAsync(ct);
         var fetched = await client.GetAsync(path, ct);
+        metrics.RecordRequest("canary", fetched.StatusCode);
 
         var failures = new List<string>();
         if (fetched.Html is null)
@@ -97,6 +103,7 @@ public sealed class CanaryLane(
             return;
         }
 
+        metrics.RecordCanaryFailure(path);
         logger.LogError("Canary {Path} FAILED: {Failures}", path, string.Join("; ", failures));
         if (throttle.ShouldAlert($"canary:{path}", time.GetUtcNow()))
         {

@@ -1,8 +1,10 @@
+using System.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Application.Scheduling;
+using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Domain.Parsing;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -23,6 +25,7 @@ public sealed class DetailCrawlLane(
     IAlerter alerter,
     TimeProvider time,
     IOptions<ScraperOptions> options,
+    CrawlMetrics metrics,
     ILogger<DetailCrawlLane> logger) : BackgroundService
 {
     private static readonly VisitPriorityOptions PriorityOptions = new();
@@ -72,13 +75,19 @@ public sealed class DetailCrawlLane(
             return;
         }
 
+        using var visit = CrawlTracing.Source.StartActivity("card.visit");
+        visit?.SetTag("card.id", card.Id);
+        visit?.SetTag("card.name", card.Name);
+
         await gate.WaitTurnAsync(ct);
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
+        metrics.RecordRequest("detail", fetched.StatusCode);
 
         if (fetched.Html is null)
         {
             RecordHttpTrouble(fetched);
+            visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, shapeHash: null, now));
             await db.SaveChangesAsync(ct);
             return;
@@ -94,6 +103,8 @@ public sealed class DetailCrawlLane(
         }
         catch (SchemaDriftException drift)
         {
+            metrics.RecordParseFailure();
+            visit?.SetStatus(ActivityStatusCode.Error, drift.Message);
             db.ParseFailures.Add(new ParseFailure
             {
                 Url = card.Url,
@@ -108,6 +119,8 @@ public sealed class DetailCrawlLane(
         }
 
         await WritePageAsync(db, card, page, shapeHash, now, ct);
+        metrics.RecordPageParsed();
+        metrics.RecordCardVisited();
     }
 
     private async Task WritePageAsync(
@@ -153,6 +166,7 @@ public sealed class DetailCrawlLane(
 
         await db.SaveChangesAsync(ct);
         await transaction.CommitAsync(ct);
+        metrics.RecordRowsAppended(newPrices.Count, newPops.Count, newSales);
 
         logger.LogInformation(
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
@@ -184,6 +198,11 @@ public sealed class DetailCrawlLane(
             .ToListAsync(ct);
 
         var now = time.GetUtcNow();
+        if (candidates.Count > 0 && candidates[0].LastVisitedAt is { } oldest)
+        {
+            metrics.SetQueueStaleness(now - oldest);
+        }
+
         return candidates.Concat(capHits)
             .DistinctBy(c => c.Id)
             .MaxBy(c => VisitPriority.Score(

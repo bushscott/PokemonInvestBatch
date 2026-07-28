@@ -1,8 +1,12 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
-using PokemonInvestBatch.Infrastructure.Alerting;
+using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.Worker;
@@ -15,15 +19,35 @@ builder.Services.AddOptions<ScraperOptions>()
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")
     .ValidateOnStart();
 
-var smtp = builder.Configuration.GetSection("Smtp").Get<SmtpOptions>() ?? new SmtpOptions();
-builder.Services.AddSingleton(smtp);
-if (smtp.IsConfigured)
+// Alert decisions live in New Relic; the app emits Critical logs and metrics.
+builder.Services.AddSingleton<IAlerter, CriticalLogAlerter>();
+
+// OTLP export to New Relic; without a license key the meters/spans still
+// exist locally and nothing is sent (clean for dev runs).
+var newRelicKey = builder.Configuration["NewRelic:LicenseKey"];
+if (!string.IsNullOrWhiteSpace(newRelicKey))
 {
-    builder.Services.AddSingleton<IAlerter, SmtpAlerter>();
-}
-else
-{
-    builder.Services.AddSingleton<IAlerter, LogOnlyAlerter>();
+    var otlp = (Action<OpenTelemetry.Exporter.OtlpExporterOptions>)(o =>
+    {
+        o.Endpoint = new Uri("https://otlp.nr-data.net:4317");
+        o.Headers = $"api-key={newRelicKey}";
+    });
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(r => r.AddService("pokemon-invest-batch"))
+        .WithTracing(t => t
+            .AddSource(CrawlTracing.SourceName)
+            .AddHttpClientInstrumentation()
+            .AddNpgsql()
+            .AddOtlpExporter(otlp))
+        .WithMetrics(m => m
+            .AddMeter(CrawlMetrics.MeterName)
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter((exporter, reader) =>
+            {
+                otlp(exporter);
+                // New Relic wants delta temporality for counters.
+                reader.TemporalityPreference = MetricReaderTemporalityPreference.Delta;
+            }));
 }
 
 builder.Services.AddDbContextFactory<PokemonDbContext>(options => options
@@ -34,6 +58,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(new AdaptiveDelay(new AdaptiveDelayOptions()));
 builder.Services.AddSingleton<PoliteGate>();
 builder.Services.AddSingleton(new IncidentThrottle(TimeSpan.FromHours(6)));
+builder.Services.AddSingleton<CrawlMetrics>();
 
 builder.Services.AddHttpClient(nameof(PriceChartingClient), (services, http) =>
 {
