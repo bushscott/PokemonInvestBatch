@@ -62,7 +62,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.sets_pending`) AS 'pending', latest(`crawl.sets_total`) AS 'of sets' FROM Metric"
+                "query": "SELECT latest(`crawl.sets_pending`) AS 'sets pending', latest(`crawl.sets_total`) AS 'sets known' FROM Metric"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
@@ -136,7 +136,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.corpus_visited`) AS 'visited', latest(`crawl.corpus_size`) AS 'of cards' FROM Metric"
+                "query": "SELECT latest(`crawl.corpus_visited`) AS 'cards visited', latest(`crawl.corpus_size`) AS 'cards known' FROM Metric"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
