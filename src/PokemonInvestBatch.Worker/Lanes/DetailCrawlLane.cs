@@ -124,7 +124,12 @@ public sealed class DetailCrawlLane(
         CardDetailPage page;
         try
         {
-            page = CardDetailParser.Parse(fetched.Html);
+            // Own span so parse time is visible next to fetch and SQL in the
+            // where-time-goes breakdown instead of hiding in card.visit's gap.
+            using (CrawlTracing.Source.StartActivity("card.parse"))
+            {
+                page = CardDetailParser.Parse(fetched.Html);
+            }
         }
         catch (SchemaDriftException drift)
         {

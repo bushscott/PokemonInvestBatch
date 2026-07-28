@@ -417,14 +417,14 @@
           }
         },
         {
-          "title": "Where visit time goes: fetch vs Postgres vs total",
+          "title": "Where visit time goes (stacked ms)",
           "layout": { "column": 7, "row": 26, "width": 6, "height": 3 },
-          "visualization": { "id": "viz.line" },
+          "visualization": { "id": "viz.area" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(duration.ms) FROM Span FACET cases(WHERE name = 'card.visit' AS 'visit total', WHERE `db.system` = 'postgresql' AS 'postgres', WHERE `http.url` LIKE '%pricecharting.com%' OR `url.full` LIKE '%pricecharting.com%' AS 'site fetch') TIMESERIES SINCE 1 day ago"
+                "query": "SELECT sum(duration.ms) FROM Span WHERE name != 'card.visit' FACET cases(WHERE `http.url` LIKE '%pricecharting.com%' OR `url.full` LIKE '%pricecharting.com%' AS 'site fetch', WHERE `db.system` = 'postgresql' AS 'postgres', WHERE name = 'card.parse' AS 'parse') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
