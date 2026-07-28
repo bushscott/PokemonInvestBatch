@@ -396,7 +396,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT * FROM Log WHERE LogLevel IN ('Warning', 'Error', 'Critical') SINCE 1 day ago"
+                "query": "SELECT * FROM Log WHERE LogLevel IN ('Warning', 'Error', 'Critical') OR message LIKE '%\"LogLevel\":\"Warning\"%' OR message LIKE '%\"LogLevel\":\"Error\"%' OR message LIKE '%\"LogLevel\":\"Critical\"%' SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
