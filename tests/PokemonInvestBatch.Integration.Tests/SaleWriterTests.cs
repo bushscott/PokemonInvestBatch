@@ -83,6 +83,9 @@ public class SaleWriterTests
         var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
         {
             DbAdapter = DbAdapter.Postgres,
+            // Respawn must never erase applied-migration bookkeeping, or the
+            // next MigrateAsync re-runs InitialCreate against existing tables.
+            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
         });
         await respawner.ResetAsync(connection);
     }
