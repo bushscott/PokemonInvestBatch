@@ -293,7 +293,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.delay_seconds`) FROM Metric TIMESERIES SINCE 24 hours ago"
+                "query": "SELECT latest(`crawl.delay_seconds`) FROM Metric TIMESERIES SINCE 48 hours ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
