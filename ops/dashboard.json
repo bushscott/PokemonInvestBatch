@@ -389,14 +389,14 @@
           }
         },
         {
-          "title": "Recent warnings (the detail behind the zero-billboards)",
+          "title": "Recent warnings and errors (click a row for full detail)",
           "layout": { "column": 7, "row": 22, "width": 6, "height": 4 },
-          "visualization": { "id": "viz.table" },
+          "visualization": { "id": "logger.log-table-widget" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT message FROM Log WHERE LogLevel = 'Warning' SINCE 1 day ago LIMIT 50"
+                "query": "SELECT * FROM Log WHERE LogLevel IN ('Warning', 'Error', 'Critical') SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
