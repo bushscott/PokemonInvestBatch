@@ -14,6 +14,10 @@ using PokemonInvestBatch.Worker.Lanes;
 
 var builder = Host.CreateApplicationBuilder(args);
 
+// Stamp TraceId/SpanId into log scopes so a log line links to its trace in NR.
+builder.Logging.Configure(o =>
+    o.ActivityTrackingOptions = ActivityTrackingOptions.TraceId | ActivityTrackingOptions.SpanId);
+
 builder.Services.AddOptions<ScraperOptions>()
     .Bind(builder.Configuration.GetSection("Scraper"))
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")

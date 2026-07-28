@@ -85,6 +85,17 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Visit_durations_feed_a_histogram_for_percentiles()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<double>(metrics.Meter, "crawl.visit_duration_seconds");
+
+        metrics.RecordVisitDuration(TimeSpan.FromSeconds(1.5));
+
+        Assert.Equal(1.5, Assert.Single(collector.GetMeasurementSnapshot()).Value);
+    }
+
+    [Fact]
     public void Canary_failures_count_by_path()
     {
         var (metrics, _) = NewMetrics();

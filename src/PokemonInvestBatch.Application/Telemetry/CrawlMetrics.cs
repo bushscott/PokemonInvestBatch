@@ -17,6 +17,7 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _rowsAppended;
     private readonly Counter<long> _cardsVisited;
     private readonly Counter<long> _canaryFailures;
+    private readonly Histogram<double> _visitDuration;
 
     private double _queueStalenessDays;
 
@@ -30,6 +31,7 @@ public sealed class CrawlMetrics : IDisposable
         _rowsAppended = Meter.CreateCounter<long>("crawl.rows_appended", description: "History rows appended, by kind");
         _cardsVisited = Meter.CreateCounter<long>("crawl.cards_visited", description: "Card detail visits completed");
         _canaryFailures = Meter.CreateCounter<long>("crawl.canary_failures", description: "Canary assertion failures, by path");
+        _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
 
         Meter.CreateObservableGauge(
             "crawl.delay_seconds", () => delay.Current.TotalSeconds,
@@ -60,6 +62,9 @@ public sealed class CrawlMetrics : IDisposable
     }
 
     public void RecordCardVisited() => _cardsVisited.Add(1);
+
+    /// <summary>Fetch through commit — excludes the polite-gate wait.</summary>
+    public void RecordVisitDuration(TimeSpan duration) => _visitDuration.Record(duration.TotalSeconds);
 
     public void RecordCanaryFailure(string path) =>
         _canaryFailures.Add(1, new KeyValuePair<string, object?>("path", path));

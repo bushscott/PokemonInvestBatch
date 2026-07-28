@@ -79,7 +79,23 @@ public sealed class DetailCrawlLane(
         visit?.SetTag("card.id", card.Id);
         visit?.SetTag("card.name", card.Name);
 
+        try
+        {
+            await VisitAsync(db, card, visit, ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            // Unexpected failures ride the trace, not just the log stream.
+            visit?.AddException(e);
+            visit?.SetStatus(ActivityStatusCode.Error, e.Message);
+            throw;
+        }
+    }
+
+    private async Task VisitAsync(PokemonDbContext db, Card card, Activity? visit, CancellationToken ct)
+    {
         await gate.WaitTurnAsync(ct);
+        var started = time.GetTimestamp();
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
         metrics.RecordRequest("detail", fetched.StatusCode);
@@ -121,6 +137,7 @@ public sealed class DetailCrawlLane(
         await WritePageAsync(db, card, page, shapeHash, now, ct);
         metrics.RecordPageParsed();
         metrics.RecordCardVisited();
+        metrics.RecordVisitDuration(time.GetElapsedTime(started));
     }
 
     private async Task WritePageAsync(
