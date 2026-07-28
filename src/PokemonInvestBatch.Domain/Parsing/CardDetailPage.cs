@@ -11,4 +11,7 @@ public sealed record CardDetailPage
 
     /// <summary>Completed sales across all marketplaces and grade buckets.</summary>
     public required IReadOnlyList<SaleRecord> Sales { get; init; }
+
+    /// <summary>CDN hash segment of the product image; the fetch-once key. Null when the card has no photo.</summary>
+    public string? ImageHash { get; init; }
 }

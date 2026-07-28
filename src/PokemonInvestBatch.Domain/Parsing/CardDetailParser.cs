@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using AngleSharp.Dom;
 using AngleSharp.Html.Parser;
 
@@ -8,8 +9,11 @@ namespace PokemonInvestBatch.Domain.Parsing;
 /// Pure parser for a pricecharting.com card detail (<c>/game/...</c>) page.
 /// HTML in, facts out — no I/O, no clock, no database.
 /// </summary>
-public static class CardDetailParser
+public static partial class CardDetailParser
 {
+    [GeneratedRegex(@"images\.pricecharting\.com/([a-z0-9]+)/")]
+    private static partial Regex ProductImageUrl();
+
     private static readonly string[] KnownGraders = ["psa", "cgc"];
 
     // Detail-page mapping only — /console/ set pages reuse these class names
@@ -36,11 +40,13 @@ public static class CardDetailParser
         var population = ParsePopulation(html);
 
         var document = new HtmlParser().ParseDocument(html);
+        var image = ProductImageUrl().Match(html);
         return new CardDetailPage
         {
             Chart = chart,
             Population = population,
             Sales = ParseSales(document),
+            ImageHash = image.Success ? image.Groups[1].Value : null,
         };
     }
 
