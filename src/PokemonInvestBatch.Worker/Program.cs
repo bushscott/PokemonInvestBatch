@@ -82,6 +82,7 @@ builder.Services.AddHostedService<EnumerationLane>();
 builder.Services.AddHostedService<DetailCrawlLane>();
 builder.Services.AddHostedService<CanaryLane>();
 builder.Services.AddHostedService<ImageLane>();
+builder.Services.AddHostedService<StatsLane>();
 
 var host = builder.Build();
 host.Run();

@@ -96,6 +96,40 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Corpus_gauges_report_the_last_stats_sweep()
+    {
+        var (metrics, _) = NewMetrics();
+        using var size = new MetricCollector<long>(metrics.Meter, "crawl.corpus_size");
+        using var visited = new MetricCollector<long>(metrics.Meter, "crawl.corpus_visited");
+        using var images = new MetricCollector<long>(metrics.Meter, "crawl.images_pending");
+
+        metrics.SetCorpusStats(corpusSize: 100_000, corpusVisited: 34_000, imagesPending: 250);
+        size.RecordObservableInstruments();
+        visited.RecordObservableInstruments();
+        images.RecordObservableInstruments();
+
+        Assert.Equal(100_000, size.LastMeasurement!.Value);
+        Assert.Equal(34_000, visited.LastMeasurement!.Value);
+        Assert.Equal(250, images.LastMeasurement!.Value);
+    }
+
+    [Fact]
+    public void Total_rows_gauge_reports_by_kind()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.total_rows");
+
+        metrics.SetTotalRows(prices: 1_500_000, populations: 40_000, sales: 900_000);
+        collector.RecordObservableInstruments();
+
+        var byKind = collector.GetMeasurementSnapshot()
+            .ToDictionary(m => (string)m.Tags["kind"]!, m => m.Value);
+        Assert.Equal(1_500_000, byKind["price"]);
+        Assert.Equal(40_000, byKind["population"]);
+        Assert.Equal(900_000, byKind["sale"]);
+    }
+
+    [Fact]
     public void Quarantines_count_by_reason()
     {
         var (metrics, _) = NewMetrics();

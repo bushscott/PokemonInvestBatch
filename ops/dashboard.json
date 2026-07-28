@@ -1,0 +1,338 @@
+{
+  "name": "Pokemon Scraper",
+  "description": "Crawl progress, yield, and data integrity at a glance. Import: replace accountIds 0 with your account id first.",
+  "permissions": "PUBLIC_READ_WRITE",
+  "pages": [
+    {
+      "name": "Crawl health",
+      "description": "Row 1: now. Row 2: traffic. Row 3: progress. Row 4: data quality. Row 5: mechanics. Row 6: host (delete widgets if empty).",
+      "widgets": [
+        {
+          "title": "Politeness delay (s) — 10 happy, 300 throttled",
+          "layout": { "column": 1, "row": 1, "width": 3, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.delay_seconds`) AS 'seconds between requests' FROM Metric"
+              }
+            ],
+            "thresholds": [
+              { "alertSeverity": "WARNING", "value": 100 },
+              { "alertSeverity": "CRITICAL", "value": 290 }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Lane paused (3-strike)",
+          "layout": { "column": 4, "row": 1, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.lane_paused`) AS 'paused' FROM Metric"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "CRITICAL", "value": 1 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Cards visited, last hour",
+          "layout": { "column": 6, "row": 1, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.cards_visited`) AS 'cards' FROM Metric SINCE 1 hour ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Sets pending walk",
+          "layout": { "column": 8, "row": 1, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.sets_pending`) AS 'sets' FROM Metric"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Queue staleness (days)",
+          "layout": { "column": 10, "row": 1, "width": 3, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.queue_staleness_days`) AS 'oldest card, days' FROM Metric"
+              }
+            ],
+            "thresholds": [
+              { "alertSeverity": "WARNING", "value": 20 },
+              { "alertSeverity": "CRITICAL", "value": 35 }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "HTTP responses by class, 24h",
+          "layout": { "column": 1, "row": 4, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.bar" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.requests`) FROM Metric SINCE 24 hours ago FACET cases(WHERE `status` < 300 AS '2xx', WHERE `status` < 400 AS '3xx', WHERE `status` < 500 AS '4xx', WHERE `status` >= 500 AS '5xx')"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Requests by lane, 24h",
+          "layout": { "column": 5, "row": 4, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.pie" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.requests`) FROM Metric SINCE 24 hours ago FACET lane"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Rows appended by kind",
+          "layout": { "column": 9, "row": 4, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.area" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.rows_appended`) FROM Metric FACET kind TIMESERIES SINCE 24 hours ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Corpus coverage",
+          "layout": { "column": 1, "row": 7, "width": 3, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.corpus_visited`) / latest(`crawl.corpus_size`) * 100 AS '% of known cards visited' FROM Metric"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Total rows in Postgres (only goes up)",
+          "layout": { "column": 4, "row": 7, "width": 5, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.total_rows`) FROM Metric FACET kind TIMESERIES SINCE 7 days ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Days to full pass (at current pace)",
+          "layout": { "column": 9, "row": 7, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'days' FROM Metric SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Images pending",
+          "layout": { "column": 11, "row": 7, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.images_pending`) AS 'images' FROM Metric"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Parse success, 24h",
+          "layout": { "column": 1, "row": 10, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.pages_parsed`) / (sum(`crawl.pages_parsed`) + sum(`crawl.parse_failures`)) * 100 AS '% parsed' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Canary failures, 24h",
+          "layout": { "column": 3, "row": 10, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.canary_failures`) AS 'failures' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "CRITICAL", "value": 1 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Cards quarantined, 24h",
+          "layout": { "column": 5, "row": 10, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.cards_quarantined`) AS 'benched' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Pop anomalies, 24h",
+          "layout": { "column": 7, "row": 10, "width": 2, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.pop_anomalies`) AS 'anomalies' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Yield: rows appended per visit",
+          "layout": { "column": 9, "row": 10, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.rows_appended`) / sum(`crawl.cards_visited`) AS 'rows per visit' FROM Metric TIMESERIES SINCE 7 days ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Monotonicity violations (watch for step changes)",
+          "layout": { "column": 1, "row": 13, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT sum(`crawl.monotonicity_violations`) FROM Metric TIMESERIES SINCE 7 days ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Visit duration p50 / p95 (s)",
+          "layout": { "column": 5, "row": 13, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT percentile(`crawl.visit_duration_seconds`, 50, 95) FROM Metric TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "AIMD delay over time",
+          "layout": { "column": 9, "row": 13, "width": 4, "height": 3 },
+          "visualization": { "id": "viz.line" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`crawl.delay_seconds`) FROM Metric TIMESERIES SINCE 24 hours ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Pi disk used % (infra agent — delete if empty)",
+          "layout": { "column": 1, "row": 16, "width": 6, "height": 3 },
+          "visualization": { "id": "viz.billboard" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(diskUsedPercent) AS '% used' FROM SystemSample"
+              }
+            ],
+            "thresholds": [
+              { "alertSeverity": "WARNING", "value": 70 },
+              { "alertSeverity": "CRITICAL", "value": 80 }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        },
+        {
+          "title": "Worker GC heap by generation (delete if empty)",
+          "layout": { "column": 7, "row": 16, "width": 6, "height": 3 },
+          "visualization": { "id": "viz.area" },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [0],
+                "query": "SELECT latest(`process.runtime.dotnet.gc.heap.size_bytes`) FROM Metric FACET generation TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": { "ignoreTimeRange": false }
+          }
+        }
+      ]
+    }
+  ]
+}

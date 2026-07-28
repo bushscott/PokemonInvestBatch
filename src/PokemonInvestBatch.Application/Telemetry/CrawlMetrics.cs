@@ -26,6 +26,15 @@ public sealed class CrawlMetrics : IDisposable
 
     private int _setsPendingWalk;
 
+    // Refreshed by the stats sweep; gauges so restarts cannot skew them the
+    // way summed delta counters would.
+    private long _corpusSize;
+    private long _corpusVisited;
+    private long _imagesPending;
+    private long _totalPriceRows;
+    private long _totalPopulationRows;
+    private long _totalSaleRows;
+
     public CrawlMetrics(AdaptiveDelay delay)
     {
         Meter = new Meter(MeterName);
@@ -53,6 +62,24 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.sets_pending", () => _setsPendingWalk,
             description: "Sets awaiting their card walk; zero is the only healthy steady state");
+        Meter.CreateObservableGauge(
+            "crawl.corpus_size", () => _corpusSize,
+            description: "Cards known to exist");
+        Meter.CreateObservableGauge(
+            "crawl.corpus_visited", () => _corpusVisited,
+            description: "Cards visited at least once — coverage numerator");
+        Meter.CreateObservableGauge(
+            "crawl.images_pending", () => _imagesPending,
+            description: "Images discovered but not yet fetched");
+        Meter.CreateObservableGauge(
+            "crawl.total_rows", () =>
+            new[]
+            {
+                new Measurement<long>(_totalPriceRows, new KeyValuePair<string, object?>("kind", "price")),
+                new Measurement<long>(_totalPopulationRows, new KeyValuePair<string, object?>("kind", "population")),
+                new Measurement<long>(_totalSaleRows, new KeyValuePair<string, object?>("kind", "sale")),
+            },
+            description: "History rows in Postgres, by kind — the number that only goes up");
 
         // Alarm-bearing counters emit a zero at startup so their series exist
         // from boot — absence is then always detectable (loss-of-signal), and
@@ -104,6 +131,22 @@ public sealed class CrawlMetrics : IDisposable
 
     /// <summary>Refreshed by the enumeration lane each cycle check.</summary>
     public void SetPendingSets(int pending) => _setsPendingWalk = pending;
+
+    /// <summary>Refreshed by the stats sweep each interval.</summary>
+    public void SetCorpusStats(long corpusSize, long corpusVisited, long imagesPending)
+    {
+        _corpusSize = corpusSize;
+        _corpusVisited = corpusVisited;
+        _imagesPending = imagesPending;
+    }
+
+    /// <summary>Refreshed by the stats sweep each interval.</summary>
+    public void SetTotalRows(long prices, long populations, long sales)
+    {
+        _totalPriceRows = prices;
+        _totalPopulationRows = populations;
+        _totalSaleRows = sales;
+    }
 
     public void Dispose() => Meter.Dispose();
 }

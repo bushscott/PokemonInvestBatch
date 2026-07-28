@@ -38,4 +38,7 @@ public sealed record ScraperOptions
 
     /// <summary>Parse-failure fraction over the last 100 detail visits that trips the alarm.</summary>
     public double ParseFailureAlertThreshold { get; init; } = 0.05;
+
+    /// <summary>Cadence of the dashboard-gauge sweep (corpus coverage, row totals).</summary>
+    public int StatsIntervalMinutes { get; init; } = 5;
 }

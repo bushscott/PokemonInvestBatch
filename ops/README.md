@@ -13,6 +13,10 @@ git config core.hooksPath ops/git-hooks   # blocks committing appsettings.Produc
 - **Pi 5 gotcha:** NR's fluent-bit crashes on the default 16K-page kernel
   (`jemalloc: Unsupported system page size`). Fix: `kernel=kernel8.img` in
   /boot/firmware/config.txt (4K pages) + reboot.
+- Dashboard: `ops/dashboard.json`. To import: replace every `"accountIds": [0]`
+  with your account id (it's in the one.newrelic.com URL), then Dashboards →
+  Import dashboard → paste. Row 3 needs the StatsLane gauges (deployed with the
+  worker); Row 6 widgets die gracefully — delete them if they show no data.
 - Integrity metrics: `crawl.monotonicity_violations` (single hits are market
   noise — alert on a step change in the rate, the signature of a silent tier
   remap) and `crawl.pop_anomalies` by grader/kind (spike = census restatement
