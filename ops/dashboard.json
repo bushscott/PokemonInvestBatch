@@ -251,7 +251,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT sum(`crawl.rows_appended`) / sum(`crawl.cards_visited`) AS 'rows per visit' FROM Metric TIMESERIES SINCE 7 days ago"
+                "query": "SELECT sum(`crawl.rows_appended`) / sum(`crawl.cards_visited`) AS 'rows per visit' FROM Metric TIMESERIES SINCE 24 hours ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
