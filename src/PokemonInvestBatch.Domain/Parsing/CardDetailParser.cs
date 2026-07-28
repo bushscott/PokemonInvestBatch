@@ -8,18 +8,15 @@ public static class CardDetailParser
 {
     private static readonly string[] KnownGraders = ["psa", "cgc"];
 
-    public static CardDetailPage Parse(string html)
-    {
-        ValidatePopulationKeys(html);
-        return new CardDetailPage();
-    }
+    public static CardDetailPage Parse(string html) =>
+        new() { Population = ParsePopulation(html) };
 
-    private static void ValidatePopulationKeys(string html)
+    private static PopulationReport? ParsePopulation(string html)
     {
         using var pop = VgpcData.ExtractObject(html, "pop_data");
         if (pop is null)
         {
-            return;
+            return null;
         }
 
         var unknown = pop.RootElement.EnumerateObject()
@@ -33,5 +30,16 @@ public static class CardDetailParser
                 $"pop_data contains unknown grader keys [{string.Join(", ", unknown)}]; " +
                 $"known: [{string.Join(", ", KnownGraders)}]. The census schema has drifted.");
         }
+
+        return new PopulationReport
+        {
+            Psa = ReadGrades(pop.RootElement, "psa"),
+            Cgc = ReadGrades(pop.RootElement, "cgc"),
+        };
     }
+
+    private static int[] ReadGrades(System.Text.Json.JsonElement popData, string grader) =>
+        popData.TryGetProperty(grader, out var grades)
+            ? [.. grades.EnumerateArray().Select(g => g.GetInt32())]
+            : [];
 }
