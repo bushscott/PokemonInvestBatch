@@ -1,0 +1,17 @@
+# /etc/systemd/system/pokemon-invest-batch.service
+# sudo systemctl daemon-reload && sudo systemctl enable --now pokemon-invest-batch
+[Unit]
+Description=PokemonInvestBatch scraper
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+User=pokemon
+WorkingDirectory=/opt/pokemon-invest-batch
+ExecStart=/opt/pokemon-invest-batch/PokemonInvestBatch.Worker
+Environment=DOTNET_ENVIRONMENT=Production
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

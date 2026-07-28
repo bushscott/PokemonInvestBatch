@@ -1,3 +1,9 @@
+# Dev machine, once per clone
+
+```bash
+git config core.hooksPath ops/git-hooks   # blocks committing appsettings.Production.json
+```
+
 # Pi setup
 
 Target: 16GB Raspberry Pi 5, 64-bit Raspberry Pi OS (Debian 12/13), SSD.

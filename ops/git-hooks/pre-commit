@@ -1,0 +1,7 @@
+#!/bin/sh
+# Hard-blocks the secrets file even past a broken .gitignore or `git add -f`.
+if git diff --cached --name-only | grep -q 'appsettings\.Production\.json$'; then
+    echo "BLOCKED: appsettings.Production.json contains secrets and must never be committed." >&2
+    echo "It belongs on the Pi only. See appsettings.Production.example.json." >&2
+    exit 1
+fi
