@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\PokemonInvestBatch.Infrastructure\PokemonInvestBatch.Infrastructure.csproj" />
+    <ProjectReference Include="..\PokemonInvestBatch.Domain.Tests\PokemonInvestBatch.Domain.Tests.csproj" />
   </ItemGroup>
 
 </Project>
