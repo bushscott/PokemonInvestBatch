@@ -36,6 +36,7 @@ public sealed class CrawlMetrics : IDisposable
     private long _totalSaleRows;
     private long _cardsAtCap;
     private long _cardsQuarantinedNow;
+    private long _setsTotal;
 
     public CrawlMetrics(AdaptiveDelay delay)
     {
@@ -73,6 +74,9 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.images_pending", () => _imagesPending,
             description: "Images discovered but not yet fetched");
+        Meter.CreateObservableGauge(
+            "crawl.sets_total", () => _setsTotal,
+            description: "Sets known to exist — the denominator that grows when enumeration discovers a new set");
         Meter.CreateObservableGauge(
             "crawl.cards_at_cap", () => _cardsAtCap,
             description: "Cards with a sale bucket at cap — the scheduler's hard-override watchlist");
@@ -141,11 +145,12 @@ public sealed class CrawlMetrics : IDisposable
     public void SetPendingSets(int pending) => _setsPendingWalk = pending;
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>
-    public void SetCorpusStats(long corpusSize, long corpusVisited, long imagesPending)
+    public void SetCorpusStats(long corpusSize, long corpusVisited, long imagesPending, long setsTotal)
     {
         _corpusSize = corpusSize;
         _corpusVisited = corpusVisited;
         _imagesPending = imagesPending;
+        _setsTotal = setsTotal;
     }
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>

@@ -46,7 +46,8 @@ public sealed class StatsLane(
         metrics.SetCorpusStats(
             corpusSize: await db.Cards.LongCountAsync(ct),
             corpusVisited: await db.Cards.LongCountAsync(c => c.LastVisitedAt != null, ct),
-            imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct));
+            imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct),
+            setsTotal: await db.Sets.LongCountAsync(ct));
 
         var now = time.GetUtcNow();
         metrics.SetSchedulerStats(

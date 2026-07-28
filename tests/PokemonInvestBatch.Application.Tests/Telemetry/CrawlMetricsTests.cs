@@ -102,15 +102,18 @@ public class CrawlMetricsTests
         using var size = new MetricCollector<long>(metrics.Meter, "crawl.corpus_size");
         using var visited = new MetricCollector<long>(metrics.Meter, "crawl.corpus_visited");
         using var images = new MetricCollector<long>(metrics.Meter, "crawl.images_pending");
+        using var sets = new MetricCollector<long>(metrics.Meter, "crawl.sets_total");
 
-        metrics.SetCorpusStats(corpusSize: 100_000, corpusVisited: 34_000, imagesPending: 250);
+        metrics.SetCorpusStats(corpusSize: 100_000, corpusVisited: 34_000, imagesPending: 250, setsTotal: 303);
         size.RecordObservableInstruments();
         visited.RecordObservableInstruments();
         images.RecordObservableInstruments();
+        sets.RecordObservableInstruments();
 
         Assert.Equal(100_000, size.LastMeasurement!.Value);
         Assert.Equal(34_000, visited.LastMeasurement!.Value);
         Assert.Equal(250, images.LastMeasurement!.Value);
+        Assert.Equal(303, sets.LastMeasurement!.Value);
     }
 
     [Fact]

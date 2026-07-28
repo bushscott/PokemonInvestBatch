@@ -55,17 +55,16 @@
           }
         },
         {
-          "title": "Sets pending walk",
+          "title": "Sets pending walk (denominator grows on discovery)",
           "layout": { "column": 8, "row": 1, "width": 2, "height": 3 },
           "visualization": { "id": "viz.billboard" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.sets_pending`) AS 'sets' FROM Metric"
+                "query": "SELECT latest(`crawl.sets_pending`) AS 'pending', latest(`crawl.sets_total`) AS 'of sets' FROM Metric"
               }
             ],
-            "thresholds": [{ "alertSeverity": "WARNING", "value": 1 }],
             "platformOptions": { "ignoreTimeRange": false }
           }
         },
