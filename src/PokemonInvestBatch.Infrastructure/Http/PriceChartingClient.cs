@@ -44,11 +44,11 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         var started = time.GetTimestamp();
         HttpResponseMessage response;
 
-        // Headers and body are timed as separate spans so the dashboard can
+        // Headers and body are timed as separate spans so telemetry can
         // tell "their server is slow to answer" from "the page got huge".
         using (var wait = CrawlTracing.Source.StartActivity("site.wait"))
         {
-            // The dashboard scopes fetch anatomy to card pages via this tag.
+            // Lets telemetry queries scope fetch timings by page kind.
             wait?.SetTag("url.path", request.RequestUri?.OriginalString);
             try
             {

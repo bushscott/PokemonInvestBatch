@@ -20,9 +20,9 @@ public sealed record VisitPriorityOptions
 /// Pure priority scoring for picking the next card to visit. There is no
 /// queue: nothing is lined up anywhere — each pick re-scores candidates
 /// fresh from Postgres and takes the single highest. Tiers, highest first:
-/// never visited → bucket-at-cap (proof of missed sales; dashboard: "cards
-/// selling faster than we can track") → starved past the floor → everyone
-/// else by staleness (days since last visit) × churn (observed sales/day).
+/// never visited → bucket-at-cap (proof sales were missed — the card sells
+/// faster than we can track) → starved past the floor → everyone else by
+/// staleness (days since last visit) × churn (observed sales/day).
 /// </summary>
 public static class VisitPriority
 {

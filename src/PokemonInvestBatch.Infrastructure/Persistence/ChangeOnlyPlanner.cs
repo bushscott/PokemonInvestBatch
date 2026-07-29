@@ -3,12 +3,12 @@ using PokemonInvestBatch.Domain.Parsing;
 namespace PokemonInvestBatch.Infrastructure.Persistence;
 
 /// <summary>
-/// Decides which rows a parsed page adds to history ("change-only append" in
-/// the design; the dashboard says "new rows inserted" — to the database every
-/// write is a brand-new row). A row is created only when its value differs
-/// from the last observation, with "never observed" defaulting to zero.
-/// Nothing is ever edited, overwritten, or deleted; unchanged facts are
-/// never re-written. Pure — the caller supplies last-known values.
+/// Decides which rows a parsed page adds to history ("change-only append":
+/// to the database every write is a brand-new row). A row is created only
+/// when its value differs from the last observation, with "never observed"
+/// defaulting to zero. Nothing is ever edited, overwritten, or deleted;
+/// unchanged facts are never re-written. Pure — the caller supplies
+/// last-known values.
 /// </summary>
 public static class ChangeOnlyPlanner
 {

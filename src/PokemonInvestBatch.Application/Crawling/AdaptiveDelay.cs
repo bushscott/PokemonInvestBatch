@@ -20,8 +20,8 @@ public sealed record AdaptiveDelayOptions
 }
 
 /// <summary>
-/// The courtesy delay (dashboard wording) — the gap we leave between our
-/// requests to the site. AIMD (additive-increase/multiplicative-decrease,
+/// The courtesy delay — the gap we leave between our requests to the site.
+/// AIMD (additive-increase/multiplicative-decrease,
 /// TCP's fairness trick) inverted for politeness: each clean response
 /// tightens the delay 5s toward the 10s floor; any trouble doubles it toward
 /// (or past, per Retry-After) the 300s ceiling. Starts at the ceiling every
@@ -30,7 +30,7 @@ public sealed record AdaptiveDelayOptions
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {
-    /// <summary>Strikes toward the pause; the dashboard's early-warning gauge.</summary>
+    /// <summary>Strikes toward the pause — visible early warning before it trips.</summary>
     public int ConsecutiveFailures { get; private set; }
 
     /// <summary>Starts at the ceiling: a cold start is never a thundering herd.</summary>

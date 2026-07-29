@@ -6,9 +6,9 @@ using PokemonInvestBatch.Infrastructure.Persistence;
 namespace PokemonInvestBatch.Worker.Lanes;
 
 /// <summary>
-/// Refreshes the dashboard gauges — corpus coverage and absolute row totals —
-/// from Postgres. Gauges, not summed counters, so worker restarts can never
-/// skew the "number that only goes up". Exact counts are fine at this scale;
+/// Publishes coverage and absolute row totals from Postgres as gauges.
+/// Gauges, not summed counters, so worker restarts can never skew the
+/// "number that only goes up". Exact counts are fine at this scale;
 /// revisit the interval before the corpus reaches tens of millions of rows.
 /// </summary>
 public sealed class StatsLane(

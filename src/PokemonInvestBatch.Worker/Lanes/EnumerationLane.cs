@@ -9,11 +9,10 @@ using PokemonInvestBatch.Infrastructure.Persistence;
 namespace PokemonInvestBatch.Worker.Lanes;
 
 /// <summary>
-/// Set discovery and cataloging (dashboard wording; "enumeration" and
-/// "walking" in code): category page → sets (minus blacklist) → console
-/// pages paged through 150 cards at a time → card URLs. A "walk" is one
-/// full paging pass that catalogs which cards a set contains. Cataloging
-/// only; no prices are read here by design.
+/// Set discovery and cataloging ("enumeration"): category page → sets
+/// (minus blacklist) → console pages paged through 150 cards at a time →
+/// card URLs. A "walk" is one full paging pass that catalogs which cards a
+/// set contains. Cataloging only; no prices are read here by design.
 ///
 /// Walks are resumable: each set records LastWalkedAt only when its cursor
 /// walk completes, so an interrupted cycle picks up the unwalked sets on the

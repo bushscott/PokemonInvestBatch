@@ -6,9 +6,9 @@ namespace PokemonInvestBatch.Application.Scheduling;
 /// What one visit's sales tell the scheduler: observed churn (sales per day),
 /// and whether a grade bucket provably rolled sales off unseen — the site
 /// keeps only the newest ~30 sales per grade, so a full bucket whose oldest
-/// row is newer than our previous visit means sales were missed. That card is
-/// then "at cap" (dashboard: "cards selling faster than we can track") and
-/// jumps the scheduling order until its buckets calm down.
+/// row is newer than our previous visit means sales were missed. That card
+/// is then "at cap" — selling faster than we can track — and jumps the
+/// scheduling order until its buckets calm down.
 /// </summary>
 public sealed record SalesObservation
 {

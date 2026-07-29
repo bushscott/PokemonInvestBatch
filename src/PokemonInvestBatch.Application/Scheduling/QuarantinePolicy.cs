@@ -1,12 +1,12 @@
 namespace PokemonInvestBatch.Application.Scheduling;
 
 /// <summary>
-/// The retry queue (dashboard wording; "quarantine" in code and columns):
-/// a card whose page repeatedly fails on its own account (parse drift, 404)
-/// must not wedge the crawl — without this it stays the stalest card and is
-/// re-picked every cycle, burning the entire polite budget on one URL.
-/// Three consecutive card-attributable failures earn an exponential time-out
-/// with a scheduled comeback date; one success clears everything.
+/// A retry queue for cards that keep failing: a card whose page repeatedly
+/// fails on its own account (parse drift, 404) must not wedge the crawl —
+/// without this it stays the stalest card and is re-picked every cycle,
+/// burning the entire polite budget on one URL. Three consecutive
+/// card-attributable failures earn an exponential time-out with a scheduled
+/// comeback date; one success clears everything.
 /// </summary>
 public static class QuarantinePolicy
 {

@@ -8,11 +8,10 @@ using PokemonInvestBatch.Infrastructure.Http;
 namespace PokemonInvestBatch.Worker.Lanes;
 
 /// <summary>
-/// The famous-card spot check (dashboard wording; "canary" everywhere else,
-/// as in the miner's bird that keels over first): a handful of famous, liquid
-/// cards fetched every few hours with hard assertions, so a site change
-/// surfaces within hours instead of at the end of a twelve-day pass.
-/// Detection speed decoupled from crawl speed. See GLOSSARY.md.
+/// A canary — the miner's bird that keels over first — is a spot check on a
+/// handful of famous, liquid cards fetched every few hours with hard
+/// assertions, so a site change surfaces within hours instead of at the end
+/// of a twelve-day pass. Detection speed decoupled from crawl speed.
 /// </summary>
 public sealed class CanaryLane(
     PriceChartingClient client,
