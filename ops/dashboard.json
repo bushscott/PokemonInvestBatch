@@ -382,7 +382,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT message FROM Log WHERE message LIKE '%price rows%' SINCE 3 hours ago LIMIT 20"
+                "query": "SELECT `MESSAGE.Message` FROM Log WHERE `MESSAGE.Message` LIKE '%price rows%' OR message LIKE '%price rows%' SINCE 3 hours ago LIMIT 20"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
@@ -396,7 +396,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT * FROM Log WHERE LogLevel IN ('Warning', 'Error', 'Critical') OR message LIKE '%\"LogLevel\":\"Warning\"%' OR message LIKE '%\"LogLevel\":\"Error\"%' OR message LIKE '%\"LogLevel\":\"Critical\"%' SINCE 1 day ago"
+                "query": "SELECT * FROM Log WHERE `MESSAGE.LogLevel` IN ('Warning', 'Error', 'Critical') OR LogLevel IN ('Warning', 'Error', 'Critical') OR message LIKE '%\"LogLevel\":\"Warning\"%' OR message LIKE '%\"LogLevel\":\"Error\"%' OR message LIKE '%\"LogLevel\":\"Critical\"%' SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
