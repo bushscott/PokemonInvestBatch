@@ -99,7 +99,7 @@
           }
         },
         {
-          "title": "Sets pending walk (denominator grows on discovery)",
+          "title": "Set discovery",
           "layout": {
             "column": 6,
             "row": 10,
