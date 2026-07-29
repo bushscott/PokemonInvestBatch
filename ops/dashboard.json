@@ -818,7 +818,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT max(duration.ms) / 1000 AS 'seconds' FROM Span WHERE name = 'card.visit' FACET `card.name` AS 'card', `url.path` AS 'url' SINCE 1 day ago LIMIT 5"
+                "query": "SELECT max(duration.ms) / 1000 AS 'seconds' FROM Span WHERE name = 'card.visit' FACET `card.name` AS 'card', `url.path` AS 'URL' SINCE 1 day ago LIMIT 5"
               }
             ],
             "platformOptions": {
