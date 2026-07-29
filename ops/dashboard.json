@@ -250,7 +250,7 @@
           }
         },
         {
-          "title": "Requests by lane, 24h",
+          "title": "Requests by purpose, 24h",
           "layout": {
             "column": 1,
             "row": 22,
