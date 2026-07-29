@@ -148,6 +148,18 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Worst_case_days_gauge_reports_the_stats_sweep_verdict()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<double>(metrics.Meter, "crawl.worst_case_days");
+
+        metrics.SetWorstCaseDays(9999);
+        collector.RecordObservableInstruments();
+
+        Assert.Equal(9999, collector.LastMeasurement!.Value);
+    }
+
+    [Fact]
     public void Total_rows_gauge_reports_by_kind()
     {
         var (metrics, _) = NewMetrics();

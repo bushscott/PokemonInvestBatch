@@ -43,11 +43,26 @@ public sealed class StatsLane(
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
+        var corpusSize = await db.Cards.LongCountAsync(ct);
+        var corpusVisited = await db.Cards.LongCountAsync(c => c.LastVisitedAt != null, ct);
         metrics.SetCorpusStats(
-            corpusSize: await db.Cards.LongCountAsync(ct),
-            corpusVisited: await db.Cards.LongCountAsync(c => c.LastVisitedAt != null, ct),
+            corpusSize,
+            corpusVisited,
             imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct),
             setsTotal: await db.Sets.LongCountAsync(ct));
+
+        // Worst-case data age. A never-visited card has no observation at
+        // all, so the worst case is unbounded — reported as the 9999
+        // sentinel rather than pretending it is measurable.
+        if (corpusSize > corpusVisited)
+        {
+            metrics.SetWorstCaseDays(9999);
+        }
+        else if (corpusVisited > 0)
+        {
+            var oldest = await db.Cards.MinAsync(c => c.LastVisitedAt, ct);
+            metrics.SetWorstCaseDays((time.GetUtcNow() - oldest!.Value).TotalDays);
+        }
 
         var now = time.GetUtcNow();
         metrics.SetSchedulerStats(

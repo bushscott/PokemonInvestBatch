@@ -128,7 +128,7 @@
           }
         },
         {
-          "title": "Longest-unchecked card (days)",
+          "title": "Worst case: crawl cycles behind",
           "layout": {
             "column": 8,
             "row": 13,
@@ -144,17 +144,17 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.queue_staleness_days`) AS 'days since checked' FROM Metric"
+                "query": "SELECT latest(`crawl.worst_case_days`) / (latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day)) AS 'cycles behind' FROM Metric SINCE 1 day ago"
               }
             ],
             "thresholds": [
               {
                 "alertSeverity": "WARNING",
-                "value": 20
+                "value": 0.75
               },
               {
                 "alertSeverity": "CRITICAL",
-                "value": 35
+                "value": 1
               }
             ],
             "platformOptions": {
@@ -350,7 +350,7 @@
           }
         },
         {
-          "title": "Days to full pass (at current pace)",
+          "title": "Crawl schedule (days, at current pace)",
           "layout": {
             "column": 8,
             "row": 10,
@@ -366,7 +366,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'days' FROM Metric SINCE 1 day ago"
+                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'visit all known', latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day) AS 'revisit cycle' FROM Metric SINCE 1 day ago"
               }
             ],
             "platformOptions": {

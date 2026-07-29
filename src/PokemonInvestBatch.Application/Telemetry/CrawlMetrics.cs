@@ -37,6 +37,7 @@ public sealed class CrawlMetrics : IDisposable
     private long _cardsAtCap;
     private long _cardsQuarantinedNow;
     private long _setsTotal;
+    private double _worstCaseDays;
 
     public CrawlMetrics(AdaptiveDelay delay)
     {
@@ -77,6 +78,9 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.images_pending", () => _imagesPending,
             description: "Images discovered but not yet fetched");
+        Meter.CreateObservableGauge(
+            "crawl.worst_case_days", () => _worstCaseDays,
+            description: "Age of the most-overdue card's data: days since its last visit, or 9999 while any known card has never been visited at all");
         Meter.CreateObservableGauge(
             "crawl.sets_total", () => _setsTotal,
             description: "Sets known to exist — the denominator that grows when enumeration discovers a new set");
@@ -155,6 +159,10 @@ public sealed class CrawlMetrics : IDisposable
         _imagesPending = imagesPending;
         _setsTotal = setsTotal;
     }
+
+    /// <summary>Refreshed by the stats sweep each interval. 9999 is the
+    /// never-visited sentinel — worst case is unbounded, not measurable.</summary>
+    public void SetWorstCaseDays(double days) => _worstCaseDays = days;
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>
     public void SetSchedulerStats(long cardsAtCap, long quarantinedNow)
