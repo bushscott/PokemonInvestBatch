@@ -318,14 +318,14 @@
           }
         },
         {
-          "title": "Worker GC heap by generation (delete if empty)",
+          "title": "Worker GC heap by generation (MB)",
           "layout": { "column": 1, "row": 33, "width": 6, "height": 3 },
           "visualization": { "id": "viz.area" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`process.runtime.dotnet.gc.heap.size_bytes`) FROM Metric FACET generation TIMESERIES SINCE 1 day ago"
+                "query": "SELECT latest(`dotnet.gc.last_collection.heap.size`) / 1e6 FROM Metric FACET `dotnet.gc.heap.generation` TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
