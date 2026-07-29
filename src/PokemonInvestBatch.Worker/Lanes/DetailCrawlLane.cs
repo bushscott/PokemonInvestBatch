@@ -189,7 +189,10 @@ public sealed class DetailCrawlLane(
         metrics.RecordMonotonicityViolations(violations.Count);
         foreach (var violation in violations)
         {
-            logger.LogWarning(
+            // Information, not Warning: a single out-of-order ladder is thin-
+            // market noise and is expected. The alarmable signal is a step
+            // change in the crawl.monotonicity_violations metric, never one card.
+            logger.LogInformation(
                 "Monotonicity violation on card {CardId}: {Lower} {LowerCents}c > {Higher} {HigherCents}c",
                 card.Id, violation.Lower, violation.LowerCents, violation.Higher, violation.HigherCents);
         }
