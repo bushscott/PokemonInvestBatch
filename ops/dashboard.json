@@ -150,7 +150,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.total_rows`) FROM Metric FACET kind TIMESERIES SINCE 7 days ago"
+                "query": "SELECT latest(`crawl.total_rows`) FROM Metric FACET kind TIMESERIES SINCE 24 hours ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
