@@ -424,7 +424,7 @@
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(duration.ms) FROM Span WHERE name IN ('card.parse', 'card.load_history', 'card.write') OR `http.url` LIKE '%pricecharting.com/game/%' OR `url.full` LIKE '%pricecharting.com/game/%' FACET cases(WHERE name = 'card.parse' AS 'parse', WHERE name = 'card.load_history' AS 'load history', WHERE name = 'card.write' AS 'write + commit', WHERE duration.ms >= 0 AS 'site fetch') TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(duration.ms) FROM Span WHERE name IN ('site.wait', 'site.download', 'card.parse', 'card.load_history', 'card.write') FACET cases(WHERE name = 'site.wait' AS 'server wait', WHERE name = 'site.download' AS 'download', WHERE name = 'card.parse' AS 'parse', WHERE name = 'card.load_history' AS 'load history', WHERE name = 'card.write' AS 'write + commit') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }

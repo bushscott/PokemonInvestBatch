@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using PokemonInvestBatch.Application.Telemetry;
+
 namespace PokemonInvestBatch.Infrastructure.Http;
 
 /// <summary>One page fetch, as the lanes see it.</summary>
@@ -40,33 +43,44 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
 
         var started = time.GetTimestamp();
         HttpResponseMessage response;
-        try
+
+        // Headers and body are timed as separate spans so the dashboard can
+        // tell "their server is slow to answer" from "the page got huge".
+        using (var wait = CrawlTracing.Source.StartActivity("site.wait"))
         {
-            response = await http.SendAsync(request, cancellationToken);
-        }
-        catch (Exception e) when (
-            e is HttpRequestException
-            || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
-        {
-            // Connection refused, DNS failure, timeout: status 0 so a dead
-            // site trips the same backoff/pause/canary alarms as a 5xx.
-            return new FetchResult
+            try
             {
-                StatusCode = 0,
-                Latency = time.GetElapsedTime(started),
-            };
+                response = await http.SendAsync(
+                    request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            }
+            catch (Exception e) when (
+                e is HttpRequestException
+                || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                // Connection refused, DNS failure, timeout: status 0 so a dead
+                // site trips the same backoff/pause/canary alarms as a 5xx.
+                wait?.SetStatus(ActivityStatusCode.Error, e.Message);
+                return new FetchResult
+                {
+                    StatusCode = 0,
+                    Latency = time.GetElapsedTime(started),
+                };
+            }
         }
 
         using var _ = response;
-        var latency = time.GetElapsedTime(started);
+        string? html = null;
+        if (response.IsSuccessStatusCode)
+        {
+            using var download = CrawlTracing.Source.StartActivity("site.download");
+            html = await response.Content.ReadAsStringAsync(cancellationToken);
+        }
 
         return new FetchResult
         {
             StatusCode = (int)response.StatusCode,
-            Html = response.IsSuccessStatusCode
-                ? await response.Content.ReadAsStringAsync(cancellationToken)
-                : null,
-            Latency = latency,
+            Html = html,
+            Latency = time.GetElapsedTime(started),
             RetryAfter = response.Headers.RetryAfter?.Delta,
         };
     }
