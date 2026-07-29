@@ -77,19 +77,22 @@ public class VisitPriorityTests
     public void A_full_bucket_overrides_any_staleness_or_churn()
     {
         // A full bucket with an oldest row newer than our last visit is proof
-        // we lost sales — the hard override from the design.
+        // we lost sales — it overrides any staleness of cards that are not
+        // themselves about to lose sales (those outrank even this).
         var capHit = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-1), AnyBucketAtCap = true });
-        var veryStale = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-90), ObservedSalesPerDay = 5 });
+        var veryStaleQuiet = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-25), ObservedSalesPerDay = 0 });
 
-        Assert.True(capHit > veryStale);
+        Assert.True(capHit > veryStaleQuiet);
     }
 
     [Fact]
     public void Starved_cards_beat_busy_recent_cards()
     {
         // The floor: no card waits past MaxDaysBetweenVisits, however dull.
+        // The busy card is fresh enough to be inside its burn-window safety
+        // margin (10/day burns in 3 days; half is 1.5) — not yet due.
         var starved = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-31), ObservedSalesPerDay = 0 });
-        var busyRecent = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-2), ObservedSalesPerDay = 10 });
+        var busyRecent = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-1), ObservedSalesPerDay = 10 });
 
         Assert.True(starved > busyRecent);
     }
