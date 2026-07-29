@@ -486,7 +486,7 @@
           "title": "Pop anomalies, 24h",
           "layout": {
             "column": 1,
-            "row": 19,
+            "row": 33,
             "width": 2,
             "height": 3
           },
@@ -542,7 +542,7 @@
           "title": "Monotonicity violations (watch for step changes)",
           "layout": {
             "column": 3,
-            "row": 19,
+            "row": 33,
             "width": 10,
             "height": 3
           },
