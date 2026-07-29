@@ -126,7 +126,7 @@
         {
           "title": "Queue staleness (days)",
           "layout": {
-            "column": 11,
+            "column": 8,
             "row": 13,
             "width": 2,
             "height": 3
@@ -454,7 +454,7 @@
         {
           "title": "Cards quarantined, 24h",
           "layout": {
-            "column": 9,
+            "column": 6,
             "row": 13,
             "width": 2,
             "height": 3
@@ -651,7 +651,7 @@
         {
           "title": "Cards at sale-cap (scheduler override watchlist)",
           "layout": {
-            "column": 4,
+            "column": 1,
             "row": 13,
             "width": 3,
             "height": 3
@@ -682,7 +682,7 @@
         {
           "title": "Quarantined right now",
           "layout": {
-            "column": 7,
+            "column": 4,
             "row": 13,
             "width": 2,
             "height": 3
@@ -713,7 +713,7 @@
         {
           "title": "New cards discovered per day",
           "layout": {
-            "column": 1,
+            "column": 10,
             "row": 13,
             "width": 3,
             "height": 3
