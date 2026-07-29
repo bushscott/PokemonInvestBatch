@@ -811,7 +811,7 @@
           }
         },
         {
-          "title": "Anatomy of a detail call (avg ms per phase)",
+          "title": "Detail-page request breakdown (avg ms per phase)",
           "layout": {
             "column": 1,
             "row": 4,
