@@ -790,7 +790,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT max(cpuPercent) AS 'scraper (peak)' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
+                "query": "SELECT max(cpuPercent) AS 'scraper (peak)' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": {
@@ -821,7 +821,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT average(memoryResidentSizeBytes) / 16781185024 * 100 AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(memoryResidentSizeBytes) / 16781185024 * 100 AS 'scraper' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": {
@@ -852,7 +852,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT (max(ioReadBytesPerSecond) + max(ioWriteBytesPerSecond)) / 1000 AS 'scraper (peak)' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
+                "query": "SELECT (max(ioReadBytesPerSecond) + max(ioWriteBytesPerSecond)) / 1000 AS 'scraper (peak)' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": {
