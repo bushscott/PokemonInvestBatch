@@ -286,14 +286,14 @@
           }
         },
         {
-          "title": "AIMD delay over time",
+          "title": "Courtesy delay (s), 24h",
           "layout": { "column": 9, "row": 13, "width": 4, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT latest(`crawl.delay_seconds`) FROM Metric TIMESERIES SINCE 48 hours ago"
+                "query": "SELECT latest(`crawl.delay_seconds`) FROM Metric TIMESERIES SINCE 24 hours ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
