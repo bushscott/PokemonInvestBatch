@@ -54,7 +54,7 @@ public sealed class CanaryLane(
 
         await gate.WaitTurnAsync(ct);
         var fetched = await client.GetAsync(path, ct);
-        metrics.RecordRequest("canary", fetched.StatusCode);
+        metrics.RecordRequest("spot check", fetched.StatusCode);
 
         var failures = new List<string>();
         if (fetched.Html is null)

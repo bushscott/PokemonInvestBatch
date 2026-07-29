@@ -86,7 +86,7 @@ public sealed class EnumerationLane(
     {
         await gate.WaitTurnAsync(ct);
         var category = await client.GetAsync(options.Value.CategoryPath, ct);
-        metrics.RecordRequest("enumeration", category.StatusCode);
+        metrics.RecordRequest("set catalog", category.StatusCode);
         if (category.Html is null)
         {
             delay.RecordFailure(category.RetryAfter);
@@ -175,7 +175,7 @@ public sealed class EnumerationLane(
             var fetched = form is null
                 ? await client.GetAsync(path, ct)
                 : await client.PostFormAsync(path, form, ct);
-            metrics.RecordRequest("enumeration", fetched.StatusCode);
+            metrics.RecordRequest("set catalog", fetched.StatusCode);
             if (fetched.Html is null)
             {
                 delay.RecordFailure(fetched.RetryAfter);

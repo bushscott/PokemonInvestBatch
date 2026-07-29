@@ -102,7 +102,7 @@ public sealed class DetailCrawlLane(
         var started = time.GetTimestamp();
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
-        metrics.RecordRequest("detail", fetched.StatusCode);
+        metrics.RecordRequest("card pages", fetched.StatusCode);
 
         if (fetched.Html is null)
         {

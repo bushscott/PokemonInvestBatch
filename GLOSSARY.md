@@ -44,4 +44,5 @@ These words mean exactly one thing everywhere on the dashboard:
 | shape / fingerprint | structure-only hash of a page (layout, not values); a never-seen hash means the site changed its markup — page HTML is archived and an alert fires | `PageFingerprint.cs`, `shapes` table, `/var/lib/pokemon/shapes/` |
 | change-only append | the storage rule: a fact row is written only when its value differs from the last known; nothing is ever edited in place | `ChangeOnlyPlanner.cs`, composite PKs ending in `observed_at` |
 | lane | one of five independent background workers sharing the politeness gate: detail crawl, enumeration, canary, images, stats | `Worker/Lanes/*.cs`, `lane` tag on `crawl.requests` |
+| lane tag values | the `lane` tag on `crawl.requests` uses plain names: `card pages` (detail crawl), `set catalog` (enumeration), `spot check` (canary). Before 2026-07-29 the values were `detail` / `enumeration` / `canary` — queries over old windows see both | "Requests by purpose" pie slices |
 | flex | New Relic's run-a-command-as-metrics mechanism; powers the pending-updates tiles | `ops/newrelic/apt-updates-*` |
