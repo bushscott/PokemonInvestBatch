@@ -400,7 +400,7 @@
           }
         },
         {
-          "title": "Parse success (%), 24h",
+          "title": "Parse failures (%), 24h",
           "layout": {
             "column": 7,
             "row": 1,
@@ -416,12 +416,18 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT sum(`crawl.pages_parsed`) / (sum(`crawl.pages_parsed`) + sum(`crawl.parse_failures`)) * 100 AS '% parsed' FROM Metric SINCE 24 hours ago"
+                "query": "SELECT 100 - (sum(`crawl.pages_parsed`) / (sum(`crawl.pages_parsed`) + sum(`crawl.parse_failures`)) * 100) AS '% failed' FROM Metric SINCE 24 hours ago"
               }
             ],
             "platformOptions": {
               "ignoreTimeRange": false
-            }
+            },
+            "thresholds": [
+              {
+                "alertSeverity": "CRITICAL",
+                "value": 0.001
+              }
+            ]
           }
         },
         {
