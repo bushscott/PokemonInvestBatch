@@ -417,7 +417,7 @@
           }
         },
         {
-          "title": "Anatomy of one visit (avg ms per phase)",
+          "title": "Anatomy of a detail call (avg ms per phase)",
           "layout": { "column": 7, "row": 26, "width": 6, "height": 3 },
           "visualization": { "id": "viz.area" },
           "rawConfiguration": {
