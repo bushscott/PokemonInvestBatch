@@ -421,7 +421,7 @@
           }
         },
         {
-          "title": "Canary failures, 24h",
+          "title": "Famous-card spot checks failing, 24h",
           "layout": {
             "column": 5,
             "row": 1,
