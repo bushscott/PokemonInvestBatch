@@ -462,7 +462,7 @@
           }
         },
         {
-          "title": "Cards put on hold, 24h",
+          "title": "Cards added to retry queue, 24h",
           "layout": {
             "column": 6,
             "row": 13,
@@ -690,7 +690,7 @@
           }
         },
         {
-          "title": "Cards on hold (repeated errors)",
+          "title": "Cards queued for retry (repeated errors)",
           "layout": {
             "column": 4,
             "row": 13,
