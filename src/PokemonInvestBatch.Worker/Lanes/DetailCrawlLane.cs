@@ -83,6 +83,9 @@ public sealed class DetailCrawlLane(
         using var visit = CrawlTracing.Source.StartActivity("card.visit");
         visit?.SetTag("card.id", card.Id);
         visit?.SetTag("card.name", card.Name);
+        // The slowest-visits table shows this so a card's page is one
+        // copy-paste away — dashboards cannot hyperlink out.
+        visit?.SetTag("url.path", card.Url);
 
         try
         {

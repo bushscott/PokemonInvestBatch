@@ -802,7 +802,7 @@
           }
         },
         {
-          "title": "Slowest card visits, 24h",
+          "title": "5 slowest card visits, 24h (seconds)",
           "layout": {
             "column": 9,
             "row": 22,
@@ -810,7 +810,7 @@
             "height": 3
           },
           "visualization": {
-            "id": "viz.bar"
+            "id": "viz.table"
           },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -818,7 +818,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT max(duration.ms) AS 'ms' FROM Span WHERE name = 'card.visit' FACET `card.name` SINCE 1 day ago LIMIT 10"
+                "query": "SELECT max(duration.ms) / 1000 AS 'seconds' FROM Span WHERE name = 'card.visit' FACET `card.name` AS 'card', `url.path` AS 'page (paste after pricecharting.com)' SINCE 1 day ago LIMIT 5"
               }
             ],
             "platformOptions": {
