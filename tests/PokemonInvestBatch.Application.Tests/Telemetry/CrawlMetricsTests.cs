@@ -73,6 +73,22 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Consecutive_failures_gauge_climbs_with_strikes_and_resets_on_success()
+    {
+        var (metrics, delay) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.consecutive_failures");
+
+        delay.RecordFailure();
+        delay.RecordFailure();
+        collector.RecordObservableInstruments();
+        Assert.Equal(2, collector.LastMeasurement!.Value);
+
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(100));
+        collector.RecordObservableInstruments();
+        Assert.Equal(0, collector.LastMeasurement!.Value);
+    }
+
+    [Fact]
     public void Queue_staleness_gauge_reports_what_the_scheduler_last_saw()
     {
         var (metrics, _) = NewMetrics();

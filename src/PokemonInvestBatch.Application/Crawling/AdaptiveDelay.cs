@@ -26,7 +26,8 @@ public sealed record AdaptiveDelayOptions
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {
-    private int _consecutiveFailures;
+    /// <summary>Strikes toward the pause; the dashboard's early-warning gauge.</summary>
+    public int ConsecutiveFailures { get; private set; }
 
     /// <summary>Starts at the ceiling: a cold start is never a thundering herd.</summary>
     public TimeSpan Current { get; private set; } = options.Ceiling;
@@ -42,7 +43,7 @@ public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
             return;
         }
 
-        _consecutiveFailures = 0;
+        ConsecutiveFailures = 0;
         ShouldPause = false;
         var tightened = Current - options.DecreaseStep;
         Current = tightened < options.Floor ? options.Floor : tightened;
@@ -74,7 +75,7 @@ public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 
     private void CountFailure()
     {
-        if (++_consecutiveFailures >= options.FailuresBeforePause)
+        if (++ConsecutiveFailures >= options.FailuresBeforePause)
         {
             ShouldPause = true;
         }

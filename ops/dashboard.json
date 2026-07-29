@@ -43,7 +43,7 @@
           }
         },
         {
-          "title": "Crawl paused (too many site errors)",
+          "title": "Consecutive failed site requests (3 pauses the crawl)",
           "layout": {
             "column": 3,
             "row": 1,
@@ -59,13 +59,17 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.lane_paused`) AS 'paused' FROM Metric"
+                "query": "SELECT latest(`crawl.consecutive_failures`) AS 'in a row' FROM Metric"
               }
             ],
             "thresholds": [
               {
+                "alertSeverity": "WARNING",
+                "value": 0.5
+              },
+              {
                 "alertSeverity": "CRITICAL",
-                "value": 1
+                "value": 2.5
               }
             ],
             "platformOptions": {

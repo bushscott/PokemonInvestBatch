@@ -60,6 +60,9 @@ public sealed class CrawlMetrics : IDisposable
             "crawl.lane_paused", () => delay.ShouldPause ? 1L : 0L,
             description: "1 while the three-strike pause is in force");
         Meter.CreateObservableGauge(
+            "crawl.consecutive_failures", () => (long)delay.ConsecutiveFailures,
+            description: "Strikes toward the three-strike pause; early warning the pause boolean can't give");
+        Meter.CreateObservableGauge(
             "crawl.queue_staleness_days", () => _queueStalenessDays,
             description: "Staleness of the oldest card the scheduler saw");
         Meter.CreateObservableGauge(
