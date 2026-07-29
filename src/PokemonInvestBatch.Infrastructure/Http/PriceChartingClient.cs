@@ -48,6 +48,8 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         // tell "their server is slow to answer" from "the page got huge".
         using (var wait = CrawlTracing.Source.StartActivity("site.wait"))
         {
+            // The dashboard scopes fetch anatomy to card pages via this tag.
+            wait?.SetTag("url.path", request.RequestUri?.OriginalString);
             try
             {
                 response = await http.SendAsync(
@@ -82,6 +84,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         string html;
         using (var download = CrawlTracing.Source.StartActivity("site.download"))
         {
+            download?.SetTag("url.path", request.RequestUri?.OriginalString);
             html = await response.Content.ReadAsStringAsync(cancellationToken);
         }
 
