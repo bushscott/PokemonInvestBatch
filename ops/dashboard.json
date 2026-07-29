@@ -296,7 +296,7 @@
           }
         },
         {
-          "title": "Corpus coverage",
+          "title": "Card coverage",
           "layout": {
             "column": 1,
             "row": 10,
