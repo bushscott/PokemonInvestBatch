@@ -659,7 +659,7 @@
           }
         },
         {
-          "title": "Cards at sale-cap (scheduler override watchlist)",
+          "title": "Cards selling faster than we can track",
           "layout": {
             "column": 1,
             "row": 13,
