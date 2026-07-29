@@ -163,11 +163,11 @@
           "layout": {
             "column": 1,
             "row": 4,
-            "width": 3,
+            "width": 4,
             "height": 3
           },
           "visualization": {
-            "id": "viz.bar"
+            "id": "viz.area"
           },
           "rawConfiguration": {
             "nrqlQueries": [
@@ -175,7 +175,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT sum(`crawl.requests`) FROM Metric SINCE 24 hours ago FACET cases(WHERE `status` < 300 AS '2xx', WHERE `status` < 400 AS '3xx', WHERE `status` < 500 AS '4xx', WHERE `status` >= 500 AS '5xx')"
+                "query": "SELECT sum(`crawl.requests`) FROM Metric FACET cases(WHERE `status` < 300 AS '2xx', WHERE `status` < 400 AS '3xx', WHERE `status` < 500 AS '4xx', WHERE `status` >= 500 AS '5xx') TIMESERIES SINCE 24 hours ago"
               }
             ],
             "platformOptions": {
@@ -186,9 +186,9 @@
         {
           "title": "Requests by lane, 24h",
           "layout": {
-            "column": 4,
+            "column": 5,
             "row": 4,
-            "width": 3,
+            "width": 2,
             "height": 3
           },
           "visualization": {
