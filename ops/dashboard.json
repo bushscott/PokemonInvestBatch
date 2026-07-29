@@ -159,7 +159,7 @@
           }
         },
         {
-          "title": "Security updates",
+          "title": "Server security updates",
           "layout": {
             "column": 9,
             "row": 1,
@@ -190,7 +190,7 @@
           }
         },
         {
-          "title": "Other updates",
+          "title": "Server other updates",
           "layout": {
             "column": 11,
             "row": 1,
