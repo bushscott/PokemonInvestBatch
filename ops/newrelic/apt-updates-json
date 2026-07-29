@@ -1,0 +1,6 @@
+#!/bin/sh
+# Emits pending apt updates as JSON for the nri-flex integration.
+# -s simulates: nothing is ever installed or changed by this script.
+apt-get -s dist-upgrade -o Debug::NoLocking=1 2>/dev/null \
+  | awk '/^Inst/ {t++; if (/Debian-Security|security/) s++}
+         END {printf "{\"totalUpdates\": %d, \"securityUpdates\": %d}\n", t, s}'

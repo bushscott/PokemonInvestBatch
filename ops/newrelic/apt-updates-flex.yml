@@ -1,0 +1,12 @@
+# Pending apt updates -> AptUpdatesSample events, every 6 hours.
+# Install: /etc/newrelic-infra/integrations.d/apt-updates-flex.yml
+# Script:  /usr/local/bin/apt-updates-json (chmod +x)
+integrations:
+  - name: nri-flex
+    interval: 6h
+    config:
+      name: AptUpdates
+      apis:
+        - event_type: AptUpdatesSample
+          commands:
+            - run: /usr/local/bin/apt-updates-json

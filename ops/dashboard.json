@@ -12,7 +12,7 @@
           "layout": {
             "column": 1,
             "row": 1,
-            "width": 3,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -45,7 +45,7 @@
         {
           "title": "Lane paused (3-strike)",
           "layout": {
-            "column": 4,
+            "column": 3,
             "row": 1,
             "width": 2,
             "height": 3
@@ -76,7 +76,7 @@
         {
           "title": "Cards visited, last hour",
           "layout": {
-            "column": 6,
+            "column": 5,
             "row": 1,
             "width": 2,
             "height": 3
@@ -101,7 +101,7 @@
         {
           "title": "Sets pending walk (denominator grows on discovery)",
           "layout": {
-            "column": 8,
+            "column": 7,
             "row": 1,
             "width": 2,
             "height": 3
@@ -126,9 +126,9 @@
         {
           "title": "Queue staleness (days)",
           "layout": {
-            "column": 10,
+            "column": 9,
             "row": 1,
-            "width": 3,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -151,6 +151,68 @@
               {
                 "alertSeverity": "CRITICAL",
                 "value": 35
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Security updates",
+          "layout": {
+            "column": 11,
+            "row": 1,
+            "width": 1,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample"
+              }
+            ],
+            "thresholds": [
+              {
+                "alertSeverity": "CRITICAL",
+                "value": 0.5
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Other updates",
+          "layout": {
+            "column": 12,
+            "row": 1,
+            "width": 1,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT latest(`totalUpdates`) - latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample"
+              }
+            ],
+            "thresholds": [
+              {
+                "alertSeverity": "WARNING",
+                "value": 0.5
               }
             ],
             "platformOptions": {
