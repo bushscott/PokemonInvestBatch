@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Persistence;
 
