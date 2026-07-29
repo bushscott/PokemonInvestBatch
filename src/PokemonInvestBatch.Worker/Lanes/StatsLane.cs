@@ -64,7 +64,23 @@ public sealed class StatsLane(
             metrics.SetWorstCaseDays((time.GetUtcNow() - oldest!.Value).TotalDays);
         }
 
+        // Leading indicator of missed sales: cards whose burn window (days
+        // for their sales rate to fill a ~30-row bucket and start rolling
+        // rows off) is shorter than the current revisit cycle. These cards
+        // survive only by fast-tracking; the count is the pressure gauge.
         var now = time.GetUtcNow();
+        var visitsLastDay = await db.Visits.LongCountAsync(
+            v => v.Kind == PageKind.CardDetail
+                && v.Outcome == VisitOutcome.Parsed
+                && v.FetchedAt >= now.AddDays(-1), ct);
+        if (visitsLastDay > 0 && corpusSize > 0)
+        {
+            var cycleDays = (double)corpusSize / visitsLastDay;
+            var atRiskSalesRate = SalesObservation.BucketCap / cycleDays;
+            metrics.SetCardsAtRisk(await db.Cards.LongCountAsync(
+                c => c.ObservedSalesPerDay > atRiskSalesRate, ct));
+        }
+
         metrics.SetSchedulerStats(
             cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),
             quarantinedNow: await db.Cards.LongCountAsync(c => c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct));

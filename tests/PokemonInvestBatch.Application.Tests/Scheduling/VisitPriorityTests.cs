@@ -2,6 +2,55 @@ using PokemonInvestBatch.Application.Scheduling;
 
 namespace PokemonInvestBatch.Application.Tests.Scheduling;
 
+public class BurnWindowGuaranteeTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 7, 29, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly VisitPriorityOptions Options = new();
+
+    private static CardVisitState Card(double? salesPerDay, int daysSinceVisit, bool atCap = false) =>
+        new()
+        {
+            LastVisitedAt = Now.AddDays(-daysSinceVisit),
+            ObservedSalesPerDay = salesPerDay,
+            AnyBucketAtCap = atCap,
+        };
+
+    [Fact]
+    public void A_card_nearing_its_burn_window_outranks_everything_but_discovery()
+    {
+        // 3 sales/day burns a 30-row bucket in 10 days; at half the window
+        // (5 days) the card is due. Missing it would lose sales forever, so
+        // prevention outranks even cap-hit revisits (already-burned cards).
+        var due = VisitPriority.Score(Card(salesPerDay: 3, daysSinceVisit: 5), Now, Options);
+        var capHit = VisitPriority.Score(Card(salesPerDay: 0.1, daysSinceVisit: 20, atCap: true), Now, Options);
+        var starved = VisitPriority.Score(Card(salesPerDay: 0, daysSinceVisit: 35), Now, Options);
+
+        Assert.True(due > capHit);
+        Assert.True(due > starved);
+    }
+
+    [Fact]
+    public void A_hot_card_recently_visited_scores_like_anyone_else()
+    {
+        // Two days into a ten-day burn window is not yet due: normal
+        // staleness-times-churn scoring applies.
+        var hot = VisitPriority.Score(Card(salesPerDay: 3, daysSinceVisit: 2), Now, Options);
+
+        Assert.Equal(2 * (1 + 3), hot, precision: 5);
+    }
+
+    [Fact]
+    public void A_cold_card_never_triggers_the_guarantee()
+    {
+        // No sales means no burn window — 29 days of staleness stays in the
+        // base tier right up to the starvation floor.
+        var cold = VisitPriority.Score(Card(salesPerDay: 0, daysSinceVisit: 29), Now, Options);
+
+        Assert.True(cold < 1_000_000);
+    }
+}
+
 public class VisitPriorityTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);

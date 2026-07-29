@@ -148,6 +148,18 @@ public class CrawlMetricsTests
     }
 
     [Fact]
+    public void Cards_at_risk_gauge_reports_the_stats_sweep_count()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.cards_at_risk");
+
+        metrics.SetCardsAtRisk(40);
+        collector.RecordObservableInstruments();
+
+        Assert.Equal(40, collector.LastMeasurement!.Value);
+    }
+
+    [Fact]
     public void Worst_case_days_gauge_reports_the_stats_sweep_verdict()
     {
         var (metrics, _) = NewMetrics();

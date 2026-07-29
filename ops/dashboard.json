@@ -130,7 +130,7 @@
         {
           "title": "Worst case: crawl cycles behind",
           "layout": {
-            "column": 8,
+            "column": 9,
             "row": 13,
             "width": 2,
             "height": 3
@@ -464,7 +464,7 @@
         {
           "title": "Cards added to retry queue, 24h",
           "layout": {
-            "column": 6,
+            "column": 7,
             "row": 13,
             "width": 2,
             "height": 3
@@ -667,9 +667,9 @@
         {
           "title": "Cards selling faster than we can track",
           "layout": {
-            "column": 1,
+            "column": 3,
             "row": 13,
-            "width": 3,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -698,7 +698,7 @@
         {
           "title": "Cards queued for retry (repeated errors)",
           "layout": {
-            "column": 4,
+            "column": 5,
             "row": 13,
             "width": 2,
             "height": 3
@@ -729,9 +729,9 @@
         {
           "title": "New cards discovered per day",
           "layout": {
-            "column": 10,
+            "column": 11,
             "row": 13,
-            "width": 3,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -937,6 +937,31 @@
                   6565679
                 ],
                 "query": "SELECT (max(ioReadBytesPerSecond) + max(ioWriteBytesPerSecond)) / 1000 AS 'scraper (peak)' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Cards at risk of missing sales",
+          "layout": {
+            "column": 1,
+            "row": 13,
+            "width": 2,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT latest(`crawl.cards_at_risk`) AS 'cards' FROM Metric SINCE 1 day ago"
               }
             ],
             "platformOptions": {
