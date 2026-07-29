@@ -221,7 +221,7 @@
           }
         },
         {
-          "title": "HTTP responses by class, 24h",
+          "title": "HTTP responses by status code, 24h",
           "layout": {
             "column": 5,
             "row": 4,
