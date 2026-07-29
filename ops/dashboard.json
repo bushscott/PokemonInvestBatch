@@ -128,7 +128,7 @@
           }
         },
         {
-          "title": "Queue staleness (days)",
+          "title": "Longest-unchecked card (days)",
           "layout": {
             "column": 8,
             "row": 13,
@@ -144,7 +144,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.queue_staleness_days`) AS 'oldest card, days' FROM Metric"
+                "query": "SELECT latest(`crawl.queue_staleness_days`) AS 'days since checked' FROM Metric"
               }
             ],
             "thresholds": [
