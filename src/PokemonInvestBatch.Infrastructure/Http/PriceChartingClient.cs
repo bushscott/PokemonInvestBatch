@@ -69,10 +69,19 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         }
 
         using var _ = response;
-        string? html = null;
-        if (response.IsSuccessStatusCode)
+        if (!response.IsSuccessStatusCode)
         {
-            using var download = CrawlTracing.Source.StartActivity("site.download");
+            return new FetchResult
+            {
+                StatusCode = (int)response.StatusCode,
+                Latency = time.GetElapsedTime(started),
+                RetryAfter = response.Headers.RetryAfter?.Delta,
+            };
+        }
+
+        string html;
+        using (var download = CrawlTracing.Source.StartActivity("site.download"))
+        {
             html = await response.Content.ReadAsStringAsync(cancellationToken);
         }
 
