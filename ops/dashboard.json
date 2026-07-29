@@ -462,7 +462,7 @@
           }
         },
         {
-          "title": "Cards quarantined, 24h",
+          "title": "Cards put on hold, 24h",
           "layout": {
             "column": 6,
             "row": 13,
@@ -690,7 +690,7 @@
           }
         },
         {
-          "title": "Quarantined right now",
+          "title": "Cards on hold (repeated errors)",
           "layout": {
             "column": 4,
             "row": 13,
