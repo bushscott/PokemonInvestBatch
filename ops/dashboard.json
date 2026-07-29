@@ -5,7 +5,7 @@
   "pages": [
     {
       "name": "Crawl health",
-      "description": "Row 1: now. Row 2: traffic. Row 3: progress. Row 4: data quality. Row 5: mechanics. Row 6: host (delete widgets if empty).",
+      "description": "Rows: alarms | progress | growth | integrity+scheduler | site relations | call performance | the Pi | logs.",
       "widgets": [
         {
           "title": "Politeness delay (s) \u2014 10 happy, 300 throttled",
@@ -76,8 +76,8 @@
         {
           "title": "Cards visited, last hour",
           "layout": {
-            "column": 5,
-            "row": 1,
+            "column": 6,
+            "row": 4,
             "width": 2,
             "height": 3
           },
@@ -101,8 +101,8 @@
         {
           "title": "Sets pending walk (denominator grows on discovery)",
           "layout": {
-            "column": 7,
-            "row": 1,
+            "column": 4,
+            "row": 4,
             "width": 2,
             "height": 3
           },
@@ -224,7 +224,7 @@
           "title": "HTTP responses by class, 24h",
           "layout": {
             "column": 1,
-            "row": 4,
+            "row": 13,
             "width": 4,
             "height": 3
           },
@@ -249,7 +249,7 @@
           "title": "Requests by lane, 24h",
           "layout": {
             "column": 5,
-            "row": 4,
+            "row": 13,
             "width": 3,
             "height": 3
           },
@@ -273,9 +273,9 @@
         {
           "title": "Rows appended by kind",
           "layout": {
-            "column": 8,
-            "row": 4,
-            "width": 5,
+            "column": 1,
+            "row": 7,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -299,7 +299,7 @@
           "title": "Corpus coverage",
           "layout": {
             "column": 1,
-            "row": 7,
+            "row": 4,
             "width": 3,
             "height": 3
           },
@@ -325,7 +325,7 @@
           "layout": {
             "column": 4,
             "row": 7,
-            "width": 5,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -348,8 +348,8 @@
         {
           "title": "Days to full pass (at current pace)",
           "layout": {
-            "column": 9,
-            "row": 7,
+            "column": 8,
+            "row": 4,
             "width": 2,
             "height": 3
           },
@@ -373,9 +373,9 @@
         {
           "title": "Images pending",
           "layout": {
-            "column": 11,
-            "row": 7,
-            "width": 2,
+            "column": 10,
+            "row": 4,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -398,8 +398,8 @@
         {
           "title": "Parse success (%), 24h",
           "layout": {
-            "column": 1,
-            "row": 10,
+            "column": 7,
+            "row": 1,
             "width": 2,
             "height": 3
           },
@@ -423,8 +423,8 @@
         {
           "title": "Canary failures, 24h",
           "layout": {
-            "column": 3,
-            "row": 10,
+            "column": 5,
+            "row": 1,
             "width": 2,
             "height": 3
           },
@@ -454,7 +454,7 @@
         {
           "title": "Cards quarantined, 24h",
           "layout": {
-            "column": 5,
+            "column": 3,
             "row": 10,
             "width": 2,
             "height": 3
@@ -485,7 +485,7 @@
         {
           "title": "Pop anomalies, 24h",
           "layout": {
-            "column": 7,
+            "column": 1,
             "row": 10,
             "width": 2,
             "height": 3
@@ -516,9 +516,9 @@
         {
           "title": "Yield: rows appended per visit",
           "layout": {
-            "column": 9,
-            "row": 10,
-            "width": 4,
+            "column": 10,
+            "row": 7,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -541,8 +541,8 @@
         {
           "title": "Monotonicity violations (watch for step changes)",
           "layout": {
-            "column": 1,
-            "row": 13,
+            "column": 9,
+            "row": 10,
             "width": 4,
             "height": 3
           },
@@ -566,8 +566,8 @@
         {
           "title": "Visit duration p50 / p95 (s)",
           "layout": {
-            "column": 5,
-            "row": 13,
+            "column": 1,
+            "row": 16,
             "width": 4,
             "height": 3
           },
@@ -591,9 +591,9 @@
         {
           "title": "Courtesy delay (s), 24h",
           "layout": {
-            "column": 9,
+            "column": 8,
             "row": 13,
-            "width": 4,
+            "width": 5,
             "height": 3
           },
           "visualization": {
@@ -617,7 +617,7 @@
           "title": "Pi disk used (%)",
           "layout": {
             "column": 1,
-            "row": 16,
+            "row": 19,
             "width": 2,
             "height": 3
           },
@@ -651,9 +651,9 @@
         {
           "title": "Cards at sale-cap (scheduler override watchlist)",
           "layout": {
-            "column": 1,
-            "row": 19,
-            "width": 3,
+            "column": 5,
+            "row": 10,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -676,9 +676,9 @@
         {
           "title": "Quarantined right now",
           "layout": {
-            "column": 4,
-            "row": 19,
-            "width": 3,
+            "column": 7,
+            "row": 10,
+            "width": 2,
             "height": 3
           },
           "visualization": {
@@ -708,8 +708,8 @@
           "title": "New cards discovered per day",
           "layout": {
             "column": 7,
-            "row": 19,
-            "width": 6,
+            "row": 7,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -782,9 +782,9 @@
         {
           "title": "Slowest card visits, 24h",
           "layout": {
-            "column": 1,
-            "row": 30,
-            "width": 6,
+            "column": 9,
+            "row": 16,
+            "width": 4,
             "height": 3
           },
           "visualization": {
@@ -807,9 +807,9 @@
         {
           "title": "Anatomy of a detail call (avg ms per phase)",
           "layout": {
-            "column": 7,
-            "row": 30,
-            "width": 6,
+            "column": 5,
+            "row": 16,
+            "width": 4,
             "height": 3
           },
           "visualization": {
@@ -833,7 +833,7 @@
           "title": "Pi CPU (%): host vs scraper",
           "layout": {
             "column": 3,
-            "row": 16,
+            "row": 19,
             "width": 4,
             "height": 3
           },
@@ -864,7 +864,7 @@
           "title": "Pi memory (%): host vs scraper",
           "layout": {
             "column": 7,
-            "row": 16,
+            "row": 19,
             "width": 3,
             "height": 3
           },
@@ -895,7 +895,7 @@
           "title": "Pi disk I/O (KB/s): host vs scraper",
           "layout": {
             "column": 10,
-            "row": 16,
+            "row": 19,
             "width": 3,
             "height": 3
           },
