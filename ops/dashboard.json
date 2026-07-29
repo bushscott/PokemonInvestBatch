@@ -275,7 +275,7 @@
           }
         },
         {
-          "title": "Rows appended by kind",
+          "title": "New rows inserted: prices, populations, sales",
           "layout": {
             "column": 1,
             "row": 16,
