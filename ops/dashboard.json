@@ -275,7 +275,7 @@
           }
         },
         {
-          "title": "New rows inserted, by type",
+          "title": "New rows inserted",
           "layout": {
             "column": 1,
             "row": 16,
