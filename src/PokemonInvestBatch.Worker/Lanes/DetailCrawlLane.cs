@@ -12,9 +12,11 @@ using PokemonInvestBatch.Infrastructure.Persistence;
 namespace PokemonInvestBatch.Worker.Lanes;
 
 /// <summary>
-/// The main lane: picks the highest-priority card, fetches its detail page
-/// through the shared polite gate, and writes everything the page contains
-/// in one transaction. Nothing is written from a page that failed any check.
+/// The main lane. A "visit" is the whole errand for one card — fetch its
+/// detail page (one HTTP request) through the shared polite gate, parse it,
+/// write everything it contains in one transaction, mark the card checked.
+/// Nothing is written from a page that failed any check. See GLOSSARY.md
+/// for the visit/request vocabulary.
 /// </summary>
 public sealed class DetailCrawlLane(
     IDbContextFactory<PokemonDbContext> dbFactory,

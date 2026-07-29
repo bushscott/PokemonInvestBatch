@@ -4,9 +4,12 @@ namespace PokemonInvestBatch.Domain.Parsing;
 public readonly record struct MonotonicityViolation(PriceTier Lower, PriceTier Higher, int LowerCents, int HigherCents);
 
 /// <summary>
-/// Value invariant (integrity layer 4): higher grades cannot be cheaper than
-/// lower grades. A single violation is market noise; a corpus-wide step
-/// change in the violation rate is a silent tier remap.
+/// Value invariant (integrity layer 4): a higher grade selling cheaper than
+/// a lower grade (dashboard wording). A single violation is thin-market
+/// noise — a stale high sale on one tier vs a fresh low sale on another —
+/// and is expected; only a step change in the rate across all cards matters,
+/// because that means the site silently remapped which chart series is
+/// which grade while every page still parses cleanly.
 /// </summary>
 public static class GradeMonotonicity
 {

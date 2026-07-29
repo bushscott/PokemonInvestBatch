@@ -20,9 +20,13 @@ public sealed record AdaptiveDelayOptions
 }
 
 /// <summary>
-/// AIMD delay controller, inverted for politeness: clean responses tighten
-/// the delay additively toward the floor; any trouble multiplies it toward
-/// (or past, per Retry-After) the ceiling. Pure state — no clock, no I/O.
+/// The courtesy delay (dashboard wording) — the gap we leave between our
+/// requests to the site. AIMD (additive-increase/multiplicative-decrease,
+/// TCP's fairness trick) inverted for politeness: each clean response
+/// tightens the delay 5s toward the 10s floor; any trouble doubles it toward
+/// (or past, per Retry-After) the 300s ceiling. Starts at the ceiling every
+/// process start, so a deploy costs ~2.5h of slow ramp — by design.
+/// Pure state — no clock, no I/O.
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {

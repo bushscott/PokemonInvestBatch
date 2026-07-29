@@ -14,11 +14,12 @@ public readonly record struct PopulationAnomaly(
     string Grader, short Grade, int Previous, int Current, PopulationAnomalyKind Kind);
 
 /// <summary>
-/// Value invariant (integrity layer 4): a graded population only grows, and
-/// only at grading pace. PSA restated its census ~June 2026 (Charizard PSA 10
-/// went 397 → 99,246 overnight) — such jumps are the source changing its
-/// methodology, not the market, and must be flagged so downstream analytics
-/// never mistake a restatement for demand.
+/// Value invariant (integrity layer 4): an impossible census change
+/// (dashboard wording). A graded population only grows — graded cards do not
+/// become ungraded — and only at grading pace. PSA restated its census
+/// ~June 2026 (Charizard PSA 10 went 397 → 99,246 overnight); such jumps are
+/// the grader changing how it counts, not the market, and must be flagged so
+/// downstream analytics never mistake a restatement for demand.
 /// </summary>
 public static class PopulationRestatement
 {

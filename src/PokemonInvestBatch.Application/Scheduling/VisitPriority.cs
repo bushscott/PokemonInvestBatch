@@ -1,6 +1,6 @@
 namespace PokemonInvestBatch.Application.Scheduling;
 
-/// <summary>Scheduler view of a card — the three columns the queue reads.</summary>
+/// <summary>Scheduler view of a card — the three columns scoring reads.</summary>
 public sealed record CardVisitState
 {
     public DateTimeOffset? LastVisitedAt { get; init; }
@@ -17,9 +17,12 @@ public sealed record VisitPriorityOptions
 }
 
 /// <summary>
-/// Pure priority scoring for the adaptive queue. Tiers, highest first:
-/// never visited → bucket-at-cap (proof of missed sales) → starved past the
-/// floor → everyone else by staleness × churn.
+/// Pure priority scoring for picking the next card to visit. There is no
+/// queue: nothing is lined up anywhere — each pick re-scores candidates
+/// fresh from Postgres and takes the single highest. Tiers, highest first:
+/// never visited → bucket-at-cap (proof of missed sales; dashboard: "cards
+/// selling faster than we can track") → starved past the floor → everyone
+/// else by staleness (days since last visit) × churn (observed sales/day).
 /// </summary>
 public static class VisitPriority
 {

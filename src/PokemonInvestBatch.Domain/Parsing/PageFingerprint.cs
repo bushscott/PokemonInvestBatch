@@ -6,9 +6,10 @@ using System.Text.RegularExpressions;
 namespace PokemonInvestBatch.Domain.Parsing;
 
 /// <summary>
-/// A structural fingerprint of a page: the names of things, never their
-/// values. Prices, dates, and sales change every visit; the shape should
-/// not — a hash never seen before is the site telling us it changed.
+/// A structural fingerprint of a page (its "shape"): the names of things,
+/// never their values. Prices, dates, and sales change every visit; the
+/// shape should not — a hash never seen before is the site telling us it
+/// changed its markup, which archives the HTML and raises an alert.
 /// </summary>
 public sealed partial record PageFingerprint
 {
