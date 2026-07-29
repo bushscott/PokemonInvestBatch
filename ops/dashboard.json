@@ -449,18 +449,18 @@
           }
         },
         {
-          "title": "Pi memory (MB): host vs scraper",
+          "title": "Pi memory (%): host vs scraper",
           "layout": { "column": 7, "row": 16, "width": 3, "height": 3 },
           "visualization": { "id": "viz.line" },
           "rawConfiguration": {
             "nrqlQueries": [
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(memoryUsedBytes) / 1e6 AS 'host' FROM SystemSample TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(memoryUsedBytes) / average(memoryTotalBytes) * 100 AS 'host' FROM SystemSample TIMESERIES SINCE 1 day ago"
               },
               {
                 "accountIds": [6565679],
-                "query": "SELECT average(memoryResidentSizeBytes) / 1e6 AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(memoryResidentSizeBytes) / 16781185024 * 100 AS 'scraper' FROM ProcessSample WHERE processDisplayName LIKE 'PokemonInvestBa%' TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": { "ignoreTimeRange": false }
