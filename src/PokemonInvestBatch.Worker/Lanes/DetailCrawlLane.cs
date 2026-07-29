@@ -107,6 +107,9 @@ public sealed class DetailCrawlLane(
         if (fetched.Html is null)
         {
             RecordHttpTrouble(fetched);
+            logger.LogWarning(
+                "Card {CardId} ({Name}) fetch returned HTTP {Status}",
+                card.Id, card.Name, fetched.StatusCode);
             visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, shapeHash: null, now));
             if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))

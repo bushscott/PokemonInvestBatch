@@ -161,7 +161,10 @@ public sealed class EnumerationLane(
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var set = await db.Sets.SingleAsync(s => s.Id == setId, ct);
 
-        var path = $"/console/{Uri.EscapeDataString(set.Slug)}";
+        // Slugs are stored verbatim from the site's own hrefs, which are
+        // already URL-encoded (champion%27s-path). Encoding again turns %27
+        // into %2527 and 404s every set with an apostrophe in its name.
+        var path = $"/console/{set.Slug}";
         IReadOnlyDictionary<string, string>? form = null;
         var pages = 0;
         var seen = 0;
