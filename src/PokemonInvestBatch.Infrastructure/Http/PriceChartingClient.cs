@@ -85,7 +85,24 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         using (var download = CrawlTracing.Source.StartActivity("site.download"))
         {
             download?.SetTag("url.path", request.RequestUri?.OriginalString);
-            html = await response.Content.ReadAsStringAsync(cancellationToken);
+            try
+            {
+                html = await response.Content.ReadAsStringAsync(cancellationToken);
+            }
+            catch (Exception e) when (
+                e is HttpRequestException or IOException
+                || (e is OperationCanceledException && !cancellationToken.IsCancellationRequested))
+            {
+                // Headers promised a page; the connection died mid-body.
+                // Same contract as a dead site: status 0 into the AIMD
+                // machinery, never an unhandled crash in a lane.
+                download?.SetStatus(ActivityStatusCode.Error, e.Message);
+                return new FetchResult
+                {
+                    StatusCode = 0,
+                    Latency = time.GetElapsedTime(started),
+                };
+            }
         }
 
         return new FetchResult

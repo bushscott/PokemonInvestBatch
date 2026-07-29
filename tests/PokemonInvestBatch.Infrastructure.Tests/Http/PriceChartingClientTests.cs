@@ -99,6 +99,58 @@ public class PriceChartingClientTests
         Assert.Null(result.Html);
     }
 
+    private sealed class DyingBodyStream : Stream
+    {
+        public override bool CanRead => true;
+
+        public override bool CanSeek => false;
+
+        public override bool CanWrite => false;
+
+        public override long Length => throw new NotSupportedException();
+
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            throw new IOException("connection reset mid-body");
+
+        public override void Flush()
+        {
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+
+        public override void SetLength(long value) => throw new NotSupportedException();
+
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
+    [Fact]
+    public async Task A_body_that_dies_mid_download_is_a_failed_fetch_not_an_exception()
+    {
+        // Headers said 200, then the connection reset while streaming the
+        // body. Same contract as a dead site: status 0, no crash, so the
+        // AIMD backoff owns it instead of the lane's catch-all.
+        var response = new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(new DyingBodyStream()),
+        };
+        var http = new HttpClient(new RecordingHandler(response))
+        {
+            BaseAddress = new Uri("https://www.pricecharting.com"),
+        };
+        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+
+        var result = await client.GetAsync("/game/x", CancellationToken.None);
+
+        Assert.Equal(0, result.StatusCode);
+        Assert.Null(result.Html);
+    }
+
     [Fact]
     public async Task Cancellation_still_propagates()
     {
