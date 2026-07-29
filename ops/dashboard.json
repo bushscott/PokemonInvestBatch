@@ -275,7 +275,7 @@
           }
         },
         {
-          "title": "New rows inserted: prices, populations, sales",
+          "title": "New rows inserted, by type",
           "layout": {
             "column": 1,
             "row": 16,
