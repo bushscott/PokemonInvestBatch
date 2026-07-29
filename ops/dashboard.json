@@ -325,7 +325,7 @@
           }
         },
         {
-          "title": "Total rows in Postgres (only goes up)",
+          "title": "Total rows in Postgres",
           "layout": {
             "column": 5,
             "row": 16,
