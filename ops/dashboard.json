@@ -590,7 +590,13 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT percentile(`crawl.visit_duration_seconds`, 50, 95) FROM Metric TIMESERIES SINCE 1 day ago"
+                "query": "SELECT percentile(`crawl.visit_duration_seconds`, 50) AS 'p50 duration (s)' FROM Metric TIMESERIES SINCE 1 day ago"
+              },
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT percentile(`crawl.visit_duration_seconds`, 95) AS 'p95 duration (s)' FROM Metric TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": {
