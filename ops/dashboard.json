@@ -179,7 +179,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample"
+                "query": "SELECT latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample SINCE 1 day ago"
               }
             ],
             "thresholds": [
@@ -210,7 +210,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`totalUpdates`) - latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample"
+                "query": "SELECT latest(`totalUpdates`) - latest(`securityUpdates`) AS 'pending' FROM AptUpdatesSample SINCE 1 day ago"
               }
             ],
             "thresholds": [
