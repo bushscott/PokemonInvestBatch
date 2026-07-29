@@ -524,7 +524,7 @@
           }
         },
         {
-          "title": "Yield: rows appended per visit",
+          "title": "New rows inserted per card visit",
           "layout": {
             "column": 9,
             "row": 16,
