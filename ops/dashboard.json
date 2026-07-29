@@ -188,7 +188,7 @@
           "layout": {
             "column": 5,
             "row": 4,
-            "width": 2,
+            "width": 3,
             "height": 3
           },
           "visualization": {
@@ -211,9 +211,9 @@
         {
           "title": "Rows appended by kind",
           "layout": {
-            "column": 7,
+            "column": 8,
             "row": 4,
-            "width": 6,
+            "width": 5,
             "height": 3
           },
           "visualization": {
