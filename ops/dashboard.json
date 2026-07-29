@@ -43,7 +43,7 @@
           }
         },
         {
-          "title": "Lane paused (3-strike)",
+          "title": "Crawl paused (too many site errors)",
           "layout": {
             "column": 3,
             "row": 1,
