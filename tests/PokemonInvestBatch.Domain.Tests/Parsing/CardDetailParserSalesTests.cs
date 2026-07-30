@@ -71,6 +71,7 @@ public class CardDetailParserSalesTests
         // A sixth marketplace appearing must alert, never be silently dropped.
         const string html = """
             <script>VGPC.chart_data = {"used":[[1606806000000,100]]};</script>
+            <a id="dropdown_selected_currency">USD</a>
             <select id="completed-auctions-condition">
               <option value="completed-auctions-used">Ungraded (1)</option>
             </select>
@@ -160,6 +161,7 @@ public class CardDetailParserSalesTests
         string price = "$10.00",
         string title = "Something") => $$"""
         <script>VGPC.chart_data = {"used":[[1606806000000,100]]};</script>
+        <a id="dropdown_selected_currency">USD</a>
         <select id="completed-auctions-condition">
           <option value="completed-auctions-used">Ungraded (1)</option>
         </select>

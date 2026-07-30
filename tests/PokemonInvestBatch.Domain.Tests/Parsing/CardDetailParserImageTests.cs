@@ -18,7 +18,10 @@ public class CardDetailParserImageTests
     [Fact]
     public void Pages_without_a_product_image_yield_null()
     {
-        const string html = """<script>VGPC.chart_data = {"used":[[1606806000000,100]]};</script>""";
+        const string html = """
+            <script>VGPC.chart_data = {"used":[[1606806000000,100]]};</script>
+            <a id="dropdown_selected_currency">USD</a>
+            """;
 
         Assert.Null(CardDetailParser.Parse(html).ImageHash);
     }

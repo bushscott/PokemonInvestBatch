@@ -57,6 +57,7 @@ public static partial class CardDetailParser
         var population = ParsePopulation(html);
 
         var document = new HtmlParser().ParseDocument(html);
+        AssertUsd(document);
         var image = ProductImageUrl().Match(html);
         return new CardDetailPage
         {
@@ -65,6 +66,23 @@ public static partial class CardDetailParser
             Sales = ParseSales(document),
             ImageHash = image.Success ? image.Groups[1].Value : null,
         };
+    }
+
+    /// <summary>Every cent stored assumes USD; the server renders USD and
+    /// converts client-side, so the header's selected currency is the page's
+    /// own statement of what its prices mean. Element verified present and
+    /// "USD" in captures from 2024 through 2026. If it ever disappears we
+    /// stop writing prices rather than write unprovable ones.</summary>
+    private static void AssertUsd(IDocument document)
+    {
+        var currency = document.QuerySelector("#dropdown_selected_currency")?.TextContent.Trim()
+            ?? throw new SchemaDriftException(
+                "The currency selector is gone — we can no longer prove prices are USD.");
+        if (currency != "USD")
+        {
+            throw new SchemaDriftException(
+                $"Page rendered in {currency}, not USD — every price on it would be stored wrong.");
+        }
     }
 
     private static IReadOnlyList<SaleRecord> ParseSales(IDocument document)
