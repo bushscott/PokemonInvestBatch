@@ -25,16 +25,17 @@ public sealed record VisitPriorityOptions
 /// Pure priority scoring for picking the next card to visit. There is no
 /// queue: nothing is lined up anywhere — each pick re-scores candidates
 /// fresh from Postgres and takes the single highest. Tiers, highest first:
-/// never visited → due by burn window (sales will start rolling off the
-/// site's ~30-row bucket if we wait — the zero-missed-sales guarantee) →
+/// due by burn window (sales will start rolling off the site's ~30-row
+/// bucket if we wait — the zero-missed-sales guarantee) → never visited →
 /// bucket-at-cap (proof sales were already missed) → starved past the floor
 /// → everyone else by staleness (days since last visit) × churn (observed
-/// sales/day).
+/// sales/day). Prevention outranks discovery: an unvisited backlog (first
+/// pass, a new set) must never make a known-hot card lose sales.
 /// </summary>
 public static class VisitPriority
 {
-    private const double UnvisitedTier = 3_000_000;
-    private const double BurnWindowDueTier = 2_500_000;
+    private const double BurnWindowDueTier = 3_000_000;
+    private const double UnvisitedTier = 2_500_000;
     private const double CapHitTier = 2_000_000;
     private const double StarvedTier = 1_000_000;
 

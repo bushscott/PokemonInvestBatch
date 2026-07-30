@@ -17,15 +17,19 @@ public class BurnWindowGuaranteeTests
         };
 
     [Fact]
-    public void A_card_nearing_its_burn_window_outranks_everything_but_discovery()
+    public void A_card_nearing_its_burn_window_outranks_everything_including_discovery()
     {
         // 3 sales/day burns a 30-row bucket in 10 days; at half the window
         // (5 days) the card is due. Missing it would lose sales forever, so
-        // prevention outranks even cap-hit revisits (already-burned cards).
+        // prevention outranks everything — even never-visited cards. A large
+        // unvisited backlog (first pass, a freshly discovered set) must not
+        // suspend the zero-missed-sales guarantee.
         var due = VisitPriority.Score(Card(salesPerDay: 3, daysSinceVisit: 5), Now, Options);
+        var unvisited = VisitPriority.Score(new CardVisitState { LastVisitedAt = null }, Now, Options);
         var capHit = VisitPriority.Score(Card(salesPerDay: 0.1, daysSinceVisit: 20, atCap: true), Now, Options);
         var starved = VisitPriority.Score(Card(salesPerDay: 0, daysSinceVisit: 35), Now, Options);
 
+        Assert.True(due > unvisited);
         Assert.True(due > capHit);
         Assert.True(due > starved);
     }
@@ -60,16 +64,24 @@ public class VisitPriorityTests
     private static double Score(CardVisitState state) => VisitPriority.Score(state, Now, Options);
 
     [Fact]
-    public void Never_visited_cards_come_before_everything_else()
+    public void Never_visited_cards_come_before_everything_except_a_due_card()
     {
         var unvisited = Score(new CardVisitState { LastVisitedAt = null });
+        var due = Score(new CardVisitState
+        {
+            LastVisitedAt = Now.AddDays(-5),
+            ObservedSalesPerDay = 3,
+        });
+        // No current sales, so the burn-window guarantee does not apply:
+        // the cap flag alone (past loss, already burned) ranks below both.
         var capHit = Score(new CardVisitState
         {
             LastVisitedAt = Now.AddDays(-40),
             AnyBucketAtCap = true,
-            ObservedSalesPerDay = 10,
+            ObservedSalesPerDay = 0,
         });
 
+        Assert.True(due > unvisited);
         Assert.True(unvisited > capHit);
     }
 
