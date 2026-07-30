@@ -6,4 +6,5 @@ namespace PokemonInvestBatch.Domain.Parsing;
 /// fail loudly before any fact is written; silently skipping unknown data
 /// is how a source change silently corrupts weeks of the catalog.
 /// </summary>
-public sealed class SchemaDriftException(string message) : Exception(message);
+public sealed class SchemaDriftException(string message, Exception? cause = null)
+    : Exception(message, cause);

@@ -6,6 +6,13 @@ namespace PokemonInvestBatch.Domain.Parsing;
 /// </summary>
 public sealed record SaleRecord
 {
+    // Shared with the persistence layer's column limits so an over-long
+    // scrape fails at parse time as schema drift, never as a database error
+    // the crawl lane can't attribute to the card.
+    public const int MaxSourceIdLength = 200;
+    public const int MaxGradeTierLength = 40;
+    public const int MaxTitleLength = 500;
+
     /// <summary>Marketplace prefix of the row id: ebay, tcgplayer, goldin, heritage, pwcc.</summary>
     public required string Source { get; init; }
 

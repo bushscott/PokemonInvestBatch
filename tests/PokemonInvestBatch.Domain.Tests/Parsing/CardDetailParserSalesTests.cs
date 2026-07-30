@@ -86,4 +86,88 @@ public class CardDetailParserSalesTests
 
         Assert.Contains("mercari", ex.Message);
     }
+
+    // Every failure below must surface as SchemaDriftException — any other
+    // type escapes the crawl lane's quarantine handling and the card is
+    // retried forever (the poison-card livelock).
+
+    [Fact]
+    public void Parse_flags_a_malformed_sale_date_as_drift()
+    {
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => CardDetailParser.Parse(SingleSalePage(date: "07/01/2026")));
+
+        Assert.Contains("07/01/2026", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_flags_garbage_price_text_as_drift()
+    {
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => CardDetailParser.Parse(SingleSalePage(price: "$1.2.3")));
+
+        Assert.Contains("$1.2.3", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_flags_a_price_too_large_for_a_cents_column_as_drift()
+    {
+        // $99,999,999,999 is ~4,600x the record card sale; a real listing
+        // will never hit this, so it can only be page breakage.
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => CardDetailParser.Parse(SingleSalePage(price: "$99,999,999,999.00")));
+
+        Assert.Contains("exceeds", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_flags_an_oversized_marketplace_id_as_drift()
+    {
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => CardDetailParser.Parse(SingleSalePage(rowId: $"ebay-{new string('x', 250)}")));
+
+        Assert.Contains("250", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_clips_an_absurd_title_instead_of_rejecting_the_page()
+    {
+        // Titles are display text, not identity — a hostile 600-char title
+        // must not bench an otherwise-good card.
+        var page = CardDetailParser.Parse(SingleSalePage(title: new string('x', 600)));
+
+        var sale = Assert.Single(page.Sales);
+        Assert.Equal(SaleRecord.MaxTitleLength, sale.Title.Length);
+    }
+
+    [Fact]
+    public void Parse_wraps_any_unexpected_exception_as_drift()
+    {
+        // A chart value beyond int.MaxValue makes GetInt32 throw
+        // FormatException deep inside the parser; the Parse-level contract
+        // must convert it (and anything like it) into drift.
+        const string html = """<script>VGPC.chart_data = {"used":[[1606806000000,99999999999]]};</script>""";
+
+        var ex = Assert.Throws<SchemaDriftException>(() => CardDetailParser.Parse(html));
+
+        Assert.Contains("Unexpected", ex.Message);
+        Assert.NotNull(ex.InnerException);
+    }
+
+    private static string SingleSalePage(
+        string rowId = "ebay-123",
+        string date = "2026-07-01",
+        string price = "$10.00",
+        string title = "Something") => $$"""
+        <script>VGPC.chart_data = {"used":[[1606806000000,100]]};</script>
+        <select id="completed-auctions-condition">
+          <option value="completed-auctions-used">Ungraded (1)</option>
+        </select>
+        <table class="hoverable-rows sortable"><tbody>
+          <tr id="{{rowId}}"><td class="date">{{date}}</td>
+            <td class="title"><a>{{title}}</a></td>
+            <td class="numeric"><span class="js-price">{{price}}</span></td>
+          </tr>
+        </tbody></table>
+        """;
 }

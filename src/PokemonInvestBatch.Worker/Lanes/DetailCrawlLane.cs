@@ -32,6 +32,8 @@ public sealed class DetailCrawlLane(
 {
     private static readonly VisitPriorityOptions PriorityOptions = new();
 
+    private readonly SameCardFailureBreaker breaker = new();
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -92,13 +94,42 @@ public sealed class DetailCrawlLane(
         try
         {
             await VisitAsync(db, card, visit, ct);
+            breaker.Reset();
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
             // Unexpected failures ride the trace, not just the log stream.
             visit?.AddException(e);
             visit?.SetStatus(ActivityStatusCode.Error, e.Message);
+            if (breaker.RecordUnexpectedFailure(card.Id))
+            {
+                await StrikeUnattributedAsync(card.Id, ct);
+            }
+
+            // Rethrown so ExecuteAsync still logs the full exception — the
+            // strike above is attribution, never suppression.
             throw;
+        }
+    }
+
+    /// <summary>
+    /// The visit died before any of its own bookkeeping could run, so the
+    /// strike is written through a fresh context — the one that failed may
+    /// hold a poisoned change tracker or a broken connection.
+    /// </summary>
+    private async Task StrikeUnattributedAsync(long cardId, CancellationToken ct)
+    {
+        try
+        {
+            await using var db = await dbFactory.CreateDbContextAsync(ct);
+            var card = await db.Cards.FirstAsync(c => c.Id == cardId, ct);
+            await RecordStrikeAsync(card, "unexpected", time.GetUtcNow(), ct);
+            await db.SaveChangesAsync(ct);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogError(e,
+                "Could not record unexpected-failure strike for card {CardId}", cardId);
         }
     }
 

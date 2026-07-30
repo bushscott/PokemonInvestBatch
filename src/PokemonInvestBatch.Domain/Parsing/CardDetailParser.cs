@@ -36,6 +36,23 @@ public static partial class CardDetailParser
 
     public static CardDetailPage Parse(string html)
     {
+        try
+        {
+            return ParseCore(html);
+        }
+        catch (Exception e) when (e is not SchemaDriftException)
+        {
+            // The contract: page-shaped trouble is ALWAYS SchemaDriftException,
+            // so the crawl lane can attribute it to the card and quarantine.
+            // Any other type escaping here is retried against the same card
+            // forever — a livelock. Full cause preserved for parse_failures.
+            throw new SchemaDriftException(
+                $"Unexpected {e.GetType().Name} while parsing: {e.Message}", e);
+        }
+    }
+
+    private static CardDetailPage ParseCore(string html)
+    {
         var chart = ParseChart(html);
         var population = ParsePopulation(html);
 
@@ -130,20 +147,47 @@ public static partial class CardDetailParser
                 $"known: [{string.Join(", ", KnownSources)}]. A new marketplace must be mapped, not dropped.");
         }
 
+        var sourceId = id[(separator + 1)..];
+        if (sourceId.Length > SaleRecord.MaxSourceIdLength)
+        {
+            throw new SchemaDriftException(
+                $"Sale row id '{source}-…' carries a {sourceId.Length}-char marketplace id; "
+                + $"no real marketplace id exceeds {SaleRecord.MaxSourceIdLength}.");
+        }
+
+        if (gradeTier.Length > SaleRecord.MaxGradeTierLength)
+        {
+            throw new SchemaDriftException(
+                $"Tier label '{gradeTier[..SaleRecord.MaxGradeTierLength]}…' exceeds "
+                + $"{SaleRecord.MaxGradeTierLength} chars; the condition selector has drifted.");
+        }
+
         var date = row.QuerySelector("td.date")?.TextContent.Trim()
             ?? throw new SchemaDriftException($"Sale row '{id}' has no date cell.");
+        if (!DateOnly.TryParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture,
+                DateTimeStyles.None, out var soldOn))
+        {
+            throw new SchemaDriftException($"Sale row '{id}' date '{date}' is not yyyy-MM-dd.");
+        }
+
         var price = row.QuerySelector("td.numeric:not(.listed-price) span.js-price")?.TextContent
             ?? throw new SchemaDriftException($"Sale row '{id}' has no price cell.");
+
+        // Titles are third-party display text, not identity — an absurd length
+        // is clipped rather than allowed to bench an otherwise-good card.
+        var title = (row.QuerySelector("td.title a")?.TextContent ?? string.Empty).Trim();
 
         return new SaleRecord
         {
             Source = source,
-            SourceId = id[(separator + 1)..],
-            SoldOn = DateOnly.ParseExact(date, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+            SourceId = sourceId,
+            SoldOn = soldOn,
             GradeTier = gradeTier,
             PriceCents = ParseCents(price)!.Value,
             ListedPriceCents = ParseCents(row.QuerySelector("td.listed-price")?.TextContent),
-            Title = (row.QuerySelector("td.title a")?.TextContent ?? string.Empty).Trim(),
+            Title = title.Length > SaleRecord.MaxTitleLength
+                ? title[..SaleRecord.MaxTitleLength]
+                : title,
         };
     }
 
@@ -156,8 +200,19 @@ public static partial class CardDetailParser
             return null;
         }
 
-        return (int)Math.Round(
-            decimal.Parse(cleaned, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture) * 100);
+        if (!decimal.TryParse(cleaned, NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture,
+                out var dollars))
+        {
+            throw new SchemaDriftException($"Price text '{text}' is not a dollar amount we understand.");
+        }
+
+        var cents = Math.Round(dollars * 100);
+        if (cents > int.MaxValue)
+        {
+            throw new SchemaDriftException($"Price text '{text}' exceeds what a cents column can hold.");
+        }
+
+        return (int)cents;
     }
 
     private static IReadOnlyDictionary<PriceTier, IReadOnlyList<PricePoint>> ParseChart(string html)

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using PokemonInvestBatch.Domain.Parsing;
 
 namespace PokemonInvestBatch.Infrastructure.Persistence;
 
@@ -60,9 +61,9 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             // The dedup guarantee; the unnest insert's ON CONFLICT target.
             sale.HasIndex(s => new { s.Source, s.SourceId }).IsUnique();
             sale.Property(s => s.Source).HasMaxLength(16);
-            sale.Property(s => s.SourceId).HasMaxLength(200);
-            sale.Property(s => s.GradeTier).HasMaxLength(40);
-            sale.Property(s => s.Title).HasMaxLength(500);
+            sale.Property(s => s.SourceId).HasMaxLength(SaleRecord.MaxSourceIdLength);
+            sale.Property(s => s.GradeTier).HasMaxLength(SaleRecord.MaxGradeTierLength);
+            sale.Property(s => s.Title).HasMaxLength(SaleRecord.MaxTitleLength);
             sale.HasOne<Card>().WithMany().HasForeignKey(s => s.CardId).OnDelete(DeleteBehavior.Restrict);
             sale.HasIndex(s => new { s.CardId, s.SoldOn });
         });
