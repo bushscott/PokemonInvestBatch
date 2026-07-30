@@ -128,7 +128,7 @@
           }
         },
         {
-          "title": "Worst case: crawl cycles behind",
+          "title": "Longest wait for a visit (days, promise: 30)",
           "layout": {
             "column": 9,
             "row": 13,
@@ -144,17 +144,17 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.worst_case_days`) / (latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day)) AS 'cycles behind' FROM Metric SINCE 1 day ago"
+                "query": "SELECT latest(`crawl.worst_case_days`) AS 'days' FROM Metric SINCE 1 day ago"
               }
             ],
             "thresholds": [
               {
                 "alertSeverity": "WARNING",
-                "value": 0.75
+                "value": 25
               },
               {
                 "alertSeverity": "CRITICAL",
-                "value": 1
+                "value": 30
               }
             ],
             "platformOptions": {
@@ -366,7 +366,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'visit all known', latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day) AS 'revisit cycle' FROM Metric SINCE 1 day ago"
+                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'visit all known', latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day) AS 'full lap at current pace' FROM Metric SINCE 1 day ago"
               }
             ],
             "platformOptions": {

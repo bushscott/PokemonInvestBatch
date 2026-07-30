@@ -81,10 +81,10 @@ public sealed class CrawlMetrics : IDisposable
             description: "Images discovered but not yet fetched");
         Meter.CreateObservableGauge(
             "crawl.cards_at_risk", () => _cardsAtRisk,
-            description: "Cards selling fast enough that their sales outlive the normal rotation only via fast-tracking — the leading indicator of missed sales");
+            description: "Selling cards past three quarters of their burn window — the scheduler fast-tracks at half, so any count means scheduling is falling behind, caught with a quarter window left before sales are lost");
         Meter.CreateObservableGauge(
             "crawl.worst_case_days", () => _worstCaseDays,
-            description: "Age of the most-overdue card's data: days since its last visit, or 9999 while any known card has never been visited at all");
+            description: "Days the most-neglected card has waited: since its last visit, or since discovery if never visited — the scheduler's floor promises this never passes 30");
         Meter.CreateObservableGauge(
             "crawl.sets_total", () => _setsTotal,
             description: "Sets known to exist — the denominator that grows when enumeration discovers a new set");

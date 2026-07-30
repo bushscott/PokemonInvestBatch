@@ -56,17 +56,23 @@ public sealed class StatsLane(
             imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct),
             setsTotal: await db.Sets.LongCountAsync(ct));
 
-        // Worst-case data age. A never-visited card has no observation at
-        // all, so the worst case is unbounded — reported as the 9999
-        // sentinel rather than pretending it is measurable.
-        if (corpusSize > corpusVisited)
+        // Longest wait for a visit: the single most-neglected card. A
+        // never-visited card has been waiting since the day enumeration
+        // discovered it — measurable, not unbounded. The scheduler's floor
+        // (MaxDaysBetweenVisits) promises this never passes 30; the
+        // dashboard reds when the promise breaks.
+        var now = time.GetUtcNow();
+        var oldestVisit = corpusVisited > 0
+            ? await db.Cards.MinAsync(c => c.LastVisitedAt, ct)
+            : null;
+        var oldestUnseen = corpusSize > corpusVisited
+            ? await db.Cards.Where(c => c.LastVisitedAt == null)
+                .MinAsync(c => (DateTimeOffset?)c.FirstSeenAt, ct)
+            : null;
+        var waitingSince = new[] { oldestVisit, oldestUnseen }.Min();
+        if (waitingSince is { } since)
         {
-            metrics.SetWorstCaseDays(9999);
-        }
-        else if (corpusVisited > 0)
-        {
-            var oldest = await db.Cards.MinAsync(c => c.LastVisitedAt, ct);
-            metrics.SetWorstCaseDays((time.GetUtcNow() - oldest!.Value).TotalDays);
+            metrics.SetWorstCaseDays((now - since).TotalDays);
         }
 
         // Leading indicator of missed sales: selling cards past three
@@ -76,7 +82,6 @@ public sealed class StatsLane(
         // keeps up nothing ages this far — any count means scheduling is
         // falling behind, caught with a quarter of the window still left
         // before rows actually roll off unseen.
-        var now = time.GetUtcNow();
         metrics.SetCardsAtRisk(
             await VisitCandidatePool.PastBurnFraction(db.Cards, now, AtRiskBurnFraction)
                 .LongCountAsync(ct));
