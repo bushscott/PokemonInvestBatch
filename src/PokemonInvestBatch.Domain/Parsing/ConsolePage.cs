@@ -12,9 +12,15 @@ public sealed record ConsolePage
 /// <summary>A card as listed on a set page.</summary>
 public sealed record ProductListing
 {
+    // Shared with the persistence layer's cards.url column limit so an
+    // over-long href fails at parse time as drift, not as a database error.
+    public const int MaxUrlLength = 500;
+
     public required long ProductId { get; init; }
 
-    /// <summary>Detail page path, e.g. "/game/pokemon-base-set/charizard-4".</summary>
+    /// <summary>Detail page path, e.g. "/game/pokemon-base-set/charizard-4".
+    /// Always site-relative under /game/ — the parser rejects anything else,
+    /// because whatever lands here is what the crawler will blindly fetch.</summary>
     public required string Url { get; init; }
 
     public required string Name { get; init; }

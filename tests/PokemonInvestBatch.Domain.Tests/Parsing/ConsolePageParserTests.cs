@@ -32,6 +32,47 @@ public class ConsolePageParserTests
         Assert.True(form.ContainsKey("release-date"));
     }
 
+    // Whatever lands in ProductListing.Url is what the detail lane will
+    // blindly fetch — hostile hrefs must die here, loudly, as drift.
+
+    [Theory]
+    [InlineData("https://evil.example/game/x")]
+    [InlineData("//evil.example/game/x")]
+    [InlineData("/stripe-connect/x")]
+    [InlineData("/game/../stripe-connect")]
+    public void Parse_rejects_hrefs_that_could_aim_the_crawler_elsewhere(string href)
+    {
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => ConsolePageParser.Parse(SingleProductPage(href)));
+
+        Assert.Contains("refusing to store", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_rejects_an_href_longer_than_the_url_column()
+    {
+        var href = "/game/pokemon-base-set/" + new string('x', 600);
+
+        var ex = Assert.Throws<SchemaDriftException>(
+            () => ConsolePageParser.Parse(SingleProductPage(href)));
+
+        Assert.Contains("623", ex.Message);
+    }
+
+    [Fact]
+    public void Parse_accepts_an_ordinary_game_href()
+    {
+        var page = ConsolePageParser.Parse(SingleProductPage("/game/pokemon-base-set/charizard-4"));
+
+        Assert.Equal("/game/pokemon-base-set/charizard-4", Assert.Single(page.Products).Url);
+    }
+
+    private static string SingleProductPage(string href) => $"""
+        <table><tbody>
+          <tr id="product-630417"><td class="title"><a href="{href}">Charizard #4</a></td></tr>
+        </tbody></table>
+        """;
+
     [Fact]
     public void Parse_yields_450_distinct_products_across_three_cursor_pages()
     {

@@ -34,7 +34,7 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
         {
             // PriceCharting's product id, never generated locally.
             card.Property(c => c.Id).ValueGeneratedNever();
-            card.Property(c => c.Url).HasMaxLength(500);
+            card.Property(c => c.Url).HasMaxLength(ProductListing.MaxUrlLength);
             card.Property(c => c.Name).HasMaxLength(300);
             card.Property(c => c.ImageHash).HasMaxLength(64);
             card.HasOne(c => c.Set).WithMany().HasForeignKey(c => c.SetId).OnDelete(DeleteBehavior.Restrict);

@@ -30,6 +30,23 @@ public class PriceChartingClientTests
         return (new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System), handler);
     }
 
+    [Theory]
+    [InlineData("https://evil.example/game/x")]
+    [InlineData("//evil.example/game/x")]
+    [InlineData("game/relative-without-slash")]
+    public async Task Non_site_relative_paths_are_refused_before_any_bytes_leave(string path)
+    {
+        // BaseAddress is only a default — an absolute URI overrides it. The
+        // client is the last line between a stored hostile href and an
+        // outbound request wearing our User-Agent.
+        var (client, handler) = NewClient();
+
+        await Assert.ThrowsAsync<ArgumentException>(
+            () => client.GetAsync(path, CancellationToken.None));
+
+        Assert.Null(handler.LastRequest);
+    }
+
     [Fact]
     public async Task Every_request_identifies_the_bot_and_a_contact_address()
     {

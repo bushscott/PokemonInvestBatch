@@ -38,6 +38,18 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
 
     private async Task<FetchResult> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        var path = request.RequestUri?.OriginalString ?? string.Empty;
+        if (!path.StartsWith('/') || path.StartsWith("//", StringComparison.Ordinal))
+        {
+            // HttpClient lets an absolute (or protocol-relative) URI override
+            // BaseAddress — a scraped href could aim the bot at any host.
+            // This class claims to be the only code that talks to the site;
+            // this is where the claim is enforced. Nothing has been sent yet.
+            throw new ArgumentException(
+                $"Refusing to fetch '{path[..Math.Min(path.Length, 80)]}': "
+                + "only site-relative paths may leave this client.");
+        }
+
         request.Headers.TryAddWithoutValidation(
             "User-Agent", $"PokemonInvestBatch/0.1 (+mailto:{contactEmail})");
 

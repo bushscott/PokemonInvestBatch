@@ -23,6 +23,23 @@ public static class ConsolePageParser
             ?? throw new SchemaDriftException($"Product row '{row.Id}' has no title link.");
         var href = anchor.GetAttribute("href")
             ?? throw new SchemaDriftException($"Product row '{row.Id}' title link has no href.");
+        if (!href.StartsWith("/game/", StringComparison.Ordinal)
+            || href.Contains("..", StringComparison.Ordinal))
+        {
+            // Every legitimate product link is a site-relative /game/ path;
+            // an absolute or escaping href would aim the crawler at a host
+            // of the page's choosing.
+            throw new SchemaDriftException(
+                $"Product row '{row.Id}' href '{href[..Math.Min(href.Length, 80)]}' is not a "
+                + "site-relative /game/ path — refusing to store a URL the crawler would blindly fetch.");
+        }
+
+        if (href.Length > ProductListing.MaxUrlLength)
+        {
+            throw new SchemaDriftException(
+                $"Product row '{row.Id}' href is {href.Length} chars; "
+                + $"no real card path exceeds {ProductListing.MaxUrlLength}.");
+        }
 
         var idText = row.Id!["product-".Length..];
         if (!long.TryParse(idText, out var productId))
