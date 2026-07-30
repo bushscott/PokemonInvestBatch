@@ -21,3 +21,6 @@ publish/
 TestResults/
 *.trx
 coverage*.xml
+
+# Deploy tarballs staged for Pi Connect drag-and-drop
+*.tar.gz
