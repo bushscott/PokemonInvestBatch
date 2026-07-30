@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Domain.Parsing;
@@ -23,6 +24,8 @@ public sealed class EnumerationLane(
     PriceChartingClient client,
     PoliteGate gate,
     AdaptiveDelay delay,
+    IncidentThrottle throttle,
+    IAlerter alerter,
     TimeProvider time,
     IOptions<ScraperOptions> options,
     CrawlMetrics metrics,
@@ -186,6 +189,26 @@ public sealed class EnumerationLane(
             seen += await UpsertCardsAsync(db, set, page.Products, ct);
             form = page.NextPageForm;
             pages++;
+            if (form is not null && pages >= options.Value.MaxSetWalkPages)
+            {
+                // Page N+1 with no end in sight means the pagination shape
+                // changed — abandon loudly, leave the walk incomplete so the
+                // next hourly cycle retries (and re-alerts if still broken).
+                logger.LogError(
+                    "Set {Slug} still offers a next page after {Pages} pages — abandoning walk",
+                    set.Slug, pages);
+                if (throttle.ShouldAlert("set-walk-runaway", time.GetUtcNow()))
+                {
+                    await alerter.RaiseAsync(
+                        $"Set walk runaway: {set.Slug}",
+                        $"After {pages} pages ({seen} cards) the set still offers a next-page form. "
+                        + "The biggest real set fits in 4 pages of 150, so the pagination shape has "
+                        + "likely changed. The walk was abandoned and will retry next cycle.",
+                        ct);
+                }
+
+                return;
+            }
         }
         while (form is not null);
 

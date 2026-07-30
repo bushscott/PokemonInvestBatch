@@ -29,6 +29,11 @@ public sealed record ScraperOptions
 
     public int EnumerationIntervalDays { get; init; } = 7;
 
+    /// <summary>Walk abandonment point. The biggest real set (463 products)
+    /// fits in 4 pages of 150; a set still offering "next" past this many
+    /// pages means the pagination shape changed.</summary>
+    public int MaxSetWalkPages { get; init; } = 20;
+
     public int CanaryIntervalHours { get; init; } = 6;
 
     public int ImageIntervalMinutes { get; init; } = 60;
