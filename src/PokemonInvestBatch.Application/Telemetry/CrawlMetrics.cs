@@ -44,7 +44,7 @@ public sealed class CrawlMetrics : IDisposable
     {
         Meter = new Meter(MeterName);
 
-        _requests = Meter.CreateCounter<long>("crawl.requests", description: "Requests to pricecharting.com by lane and status");
+        _requests = Meter.CreateCounter<long>("crawl.requests", description: "Outbound requests by lane and status: pricecharting.com plus the image CDN");
         _pagesParsed = Meter.CreateCounter<long>("crawl.pages_parsed", description: "Detail pages parsed and written");
         _parseFailures = Meter.CreateCounter<long>("crawl.parse_failures", description: "Pages refused for schema drift");
         _rowsAppended = Meter.CreateCounter<long>("crawl.rows_appended", description: "History rows appended, by kind");

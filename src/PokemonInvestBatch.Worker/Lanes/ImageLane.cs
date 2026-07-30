@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Persistence;
 
 namespace PokemonInvestBatch.Worker.Lanes;
@@ -13,6 +14,7 @@ namespace PokemonInvestBatch.Worker.Lanes;
 public sealed class ImageLane(
     IDbContextFactory<PokemonDbContext> dbFactory,
     IHttpClientFactory httpFactory,
+    CrawlMetrics metrics,
     TimeProvider time,
     IOptions<ScraperOptions> options,
     ILogger<ImageLane> logger) : BackgroundService
@@ -82,6 +84,10 @@ public sealed class ImageLane(
                 // body into memory before the status code is even seen.
                 using var response = await http.GetAsync(
                     $"{CdnBase}/{card.ImageHash}/1600.jpg", HttpCompletionOption.ResponseHeadersRead, ct);
+
+                // Counted directly, never through FetchBookkeeping: CDN
+                // results must not steer pricecharting.com's courtesy delay.
+                metrics.RecordRequest("images", (int)response.StatusCode);
                 var declared = response.Content.Headers.ContentLength;
                 if (response.IsSuccessStatusCode && declared is null or > MaxImageBytes)
                 {
@@ -122,8 +128,10 @@ public sealed class ImageLane(
             }
             catch (HttpRequestException e)
             {
-                // One flaky fetch must not abort the sweep and discard the
-                // progress marks of the cards before it.
+                // Transport death is status 0, same convention as the polite
+                // client. One flaky fetch must not abort the sweep and discard
+                // the progress marks of the cards before it.
+                metrics.RecordRequest("images", 0);
                 logger.LogWarning(e, "Image {Hash} for card {CardId} failed transport — will retry next sweep",
                     card.ImageHash, card.Id);
                 deferred++;
