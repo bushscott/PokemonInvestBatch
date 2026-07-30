@@ -727,7 +727,7 @@
           }
         },
         {
-          "title": "New cards discovered per day",
+          "title": "Longest wait, 7-day trend",
           "layout": {
             "column": 11,
             "row": 13,
@@ -743,7 +743,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT derivative(`crawl.corpus_size`, 1 day) AS 'cards/day' FROM Metric TIMESERIES SINCE 7 days ago"
+                "query": "SELECT latest(`crawl.worst_case_days`) AS 'days' FROM Metric TIMESERIES SINCE 7 days ago"
               }
             ],
             "platformOptions": {
