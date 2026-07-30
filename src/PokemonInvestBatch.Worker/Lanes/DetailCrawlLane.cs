@@ -91,10 +91,25 @@ public sealed class DetailCrawlLane(
         // straight to the card page that caused it.
         visit?.SetTag("url.path", card.Url);
 
+        // Every log line written during the visit — EF's transaction chatter
+        // included — carries the card, so no mid-visit error ever needs
+        // trace archaeology to attribute.
+        using var scope = logger.BeginScope("Visiting {CardUrl}", card.Url);
+
         try
         {
             await VisitAsync(db, card, visit, ct);
             breaker.Reset();
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        {
+            // Shutdown caught the visit mid-flight: the transaction rolls
+            // back whole and LastVisitedAt never advanced. Said out loud so
+            // EF's exception-less "error using a transaction" has a witness.
+            logger.LogInformation(
+                "Visit of {CardUrl} interrupted by shutdown — the card returns to the rotation",
+                card.Url);
+            throw;
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
