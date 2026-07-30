@@ -329,16 +329,14 @@ public sealed class DetailCrawlLane(
         }
     }
 
-    /// <summary>Unvisited first; otherwise the tested priority score over the
-    /// stalest 500 plus every cap-hit card. Quarantined cards are invisible
-    /// until their sentence lapses.</summary>
+    /// <summary>Unvisited first; otherwise the tested priority score over
+    /// VisitCandidatePool — the stalest 500 plus the cap-hit and
+    /// burn-window-due tiers, each queried on its own membership so no tier
+    /// is starved by staleness ordering.</summary>
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        var eligible = db.Cards
-            .Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
-
-        var unvisited = await eligible
+        var unvisited = await VisitCandidatePool.Eligible(db, now)
             .Where(c => c.LastVisitedAt == null)
             .OrderBy(c => c.Id)
             .FirstOrDefaultAsync(ct);
@@ -347,22 +345,13 @@ public sealed class DetailCrawlLane(
             return unvisited;
         }
 
-        var candidates = await eligible
-            .OrderBy(c => c.LastVisitedAt)
-            .Take(500)
-            .ToListAsync(ct);
-        var capHits = await eligible
-            .Where(c => c.AnyBucketAtCap)
-            .OrderBy(c => c.LastVisitedAt)
-            .Take(50)
-            .ToListAsync(ct);
+        var candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
         if (candidates.Count > 0 && candidates[0].LastVisitedAt is { } oldest)
         {
             metrics.SetQueueStaleness(now - oldest);
         }
 
-        return candidates.Concat(capHits)
-            .DistinctBy(c => c.Id)
+        return candidates
             .MaxBy(c => VisitPriority.Score(
                 new CardVisitState
                 {
