@@ -344,21 +344,19 @@ public sealed class DetailCrawlLane(
         }
 
         var candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
-        if (candidates.Count > 0 && candidates[0].LastVisitedAt is { } oldest)
+        if (candidates.Count > 0 && candidates[0].State.LastVisitedAt is { } oldest)
         {
             metrics.SetQueueStaleness(now - oldest);
         }
 
-        return candidates
-            .MaxBy(c => VisitPriority.Score(
-                new CardVisitState
-                {
-                    LastVisitedAt = c.LastVisitedAt,
-                    ObservedSalesPerDay = c.ObservedSalesPerDay,
-                    AnyBucketAtCap = c.AnyBucketAtCap,
-                },
-                now,
-                PriorityOptions));
+        var winner = candidates.MaxBy(c => VisitPriority.Score(c.State, now, PriorityOptions));
+        if (winner is null)
+        {
+            return null;
+        }
+
+        // Only the winner is loaded for real — the visit writes to it.
+        return await db.Cards.FirstAsync(c => c.Id == winner.Id, ct);
     }
 
     /// <summary>Fingerprints the page; a never-before-seen shape is archived

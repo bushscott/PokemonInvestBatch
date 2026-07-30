@@ -71,15 +71,7 @@ public class VisitCandidatePoolTests
 
         Assert.Contains(pool, c => c.Id == hot.Id);
 
-        var winner = pool.MaxBy(c => VisitPriority.Score(
-            new CardVisitState
-            {
-                LastVisitedAt = c.LastVisitedAt,
-                ObservedSalesPerDay = c.ObservedSalesPerDay,
-                AnyBucketAtCap = c.AnyBucketAtCap,
-            },
-            now,
-            priorityOptions));
+        var winner = pool.MaxBy(c => VisitPriority.Score(c.State, now, priorityOptions));
         Assert.Equal(hot.Id, winner!.Id);
     }
 

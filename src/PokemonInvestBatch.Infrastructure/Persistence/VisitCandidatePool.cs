@@ -20,25 +20,43 @@ public static class VisitCandidatePool
     /// <summary>Bound per targeted tier query.</summary>
     public const int TierTake = 50;
 
-    public static async Task<IReadOnlyList<Card>> LoadAsync(
+    public static async Task<IReadOnlyList<VisitCandidate>> LoadAsync(
         PokemonDbContext db, DateTimeOffset now, VisitPriorityOptions options, CancellationToken ct)
     {
         var eligible = Eligible(db, now);
         var stalest = await eligible
             .OrderBy(c => c.LastVisitedAt)
             .Take(StalestTake)
+            .Select(ToCandidate)
             .ToListAsync(ct);
         var capHits = await eligible
             .Where(c => c.AnyBucketAtCap)
             .OrderBy(c => c.LastVisitedAt)
             .Take(TierTake)
+            .Select(ToCandidate)
             .ToListAsync(ct);
-        var dueByBurn = await DueByBurnWindow(eligible, now, options).ToListAsync(ct);
+        var dueByBurn = await DueByBurnWindow(eligible, now, options)
+            .Select(ToCandidate)
+            .ToListAsync(ct);
 
         // Stalest-first order is part of the contract: callers read the
         // queue-staleness gauge off the first element.
         return stalest.Concat(capHits).Concat(dueByBurn).DistinctBy(c => c.Id).ToList();
     }
+
+    // Four columns cross the wire and nothing is change-tracked — ~600
+    // candidates are read per pick and exactly one card is ever written.
+    private static readonly System.Linq.Expressions.Expression<Func<Card, VisitCandidate>> ToCandidate =
+        c => new VisitCandidate
+        {
+            Id = c.Id,
+            State = new CardVisitState
+            {
+                LastVisitedAt = c.LastVisitedAt,
+                ObservedSalesPerDay = c.ObservedSalesPerDay,
+                AnyBucketAtCap = c.AnyBucketAtCap,
+            },
+        };
 
     /// <summary>Quarantined cards are invisible until their sentence lapses.</summary>
     public static IQueryable<Card> Eligible(PokemonDbContext db, DateTimeOffset now) =>
@@ -49,6 +67,15 @@ public static class VisitCandidatePool
     /// consumed the safety fraction of the bucket — translated to SQL, most
     /// overdue first. Must stay the same inequality as VisitPriority.Score.
     /// </summary>
+    /// <summary>One scoring candidate: the card's id plus the three facts the
+    /// scorer reads. Nothing else leaves the database until a winner is picked.</summary>
+    public sealed record VisitCandidate
+    {
+        public required long Id { get; init; }
+
+        public required CardVisitState State { get; init; }
+    }
+
     public static IQueryable<Card> DueByBurnWindow(
         IQueryable<Card> eligible, DateTimeOffset now, VisitPriorityOptions options)
     {
