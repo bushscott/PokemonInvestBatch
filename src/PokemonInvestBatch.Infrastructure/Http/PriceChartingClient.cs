@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Text;
 using PokemonInvestBatch.Application.Telemetry;
 
 namespace PokemonInvestBatch.Infrastructure.Http;
@@ -24,6 +25,11 @@ public sealed record FetchResult
 /// </summary>
 public sealed class PriceChartingClient(HttpClient http, string contactEmail, TimeProvider time)
 {
+    /// <summary>Ten times the heaviest real card page (~1 MB, 410 sales).
+    /// MaxResponseContentBufferSize does not apply after ResponseHeadersRead,
+    /// so this cap is the only thing between a size bomb and the Pi's RAM.</summary>
+    public const long MaxBodyBytes = 10 * 1024 * 1024;
+
     public Task<FetchResult> GetAsync(string path, CancellationToken cancellationToken) =>
         SendAsync(new HttpRequestMessage(HttpMethod.Get, path), cancellationToken);
 
@@ -97,9 +103,35 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         using (var download = CrawlTracing.Source.StartActivity("site.download"))
         {
             download?.SetTag("url.path", request.RequestUri?.OriginalString);
+            var declared = response.Content.Headers.ContentLength;
+            if (declared > MaxBodyBytes)
+            {
+                // A size bomb is the site misbehaving — same contract as a
+                // dead connection: status 0 into the AIMD machinery.
+                download?.SetStatus(ActivityStatusCode.Error,
+                    $"Declared body of {declared} bytes exceeds the {MaxBodyBytes}-byte cap.");
+                return new FetchResult
+                {
+                    StatusCode = 0,
+                    Latency = time.GetElapsedTime(started),
+                };
+            }
+
             try
             {
-                html = await response.Content.ReadAsStringAsync(cancellationToken);
+                var read = await TryReadBoundedAsync(response.Content, cancellationToken);
+                if (read is null)
+                {
+                    download?.SetStatus(ActivityStatusCode.Error,
+                        $"Body exceeded the {MaxBodyBytes}-byte cap mid-stream.");
+                    return new FetchResult
+                    {
+                        StatusCode = 0,
+                        Latency = time.GetElapsedTime(started),
+                    };
+                }
+
+                html = read;
             }
             catch (Exception e) when (
                 e is HttpRequestException or IOException
@@ -124,5 +156,44 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
             Latency = time.GetElapsedTime(started),
             RetryAfter = response.Headers.RetryAfter?.Delta,
         };
+    }
+
+    /// <summary>Reads at most MaxBodyBytes; null when the stream keeps going —
+    /// the guard for servers that omit Content-Length or lie in it.</summary>
+    private static async Task<string?> TryReadBoundedAsync(HttpContent content, CancellationToken ct)
+    {
+        await using var stream = await content.ReadAsStreamAsync(ct);
+        using var buffered = new MemoryStream();
+        var chunk = new byte[81920];
+        int read;
+        while ((read = await stream.ReadAsync(chunk, ct)) > 0)
+        {
+            buffered.Write(chunk, 0, read);
+            if (buffered.Length > MaxBodyBytes)
+            {
+                return null;
+            }
+        }
+
+        // ReadAsStringAsync honoured the response charset; so does this.
+        return ResolveEncoding(content.Headers.ContentType?.CharSet)
+            .GetString(buffered.GetBuffer(), 0, (int)buffered.Length);
+    }
+
+    private static Encoding ResolveEncoding(string? charset)
+    {
+        if (charset is null)
+        {
+            return Encoding.UTF8;
+        }
+
+        try
+        {
+            return Encoding.GetEncoding(charset.Trim('"'));
+        }
+        catch (ArgumentException)
+        {
+            return Encoding.UTF8;
+        }
     }
 }

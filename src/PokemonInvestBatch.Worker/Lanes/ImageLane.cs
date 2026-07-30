@@ -21,6 +21,11 @@ public sealed class ImageLane(
 
     private const string CdnBase = "https://storage.googleapis.com/images.pricecharting.com";
 
+    /// <summary>~100x a real 1600.jpg (325x450, tens of KB). The CDN always
+    /// declares Content-Length for static files; an undeclared or oversized
+    /// body is not an image we want.</summary>
+    private const long MaxImageBytes = 5 * 1024 * 1024;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -73,8 +78,22 @@ public sealed class ImageLane(
 
             try
             {
-                using var response = await http.GetAsync($"{CdnBase}/{card.ImageHash}/1600.jpg", ct);
-                if (response.IsSuccessStatusCode)
+                // Headers first — the default GetAsync buffers the entire
+                // body into memory before the status code is even seen.
+                using var response = await http.GetAsync(
+                    $"{CdnBase}/{card.ImageHash}/1600.jpg", HttpCompletionOption.ResponseHeadersRead, ct);
+                var declared = response.Content.Headers.ContentLength;
+                if (response.IsSuccessStatusCode && declared is null or > MaxImageBytes)
+                {
+                    // Fetch-once applies to junk too: never re-download a
+                    // body that will never be stored.
+                    logger.LogWarning(
+                        "Image {Hash} for card {CardId} declares {Declared} bytes (cap {Cap}) — giving up",
+                        card.ImageHash, card.Id, declared, MaxImageBytes);
+                    card.ImageFetchedAt = time.GetUtcNow();
+                    done++;
+                }
+                else if (response.IsSuccessStatusCode)
                 {
                     Directory.CreateDirectory(directory);
                     await File.WriteAllBytesAsync(file, await response.Content.ReadAsByteArrayAsync(ct), ct);

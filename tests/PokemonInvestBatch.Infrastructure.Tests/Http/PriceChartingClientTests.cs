@@ -48,6 +48,53 @@ public class PriceChartingClientTests
     }
 
     [Fact]
+    public async Task A_body_declared_over_the_cap_is_never_read()
+    {
+        var content = new StringContent("<html/>");
+        content.Headers.ContentLength = PriceChartingClient.MaxBodyBytes + 1;
+        var (client, _) = NewClient(new HttpResponseMessage(HttpStatusCode.OK) { Content = content });
+
+        var fetched = await client.GetAsync("/game/pokemon-base-set/charizard-4", CancellationToken.None);
+
+        Assert.Equal(0, fetched.StatusCode);
+        Assert.Null(fetched.Html);
+    }
+
+    [Fact]
+    public async Task A_stream_that_outgrows_the_cap_is_cut_off_mid_body()
+    {
+        // No Content-Length at all — the chunked-transfer size bomb. The
+        // bounded read must bail, not buffer until the Pi runs out of RAM.
+        var (client, _) = NewClient(new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new EndlessContent(PriceChartingClient.MaxBodyBytes + 81_920),
+        });
+
+        var fetched = await client.GetAsync("/game/pokemon-base-set/charizard-4", CancellationToken.None);
+
+        Assert.Equal(0, fetched.StatusCode);
+        Assert.Null(fetched.Html);
+    }
+
+    private sealed class EndlessContent(long totalBytes) : HttpContent
+    {
+        protected override async Task SerializeToStreamAsync(Stream stream, System.Net.TransportContext? context)
+        {
+            var chunk = new byte[81_920];
+            for (var sent = 0L; sent < totalBytes; sent += chunk.Length)
+            {
+                await stream.WriteAsync(chunk);
+            }
+        }
+
+        protected override bool TryComputeLength(out long length)
+        {
+            length = 0;
+            return false;
+        }
+    }
+
+    [Fact]
     public async Task Every_request_identifies_the_bot_and_a_contact_address()
     {
         var (client, handler) = NewClient();
