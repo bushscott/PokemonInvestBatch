@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Persistence;
 
@@ -19,6 +18,11 @@ public sealed class StatsLane(
     IOptions<ScraperOptions> options,
     ILogger<StatsLane> logger) : BackgroundService
 {
+    /// <summary>The at-risk line: the scheduler fast-tracks a selling card at
+    /// half its burn window and rows roll off at the full window, so a card
+    /// past three quarters means scheduling is falling behind.</summary>
+    private const double AtRiskBurnFraction = 0.75;
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -65,22 +69,17 @@ public sealed class StatsLane(
             metrics.SetWorstCaseDays((time.GetUtcNow() - oldest!.Value).TotalDays);
         }
 
-        // Leading indicator of missed sales: cards whose burn window (days
-        // for their sales rate to fill a ~30-row bucket and start rolling
-        // rows off) is shorter than the current revisit cycle. These cards
-        // survive only by fast-tracking; the count is the pressure gauge.
+        // Leading indicator of missed sales: selling cards past three
+        // quarters of their burn window (the days their sales rate takes to
+        // fill a ~30-row bucket and start rolling rows off). The scheduler
+        // fast-tracks every selling card at half its window, so while it
+        // keeps up nothing ages this far — any count means scheduling is
+        // falling behind, caught with a quarter of the window still left
+        // before rows actually roll off unseen.
         var now = time.GetUtcNow();
-        var visitsLastDay = await db.Visits.LongCountAsync(
-            v => v.Kind == PageKind.CardDetail
-                && v.Outcome == VisitOutcome.Parsed
-                && v.FetchedAt >= now.AddDays(-1), ct);
-        if (visitsLastDay > 0 && corpusSize > 0)
-        {
-            var cycleDays = (double)corpusSize / visitsLastDay;
-            var atRiskSalesRate = SalesObservation.BucketCap / cycleDays;
-            metrics.SetCardsAtRisk(await db.Cards.LongCountAsync(
-                c => c.ObservedSalesPerDay > atRiskSalesRate, ct));
-        }
+        metrics.SetCardsAtRisk(
+            await VisitCandidatePool.PastBurnFraction(db.Cards, now, AtRiskBurnFraction)
+                .LongCountAsync(ct));
 
         metrics.SetSchedulerStats(
             cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),

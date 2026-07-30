@@ -88,4 +88,20 @@ public static class VisitCandidatePool
                                     * c.ObservedSalesPerDay!.Value)
             .Take(TierTake);
     }
+
+    /// <summary>
+    /// Selling cards whose staleness × sales rate has consumed the given
+    /// fraction of the bucket — the stats sweep's at-risk count. Unbounded
+    /// and unfiltered on purpose: a quarantined hot card is still losing
+    /// margin, so it must still be counted.
+    /// </summary>
+    public static IQueryable<Card> PastBurnFraction(
+        IQueryable<Card> cards, DateTimeOffset now, double fraction)
+    {
+        var threshold = SalesObservation.BucketCap * fraction;
+        return cards
+            .Where(c => c.LastVisitedAt != null && c.ObservedSalesPerDay > 0)
+            .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
+                        > threshold);
+    }
 }

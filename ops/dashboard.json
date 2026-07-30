@@ -966,7 +966,13 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
-            }
+            },
+            "thresholds": [
+              {
+                "alertSeverity": "CRITICAL",
+                "value": 0.5
+              }
+            ]
           }
         }
       ]
