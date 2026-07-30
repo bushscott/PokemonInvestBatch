@@ -138,11 +138,10 @@ public sealed class DetailCrawlLane(
         var started = time.GetTimestamp();
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
-        metrics.RecordRequest("card pages", fetched.StatusCode);
+        fetched.RecordOutcome(metrics, delay, "card pages");
 
         if (fetched.Html is null)
         {
-            RecordHttpTrouble(fetched);
             logger.LogWarning(
                 "Card {CardId} ({Name}) fetch returned HTTP {Status}",
                 card.Id, card.Name, fetched.StatusCode);
@@ -157,7 +156,6 @@ public sealed class DetailCrawlLane(
             return;
         }
 
-        delay.RecordSuccess(fetched.Latency);
         var shapeHash = await RecordShapeAsync(db, card, fetched.Html, now, ct);
 
         CardDetailPage page;
@@ -423,18 +421,6 @@ public sealed class DetailCrawlLane(
                 $"{failureRate:P0} of the last {recent.Count} detail pages failed to parse — "
                 + "pricecharting.com has probably changed its markup. See parse_failures and shapes/.",
                 ct);
-        }
-    }
-
-    private void RecordHttpTrouble(FetchResult fetched)
-    {
-        if (fetched.StatusCode is 429 or 503)
-        {
-            delay.RecordRateLimited(fetched.RetryAfter);
-        }
-        else
-        {
-            delay.RecordFailure(fetched.RetryAfter);
         }
     }
 

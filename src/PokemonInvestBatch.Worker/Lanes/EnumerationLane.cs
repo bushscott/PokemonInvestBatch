@@ -88,15 +88,13 @@ public sealed class EnumerationLane(
     {
         await gate.WaitTurnAsync(ct);
         var category = await client.GetAsync(options.Value.CategoryPath, ct);
-        metrics.RecordRequest("set catalog", category.StatusCode);
+        category.RecordOutcome(metrics, delay, "set catalog");
         if (category.Html is null)
         {
-            delay.RecordFailure(category.RetryAfter);
             logger.LogWarning("Category page fetch failed with {Status}", category.StatusCode);
             return;
         }
 
-        delay.RecordSuccess(category.Latency);
         var listings = CategoryPageParser.ParseSets(category.Html);
         var now = time.GetUtcNow();
 
@@ -177,15 +175,13 @@ public sealed class EnumerationLane(
             var fetched = form is null
                 ? await client.GetAsync(path, ct)
                 : await client.PostFormAsync(path, form, ct);
-            metrics.RecordRequest("set catalog", fetched.StatusCode);
+            fetched.RecordOutcome(metrics, delay, "set catalog");
             if (fetched.Html is null)
             {
-                delay.RecordFailure(fetched.RetryAfter);
                 logger.LogWarning("Set {Slug} page fetch failed with {Status}; walk left incomplete", set.Slug, fetched.StatusCode);
                 return;
             }
 
-            delay.RecordSuccess(fetched.Latency);
             var page = ConsolePageParser.Parse(fetched.Html);
             seen += await UpsertCardsAsync(db, set, page.Products, ct);
             form = page.NextPageForm;

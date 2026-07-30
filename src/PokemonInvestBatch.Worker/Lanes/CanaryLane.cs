@@ -55,17 +55,15 @@ public sealed class CanaryLane(
 
         await gate.WaitTurnAsync(ct);
         var fetched = await client.GetAsync(path, ct);
-        metrics.RecordRequest("spot check", fetched.StatusCode);
+        fetched.RecordOutcome(metrics, delay, "spot check");
 
         var failures = new List<string>();
         if (fetched.Html is null)
         {
-            delay.RecordFailure(fetched.RetryAfter);
             failures.Add($"HTTP {fetched.StatusCode}");
         }
         else
         {
-            delay.RecordSuccess(fetched.Latency);
             try
             {
                 var page = CardDetailParser.Parse(fetched.Html);
