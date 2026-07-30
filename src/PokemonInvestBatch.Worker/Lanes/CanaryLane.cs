@@ -58,7 +58,7 @@ public sealed class CanaryLane(
         fetched.RecordOutcome(metrics, delay, "spot check");
 
         var failures = new List<string>();
-        if (fetched.Html is null)
+        if (fetched is not FetchedPage fetchedPage)
         {
             failures.Add($"HTTP {fetched.StatusCode}");
         }
@@ -66,7 +66,7 @@ public sealed class CanaryLane(
         {
             try
             {
-                var page = CardDetailParser.Parse(fetched.Html);
+                var page = CardDetailParser.Parse(fetchedPage.Html);
                 if (page.Chart.Count < 5)
                 {
                     failures.Add($"only {page.Chart.Count} chart tiers");

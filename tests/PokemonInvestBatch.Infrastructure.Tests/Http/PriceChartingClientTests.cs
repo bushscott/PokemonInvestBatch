@@ -57,7 +57,7 @@ public class PriceChartingClientTests
         var fetched = await client.GetAsync("/game/pokemon-base-set/charizard-4", CancellationToken.None);
 
         Assert.Equal(0, fetched.StatusCode);
-        Assert.Null(fetched.Html);
+        Assert.IsType<FetchFailure>(fetched);
     }
 
     [Fact]
@@ -73,7 +73,7 @@ public class PriceChartingClientTests
         var fetched = await client.GetAsync("/game/pokemon-base-set/charizard-4", CancellationToken.None);
 
         Assert.Equal(0, fetched.StatusCode);
-        Assert.Null(fetched.Html);
+        Assert.IsType<FetchFailure>(fetched);
     }
 
     private sealed class EndlessContent(long totalBytes) : HttpContent
@@ -136,7 +136,7 @@ public class PriceChartingClientTests
 
         Assert.Equal(503, result.StatusCode);
         Assert.Equal(TimeSpan.FromSeconds(120), result.RetryAfter);
-        Assert.Null(result.Html);
+        Assert.IsType<FetchFailure>(result);
     }
 
     private sealed class ThrowingHandler(Exception exception) : HttpMessageHandler
@@ -160,7 +160,7 @@ public class PriceChartingClientTests
         var result = await client.GetAsync("/game/x", CancellationToken.None);
 
         Assert.Equal(0, result.StatusCode);
-        Assert.Null(result.Html);
+        Assert.IsType<FetchFailure>(result);
     }
 
     private sealed class DyingBodyStream : Stream
@@ -212,7 +212,7 @@ public class PriceChartingClientTests
         var result = await client.GetAsync("/game/x", CancellationToken.None);
 
         Assert.Equal(0, result.StatusCode);
-        Assert.Null(result.Html);
+        Assert.IsType<FetchFailure>(result);
     }
 
     [Fact]
@@ -238,6 +238,6 @@ public class PriceChartingClientTests
         var result = await client.GetAsync("/game/x", CancellationToken.None);
 
         Assert.Equal(200, result.StatusCode);
-        Assert.Equal("<html/>", result.Html);
+        Assert.Equal("<html/>", Assert.IsType<FetchedPage>(result).Html);
     }
 }

@@ -18,7 +18,7 @@ public static class FetchBookkeeping
         this FetchResult fetched, CrawlMetrics metrics, AdaptiveDelay delay, string laneTag)
     {
         metrics.RecordRequest(laneTag, fetched.StatusCode);
-        if (fetched.Html is not null)
+        if (fetched is FetchedPage)
         {
             delay.RecordSuccess(fetched.Latency);
         }

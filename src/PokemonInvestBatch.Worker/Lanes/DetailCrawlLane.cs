@@ -140,7 +140,7 @@ public sealed class DetailCrawlLane(
         var now = time.GetUtcNow();
         fetched.RecordOutcome(metrics, delay, "card pages");
 
-        if (fetched.Html is null)
+        if (fetched is not FetchedPage fetchedPage)
         {
             logger.LogWarning(
                 "Card {CardId} ({Name}) fetch returned HTTP {Status}",
@@ -156,7 +156,7 @@ public sealed class DetailCrawlLane(
             return;
         }
 
-        var shapeHash = await RecordShapeAsync(db, card, fetched.Html, now, ct);
+        var shapeHash = await RecordShapeAsync(db, card, fetchedPage.Html, now, ct);
 
         CardDetailPage page;
         try
@@ -165,7 +165,7 @@ public sealed class DetailCrawlLane(
             // where-time-goes breakdown instead of hiding in card.visit's gap.
             using (CrawlTracing.Source.StartActivity("card.parse"))
             {
-                page = CardDetailParser.Parse(fetched.Html);
+                page = CardDetailParser.Parse(fetchedPage.Html);
             }
         }
         catch (SchemaDriftException drift)

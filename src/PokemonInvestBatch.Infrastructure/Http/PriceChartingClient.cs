@@ -4,19 +4,28 @@ using PokemonInvestBatch.Application.Telemetry;
 
 namespace PokemonInvestBatch.Infrastructure.Http;
 
-/// <summary>One page fetch, as the lanes see it.</summary>
-public sealed record FetchResult
+/// <summary>One page fetch, as the lanes see it: a page or a failure,
+/// never a maybe. Guard with <c>is not FetchedPage</c> and exit early.</summary>
+public abstract record FetchResult
 {
     public required int StatusCode { get; init; }
-
-    /// <summary>Body on success; null on any non-2xx.</summary>
-    public string? Html { get; init; }
 
     public required TimeSpan Latency { get; init; }
 
     /// <summary>Server-demanded backoff, when sent.</summary>
     public TimeSpan? RetryAfter { get; init; }
 }
+
+/// <summary>A 2xx and its body — Html is always present here.</summary>
+public sealed record FetchedPage : FetchResult
+{
+    public required string Html { get; init; }
+}
+
+/// <summary>Non-2xx, transport death, or a size bomb (status 0). Carries no
+/// body on purpose: failure is a type, not a null threaded through the
+/// happy path.</summary>
+public sealed record FetchFailure : FetchResult;
 
 /// <summary>
 /// The only code that talks to pricecharting.com. Every request carries a
@@ -80,7 +89,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
                 // Connection refused, DNS failure, timeout: status 0 so a dead
                 // site trips the same backoff/pause/canary alarms as a 5xx.
                 wait?.SetStatus(ActivityStatusCode.Error, e.Message);
-                return new FetchResult
+                return new FetchFailure
                 {
                     StatusCode = 0,
                     Latency = time.GetElapsedTime(started),
@@ -91,7 +100,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
         using var _ = response;
         if (!response.IsSuccessStatusCode)
         {
-            return new FetchResult
+            return new FetchFailure
             {
                 StatusCode = (int)response.StatusCode,
                 Latency = time.GetElapsedTime(started),
@@ -110,7 +119,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
                 // dead connection: status 0 into the AIMD machinery.
                 download?.SetStatus(ActivityStatusCode.Error,
                     $"Declared body of {declared} bytes exceeds the {MaxBodyBytes}-byte cap.");
-                return new FetchResult
+                return new FetchFailure
                 {
                     StatusCode = 0,
                     Latency = time.GetElapsedTime(started),
@@ -124,7 +133,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
                 {
                     download?.SetStatus(ActivityStatusCode.Error,
                         $"Body exceeded the {MaxBodyBytes}-byte cap mid-stream.");
-                    return new FetchResult
+                    return new FetchFailure
                     {
                         StatusCode = 0,
                         Latency = time.GetElapsedTime(started),
@@ -141,7 +150,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
                 // Same contract as a dead site: status 0 into the AIMD
                 // machinery, never an unhandled crash in a lane.
                 download?.SetStatus(ActivityStatusCode.Error, e.Message);
-                return new FetchResult
+                return new FetchFailure
                 {
                     StatusCode = 0,
                     Latency = time.GetElapsedTime(started),
@@ -149,7 +158,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
             }
         }
 
-        return new FetchResult
+        return new FetchedPage
         {
             StatusCode = (int)response.StatusCode,
             Html = html,

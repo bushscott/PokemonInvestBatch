@@ -19,13 +19,20 @@ public class FetchBookkeepingTests
     }
 
     private static FetchResult Fetch(int status, string? html = null, TimeSpan? retryAfter = null) =>
-        new()
-        {
-            StatusCode = status,
-            Html = html,
-            Latency = TimeSpan.FromMilliseconds(200),
-            RetryAfter = retryAfter,
-        };
+        html is null
+            ? new FetchFailure
+            {
+                StatusCode = status,
+                Latency = TimeSpan.FromMilliseconds(200),
+                RetryAfter = retryAfter,
+            }
+            : new FetchedPage
+            {
+                StatusCode = status,
+                Html = html,
+                Latency = TimeSpan.FromMilliseconds(200),
+                RetryAfter = retryAfter,
+            };
 
     private static void TightenToFloor(AdaptiveDelay delay)
     {
