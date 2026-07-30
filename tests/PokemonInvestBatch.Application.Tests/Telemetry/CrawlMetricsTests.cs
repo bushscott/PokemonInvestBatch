@@ -53,7 +53,7 @@ public class CrawlMetricsTests
 
         delay.RecordSuccess(TimeSpan.FromMilliseconds(100));
         collector.RecordObservableInstruments();
-        Assert.Equal(295, collector.LastMeasurement!.Value);
+        Assert.Equal(150, collector.LastMeasurement!.Value);
     }
 
     [Fact]

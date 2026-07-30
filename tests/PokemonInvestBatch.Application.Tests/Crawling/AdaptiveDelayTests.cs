@@ -13,11 +13,81 @@ public class AdaptiveDelayTests
     }
 
     [Fact]
-    public void Clean_responses_tighten_additively_toward_the_floor()
+    public void Clean_responses_tighten_additively_after_the_first_trouble()
+    {
+        var delay = NewDelay();
+        delay.RecordFailure(); // ends slow start; doubling is capped at the ceiling
+
+        delay.RecordSuccess(latency: TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(TimeSpan.FromSeconds(295), delay.Current);
+    }
+
+    [Fact]
+    public void Slow_start_halves_toward_the_floor_while_the_site_stays_healthy()
     {
         var delay = NewDelay();
 
         delay.RecordSuccess(latency: TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(TimeSpan.FromSeconds(150), delay.Current);
+    }
+
+    [Fact]
+    public void Slow_start_reaches_the_floor_in_six_clean_responses()
+    {
+        // 300 → 150 → 75 → 37.5 → 18.75 → 10: minutes, not the 2.5h
+        // the additive ramp would cost after every deploy.
+        var delay = NewDelay();
+
+        for (var i = 0; i < 6; i++)
+        {
+            delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
+        }
+
+        Assert.Equal(TimeSpan.FromSeconds(10), delay.Current);
+    }
+
+    [Fact]
+    public void Any_trouble_ends_slow_start_for_the_rest_of_the_process()
+    {
+        var delay = NewDelay();
+        delay.RecordFailure();
+
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(TimeSpan.FromSeconds(290), delay.Current);
+    }
+
+    [Fact]
+    public void A_slow_response_ends_slow_start_too()
+    {
+        var delay = NewDelay();
+        delay.RecordSuccess(latency: TimeSpan.FromSeconds(6));
+
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(TimeSpan.FromSeconds(295), delay.Current);
+    }
+
+    [Fact]
+    public void Rate_limiting_ends_slow_start_too()
+    {
+        var delay = NewDelay();
+        delay.RecordRateLimited();
+
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
+
+        Assert.Equal(TimeSpan.FromSeconds(295), delay.Current);
+    }
+
+    [Fact]
+    public void A_factor_of_one_disables_slow_start()
+    {
+        var delay = new AdaptiveDelay(new AdaptiveDelayOptions { SlowStartFactor = 1.0 });
+
+        delay.RecordSuccess(TimeSpan.FromMilliseconds(200));
 
         Assert.Equal(TimeSpan.FromSeconds(295), delay.Current);
     }

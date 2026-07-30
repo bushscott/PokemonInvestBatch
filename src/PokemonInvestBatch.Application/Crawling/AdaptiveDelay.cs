@@ -16,6 +16,12 @@ public sealed record AdaptiveDelayOptions
     /// <summary>A "success" slower than this is treated as trouble.</summary>
     public TimeSpan SlowResponseThreshold { get; init; } = TimeSpan.FromSeconds(5);
 
+    /// <summary>
+    /// Multiplicative tightening per clean response until the first trouble
+    /// of the process lifetime. 1.0 disables slow start (pure additive).
+    /// </summary>
+    public double SlowStartFactor { get; init; } = 0.5;
+
     public int FailuresBeforePause { get; init; } = 3;
 }
 
@@ -25,11 +31,16 @@ public sealed record AdaptiveDelayOptions
 /// TCP's fairness trick) inverted for politeness: each clean response
 /// tightens the delay 5s toward the 10s floor; any trouble doubles it toward
 /// (or past, per Retry-After) the 300s ceiling. Starts at the ceiling every
-/// process start, so a deploy costs ~2.5h of slow ramp — by design.
+/// process start, and — mirroring TCP slow start, also inverted — tightens
+/// multiplicatively until the first trouble of the process lifetime, so a
+/// deploy against a healthy site reaches the floor in ~10 minutes instead
+/// of ~2.5h. Any trouble ends slow start for good.
 /// Pure state — no clock, no I/O.
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {
+    private bool _slowStart = true;
+
     /// <summary>Strikes toward the pause — visible early warning before it trips.</summary>
     public int ConsecutiveFailures { get; private set; }
 
@@ -50,6 +61,14 @@ public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
         ConsecutiveFailures = 0;
         ShouldPause = false;
         var tightened = Current - options.DecreaseStep;
+        if (_slowStart)
+        {
+            // Whichever tightens harder; with a factor of 1.0 the additive
+            // step always wins, disabling slow start.
+            var halved = TimeSpan.FromTicks((long)(Current.Ticks * options.SlowStartFactor));
+            tightened = halved < tightened ? halved : tightened;
+        }
+
         Current = tightened < options.Floor ? options.Floor : tightened;
     }
 
@@ -63,12 +82,14 @@ public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
     /// <summary>429/503 — an explicit "stop", answered with the ceiling.</summary>
     public void RecordRateLimited(TimeSpan? retryAfter = null)
     {
+        _slowStart = false;
         Current = MaxWithRetryAfter(options.Ceiling, retryAfter);
         CountFailure();
     }
 
     private void BackOff(TimeSpan? retryAfter)
     {
+        _slowStart = false;
         var increased = TimeSpan.FromTicks((long)(Current.Ticks * options.IncreaseFactor));
         var capped = increased > options.Ceiling ? options.Ceiling : increased;
         Current = MaxWithRetryAfter(capped, retryAfter);
