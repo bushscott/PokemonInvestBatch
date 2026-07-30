@@ -253,6 +253,11 @@ public sealed class DetailCrawlLane(
 
         var observation = SalesObservation.From(page.Sales, card.LastVisitedAt, now);
 
+        // The flip into cap is the moment loss was proven; the fast-track
+        // revisits that follow re-observe hot buckets while the cure runs,
+        // and must not re-raise.
+        var newlyAtCap = observation.AnyBucketAtCap && !card.AnyBucketAtCap;
+
         int newSales;
         using (CrawlTracing.Source.StartActivity("card.write"))
         {
@@ -276,10 +281,23 @@ public sealed class DetailCrawlLane(
 
         metrics.RecordRowsAppended(newPrices.Count, newPops.Count, newSales);
 
-        logger.LogInformation(
+        logger.Log(
+            observation.AnyBucketAtCap ? LogLevel.Warning : LogLevel.Information,
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
             card.Id, card.Name, newPrices.Count, newPops.Count, newSales,
             observation.SalesPerDay, observation.AnyBucketAtCap ? ", AT CAP" : "");
+
+        if (newlyAtCap && throttle.ShouldAlert("sales-lost", now))
+        {
+            await alerter.RaiseAsync(
+                "Sales lost to a hot card",
+                $"Card {card.Id} ({card.Name}) is missing sales data because it outsold our visit "
+                + $"pace: the sale page completely turned over between visits, and anything older "
+                + $"than the newest {SalesObservation.BucketCap} rows is gone for good. It is "
+                + $"fast-tracked until its buckets calm down.\n"
+                + $"https://www.pricecharting.com{card.Url}",
+                ct);
+        }
     }
 
     /// <summary>Caller saves; the card is tracked, so the streak rides the

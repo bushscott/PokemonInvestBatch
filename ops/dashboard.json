@@ -130,7 +130,7 @@
         {
           "title": "Longest wait for a visit (days, promise: 30)",
           "layout": {
-            "column": 9,
+            "column": 7,
             "row": 13,
             "width": 2,
             "height": 3
@@ -464,7 +464,7 @@
         {
           "title": "Cards added to retry queue, 24h",
           "layout": {
-            "column": 7,
+            "column": 5,
             "row": 13,
             "width": 2,
             "height": 3
@@ -665,40 +665,9 @@
           }
         },
         {
-          "title": "Cards selling faster than we can track",
-          "layout": {
-            "column": 3,
-            "row": 13,
-            "width": 2,
-            "height": 3
-          },
-          "visualization": {
-            "id": "viz.billboard"
-          },
-          "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  6565679
-                ],
-                "query": "SELECT latest(`crawl.cards_at_cap`) AS 'cards' FROM Metric"
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            },
-            "thresholds": [
-              {
-                "alertSeverity": "CRITICAL",
-                "value": 0.5
-              }
-            ]
-          }
-        },
-        {
           "title": "Cards queued for retry (repeated errors)",
           "layout": {
-            "column": 5,
+            "column": 3,
             "row": 13,
             "width": 2,
             "height": 3
@@ -729,9 +698,9 @@
         {
           "title": "Longest wait, 7-day trend",
           "layout": {
-            "column": 11,
+            "column": 9,
             "row": 13,
-            "width": 2,
+            "width": 4,
             "height": 3
           },
           "visualization": {
@@ -945,7 +914,7 @@
           }
         },
         {
-          "title": "Cards at risk of missing sales",
+          "title": "Cards at risk of missing sales (predictive)",
           "layout": {
             "column": 1,
             "row": 13,
