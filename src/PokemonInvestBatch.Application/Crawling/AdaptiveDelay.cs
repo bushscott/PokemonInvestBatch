@@ -39,70 +39,121 @@ public sealed record AdaptiveDelayOptions
 /// </summary>
 public sealed class AdaptiveDelay(AdaptiveDelayOptions options)
 {
+    // The class's one lock. Three lanes report outcomes concurrently and the
+    // metrics gauge reads from the collection thread; without this, a
+    // failure's doubling can be overwritten by a racing success's tighten.
+    // Everything under the lock is pure state — no I/O, no callbacks,
+    // nothing that can block. Keep it that way.
+    private readonly Lock _sync = new();
+
     private bool _slowStart = true;
 
+    private int _consecutiveFailures;
+
+    private TimeSpan _current = options.Ceiling;
+
+    private bool _shouldPause;
+
     /// <summary>Strikes toward the pause — visible early warning before it trips.</summary>
-    public int ConsecutiveFailures { get; private set; }
+    public int ConsecutiveFailures
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _consecutiveFailures;
+            }
+        }
+    }
 
     /// <summary>Starts at the ceiling: a cold start is never a thundering herd.</summary>
-    public TimeSpan Current { get; private set; } = options.Ceiling;
+    public TimeSpan Current
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _current;
+            }
+        }
+    }
 
-    public bool ShouldPause { get; private set; }
+    public bool ShouldPause
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _shouldPause;
+            }
+        }
+    }
 
     public void RecordSuccess(TimeSpan latency)
     {
-        if (latency >= options.SlowResponseThreshold)
+        lock (_sync)
         {
-            // Their server straining is partly us — back off unasked.
-            BackOff(retryAfter: null);
-            return;
-        }
+            if (latency >= options.SlowResponseThreshold)
+            {
+                // Their server straining is partly us — back off unasked.
+                BackOff(retryAfter: null);
+                return;
+            }
 
-        ConsecutiveFailures = 0;
-        ShouldPause = false;
-        var tightened = Current - options.DecreaseStep;
-        if (_slowStart)
-        {
-            // Whichever tightens harder; with a factor of 1.0 the additive
-            // step always wins, disabling slow start.
-            var halved = TimeSpan.FromTicks((long)(Current.Ticks * options.SlowStartFactor));
-            tightened = halved < tightened ? halved : tightened;
-        }
+            _consecutiveFailures = 0;
+            _shouldPause = false;
+            var tightened = _current - options.DecreaseStep;
+            if (_slowStart)
+            {
+                // Whichever tightens harder; with a factor of 1.0 the additive
+                // step always wins, disabling slow start.
+                var halved = TimeSpan.FromTicks((long)(_current.Ticks * options.SlowStartFactor));
+                tightened = halved < tightened ? halved : tightened;
+            }
 
-        Current = tightened < options.Floor ? options.Floor : tightened;
+            _current = tightened < options.Floor ? options.Floor : tightened;
+        }
     }
 
     /// <summary>Timeouts and 5xx (other than 503).</summary>
     public void RecordFailure(TimeSpan? retryAfter = null)
     {
-        BackOff(retryAfter);
-        CountFailure();
+        lock (_sync)
+        {
+            BackOff(retryAfter);
+            CountFailure();
+        }
     }
 
     /// <summary>429/503 — an explicit "stop", answered with the ceiling.</summary>
     public void RecordRateLimited(TimeSpan? retryAfter = null)
     {
-        _slowStart = false;
-        Current = MaxWithRetryAfter(options.Ceiling, retryAfter);
-        CountFailure();
+        lock (_sync)
+        {
+            _slowStart = false;
+            _current = MaxWithRetryAfter(options.Ceiling, retryAfter);
+            CountFailure();
+        }
     }
 
+    /// <summary>Callers hold the lock.</summary>
     private void BackOff(TimeSpan? retryAfter)
     {
         _slowStart = false;
-        var increased = TimeSpan.FromTicks((long)(Current.Ticks * options.IncreaseFactor));
+        var increased = TimeSpan.FromTicks((long)(_current.Ticks * options.IncreaseFactor));
         var capped = increased > options.Ceiling ? options.Ceiling : increased;
-        Current = MaxWithRetryAfter(capped, retryAfter);
+        _current = MaxWithRetryAfter(capped, retryAfter);
     }
 
     private static TimeSpan MaxWithRetryAfter(TimeSpan computed, TimeSpan? retryAfter) =>
         retryAfter is { } demanded && demanded > computed ? demanded : computed;
 
+    /// <summary>Callers hold the lock.</summary>
     private void CountFailure()
     {
-        if (++ConsecutiveFailures >= options.FailuresBeforePause)
+        if (++_consecutiveFailures >= options.FailuresBeforePause)
         {
-            ShouldPause = true;
+            _shouldPause = true;
         }
     }
 }

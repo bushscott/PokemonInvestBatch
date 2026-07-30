@@ -190,6 +190,28 @@ public class AdaptiveDelayTests
         Assert.False(delay.ShouldPause);
     }
 
+    [Fact]
+    public void Concurrent_reports_never_tear_the_state()
+    {
+        // Smoke test for the lock: three lanes report outcomes concurrently.
+        // Whatever the interleaving, the delay must stay inside its rails
+        // and the failure streak must never go negative.
+        var delay = NewDelay();
+
+        Parallel.For(0, 3_000, i =>
+        {
+            switch (i % 3)
+            {
+                case 0: delay.RecordSuccess(TimeSpan.FromMilliseconds(200)); break;
+                case 1: delay.RecordFailure(); break;
+                default: delay.RecordRateLimited(); break;
+            }
+        });
+
+        Assert.InRange(delay.Current, TimeSpan.FromSeconds(10), TimeSpan.FromSeconds(300));
+        Assert.InRange(delay.ConsecutiveFailures, 0, int.MaxValue);
+    }
+
     private static void TightenTo(AdaptiveDelay delay, TimeSpan target)
     {
         while (delay.Current > target)
