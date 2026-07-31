@@ -325,6 +325,31 @@
           }
         },
         {
+          "title": "5 slowest database queries, 24h (avg ms)",
+          "layout": {
+            "column": 9,
+            "row": 16,
+            "width": 4,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.table"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT average(avg_elapsed_time_ms) AS 'avg ms', latest(execution_count) AS 'runs since stats reset' FROM PostgresSlowQueries FACET database_name, query_text SINCE 1 day ago LIMIT 5"
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
           "title": "Total rows in Postgres",
           "layout": {
             "column": 5,
@@ -516,31 +541,6 @@
               {
                 "alertSeverity": "WARNING",
                 "value": 1
-              }
-            ],
-            "platformOptions": {
-              "ignoreTimeRange": false
-            }
-          }
-        },
-        {
-          "title": "New rows inserted per card visit",
-          "layout": {
-            "column": 9,
-            "row": 16,
-            "width": 4,
-            "height": 3
-          },
-          "visualization": {
-            "id": "viz.line"
-          },
-          "rawConfiguration": {
-            "nrqlQueries": [
-              {
-                "accountIds": [
-                  6565679
-                ],
-                "query": "SELECT sum(`crawl.rows_appended`) / sum(`crawl.cards_visited`) AS 'rows per visit' FROM Metric TIMESERIES SINCE 24 hours ago"
               }
             ],
             "platformOptions": {
