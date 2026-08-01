@@ -36,7 +36,9 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             card.Property(c => c.Id).ValueGeneratedNever();
             card.Property(c => c.Url).HasMaxLength(ProductListing.MaxUrlLength);
             card.Property(c => c.Name).HasMaxLength(300);
-            card.Property(c => c.ImageHash).HasMaxLength(64);
+            // Was 64 (plain sha256 hex); the site now serves "ref"-prefixed
+            // 67-char tokens. 128 leaves room for the next format surprise.
+            card.Property(c => c.ImageHash).HasMaxLength(128);
             card.HasOne(c => c.Set).WithMany().HasForeignKey(c => c.SetId).OnDelete(DeleteBehavior.Restrict);
             // The scheduler's oldest-first / priority scans.
             card.HasIndex(c => c.LastVisitedAt);
