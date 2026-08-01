@@ -737,7 +737,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT `MESSAGE.Message` FROM Log WHERE `MESSAGE.Message` LIKE '%price rows%' OR message LIKE '%price rows%' SINCE 3 hours ago LIMIT 10"
+                "query": "SELECT `MESSAGE.Message` FROM Log WHERE `MESSAGE.Message` LIKE '%price rows%' OR message LIKE '%price rows%' ORDER BY timestamp DESC SINCE 3 hours ago LIMIT 10"
               }
             ],
             "platformOptions": {
