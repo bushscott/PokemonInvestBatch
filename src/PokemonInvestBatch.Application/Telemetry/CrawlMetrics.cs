@@ -39,6 +39,8 @@ public sealed class CrawlMetrics : IDisposable
     private long _setsTotal;
     private double _worstCaseDays;
     private long _cardsAtRisk;
+    private string[] _cardsAtRiskNow = [];
+    private string[] _cardsAtRiskRecovered = [];
 
     public CrawlMetrics(AdaptiveDelay delay)
     {
@@ -82,6 +84,9 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.cards_at_risk", () => _cardsAtRisk,
             description: "Selling cards past three quarters of their burn window — the scheduler fast-tracks at half, so any count means scheduling is falling behind, caught with a quarter window left before sales are lost");
+        Meter.CreateObservableGauge(
+            "crawl.card_at_risk", ObserveCardsAtRisk,
+            description: "1 per named at-risk card, so the alert incident carries the card's identity; a recovered card reports one 0 so its incident closes on data, not on a timeout");
         Meter.CreateObservableGauge(
             "crawl.worst_case_days", () => _worstCaseDays,
             description: "Days the most-neglected card has waited: since its last visit, or since discovery if never visited — the scheduler's floor promises this never passes 30");
@@ -168,8 +173,29 @@ public sealed class CrawlMetrics : IDisposable
     /// never-visited sentinel — worst case is unbounded, not measurable.</summary>
     public void SetWorstCaseDays(double days) => _worstCaseDays = days;
 
-    /// <summary>Refreshed by the stats sweep each interval.</summary>
-    public void SetCardsAtRisk(long cards) => _cardsAtRisk = cards;
+    /// <summary>Refreshed by the stats sweep each interval. Labels are
+    /// "Name /game/... url" so the faceted alert names its card outright.</summary>
+    public void SetCardsAtRisk(IReadOnlyList<string> cards)
+    {
+        var previous = _cardsAtRiskNow;
+        var current = cards.ToArray();
+        _cardsAtRiskRecovered = [.. previous.Except(current)];
+        _cardsAtRiskNow = current;
+        _cardsAtRisk = current.Length;
+    }
+
+    private IEnumerable<Measurement<long>> ObserveCardsAtRisk()
+    {
+        foreach (var card in _cardsAtRiskNow)
+        {
+            yield return new Measurement<long>(1, new KeyValuePair<string, object?>("card", card));
+        }
+
+        foreach (var card in _cardsAtRiskRecovered)
+        {
+            yield return new Measurement<long>(0, new KeyValuePair<string, object?>("card", card));
+        }
+    }
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>
     public void SetSchedulerStats(long cardsAtCap, long quarantinedNow)

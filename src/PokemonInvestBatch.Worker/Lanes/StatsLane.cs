@@ -84,7 +84,8 @@ public sealed class StatsLane(
         // before rows actually roll off unseen.
         metrics.SetCardsAtRisk(
             await VisitCandidatePool.PastBurnFraction(db.Cards, now, AtRiskBurnFraction)
-                .LongCountAsync(ct));
+                .Select(c => c.Name + " " + c.Url)
+                .ToListAsync(ct));
 
         metrics.SetSchedulerStats(
             cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),

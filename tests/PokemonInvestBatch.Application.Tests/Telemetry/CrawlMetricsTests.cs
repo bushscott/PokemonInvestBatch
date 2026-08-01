@@ -153,10 +153,48 @@ public class CrawlMetricsTests
         var (metrics, _) = NewMetrics();
         using var collector = new MetricCollector<long>(metrics.Meter, "crawl.cards_at_risk");
 
-        metrics.SetCardsAtRisk(40);
+        metrics.SetCardsAtRisk(["Charizard #4 /game/pokemon-base-set/charizard-4", "Blastoise #2 /game/pokemon-base-set/blastoise-2"]);
         collector.RecordObservableInstruments();
 
-        Assert.Equal(40, collector.LastMeasurement!.Value);
+        Assert.Equal(2, collector.LastMeasurement!.Value);
+    }
+
+    [Fact]
+    public void Each_at_risk_card_is_named_so_the_alert_can_say_who()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.card_at_risk");
+
+        metrics.SetCardsAtRisk(["Charizard #4 /game/pokemon-base-set/charizard-4"]);
+        collector.RecordObservableInstruments();
+
+        var measurement = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(1, measurement.Value);
+        Assert.Equal(
+            "Charizard #4 /game/pokemon-base-set/charizard-4",
+            measurement.Tags.Single(t => t.Key == "card").Value);
+    }
+
+    [Fact]
+    public void A_recovered_card_reports_zero_once_then_falls_silent()
+    {
+        var (metrics, _) = NewMetrics();
+        using var collector = new MetricCollector<long>(metrics.Meter, "crawl.card_at_risk");
+
+        metrics.SetCardsAtRisk(["Charizard #4 /game/pokemon-base-set/charizard-4"]);
+
+        // Next sweep: recovered. The card must report a 0 so its open alert
+        // incident closes on data instead of a loss-of-signal timeout.
+        metrics.SetCardsAtRisk([]);
+        collector.RecordObservableInstruments();
+        var zero = Assert.Single(collector.GetMeasurementSnapshot());
+        Assert.Equal(0, zero.Value);
+
+        // The sweep after that: gone entirely.
+        metrics.SetCardsAtRisk([]);
+        collector.Clear();
+        collector.RecordObservableInstruments();
+        Assert.Empty(collector.GetMeasurementSnapshot());
     }
 
     [Fact]
