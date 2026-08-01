@@ -261,6 +261,14 @@
             "id": "viz.pie"
           },
           "rawConfiguration": {
+            "colors": {
+              "seriesOverrides": [
+                { "seriesName": "card pages", "color": "#2a78d6" },
+                { "seriesName": "set catalog", "color": "#c98500" },
+                { "seriesName": "spot check", "color": "#d55181" },
+                { "seriesName": "images", "color": "#008300" }
+              ]
+            },
             "nrqlQueries": [
               {
                 "accountIds": [
