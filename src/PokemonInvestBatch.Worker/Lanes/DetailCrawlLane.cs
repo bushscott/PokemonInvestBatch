@@ -34,6 +34,9 @@ public sealed class DetailCrawlLane(
 
     private readonly SameCardFailureBreaker breaker = new();
 
+    private readonly SecondChanceTrickle secondChances =
+        new(TimeSpan.FromMinutes(options.Value.SecondChanceIntervalMinutes));
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
@@ -79,6 +82,11 @@ public sealed class DetailCrawlLane(
             return;
         }
 
+        // A still-benched card can only reach us through the second-chance
+        // trickle; remembered so its failures skip the breaker below.
+        var isSecondChance = card.QuarantinedUntil is { } benchedUntil
+            && benchedUntil > time.GetUtcNow();
+
         // The polite wait happens outside the span: card.visit measures work
         // (fetch through commit), not the voluntary sleep before it — same
         // boundary as the visit-duration histogram.
@@ -116,7 +124,15 @@ public sealed class DetailCrawlLane(
             // Unexpected failures ride the trace, not just the log stream.
             visit?.AddException(e);
             visit?.SetStatus(ActivityStatusCode.Error, e.Message);
-            if (breaker.RecordUnexpectedFailure(card.Id))
+            if (isSecondChance)
+            {
+                // The breaker exists to attribute repeat failures to a card;
+                // a benched card is already attributed. One failed retry
+                // re-benches it immediately with the doubled sentence —
+                // otherwise the trickle would probe it again in minutes.
+                await StrikeUnattributedAsync(card.Id, ct);
+            }
+            else if (breaker.RecordUnexpectedFailure(card.Id))
             {
                 await StrikeUnattributedAsync(card.Id, ct);
             }
@@ -367,6 +383,19 @@ public sealed class DetailCrawlLane(
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
         var now = time.GetUtcNow();
+        if (secondChances.IsSlotOpen(now))
+        {
+            var benched = await VisitCandidatePool.Benched(db, now).ToListAsync(ct);
+            if (secondChances.TrySelect(benched, now) is { } retryId)
+            {
+                var retried = await db.Cards.FirstAsync(c => c.Id == retryId, ct);
+                logger.LogInformation(
+                    "Second chance: retrying benched card {CardId} ({Name}) ahead of its {Until:u} comeback",
+                    retried.Id, retried.Name, retried.QuarantinedUntil);
+                return retried;
+            }
+        }
+
         var unvisited = await VisitCandidatePool.Eligible(db, now)
             .Where(c => c.LastVisitedAt == null)
             .OrderBy(c => c.Id)

@@ -63,6 +63,24 @@ public static class VisitCandidatePool
         db.Cards.Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
 
     /// <summary>
+    /// The retry queue, for the second-chance trickle: still-benched cards,
+    /// soonest comeback first (a fair proxy for benched-earliest — the exact
+    /// due ordering is the trickle's pure-code job). Bounded like the other
+    /// tier windows; three narrow columns cross the wire.
+    /// </summary>
+    public static IQueryable<BenchedCandidate> Benched(PokemonDbContext db, DateTimeOffset now) =>
+        db.Cards
+            .Where(c => c.QuarantinedUntil != null && c.QuarantinedUntil >= now)
+            .OrderBy(c => c.QuarantinedUntil)
+            .Take(TierTake)
+            .Select(c => new BenchedCandidate
+            {
+                Id = c.Id,
+                FailureStreak = c.FailureStreak,
+                QuarantinedUntil = c.QuarantinedUntil!.Value,
+            });
+
+    /// <summary>
     /// VisitPriority's burn-window condition — staleness × sales rate has
     /// consumed the safety fraction of the bucket — translated to SQL, most
     /// overdue first. Must stay the same inequality as VisitPriority.Score.
