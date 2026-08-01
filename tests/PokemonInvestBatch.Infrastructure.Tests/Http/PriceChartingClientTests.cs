@@ -126,6 +126,25 @@ public class PriceChartingClientTests
     }
 
     [Fact]
+    public async Task A_redirect_is_a_failure_that_names_its_destination()
+    {
+        // The handler is built with AllowAutoRedirect = false, so a renamed
+        // card's 302 arrives here instead of the search page it points at.
+        // The destination rides the failure so the log can say "moved where".
+        var response = new HttpResponseMessage(HttpStatusCode.Found);
+        response.Headers.Location = new Uri(
+            "https://www.pricecharting.com/search-products?type=prices&q=misdreavus");
+        var (client, _) = NewClient(response);
+
+        var result = await client.GetAsync(
+            "/game/pokemon-japanese-awakening-legends/misdreavus", CancellationToken.None);
+
+        var failure = Assert.IsType<FetchFailure>(result);
+        Assert.Equal(302, failure.StatusCode);
+        Assert.Contains("/search-products", failure.RedirectTarget);
+    }
+
+    [Fact]
     public async Task Retry_after_seconds_are_surfaced()
     {
         var response = new HttpResponseMessage(HttpStatusCode.ServiceUnavailable);

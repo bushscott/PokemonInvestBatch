@@ -189,9 +189,18 @@ public sealed class DetailCrawlLane(
 
         if (fetched is not FetchedPage fetchedPage)
         {
-            logger.LogWarning(
-                "Card {CardId} ({Name}) fetch returned HTTP {Status}",
-                card.Id, card.Name, fetched.StatusCode);
+            if (fetched is FetchFailure { RedirectTarget: { } movedTo })
+            {
+                logger.LogWarning(
+                    "Card {CardId} ({Name}) fetch returned HTTP {Status} redirecting to {RedirectTarget}",
+                    card.Id, card.Name, fetched.StatusCode, movedTo);
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Card {CardId} ({Name}) fetch returned HTTP {Status}",
+                    card.Id, card.Name, fetched.StatusCode);
+            }
             visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, shapeHash: null, now));
             if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))

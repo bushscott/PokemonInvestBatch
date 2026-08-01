@@ -25,7 +25,12 @@ public sealed record FetchedPage : FetchResult
 /// <summary>Non-2xx, transport death, or a size bomb (status 0). Carries no
 /// body on purpose: failure is a type, not a null threaded through the
 /// happy path.</summary>
-public sealed record FetchFailure : FetchResult;
+public sealed record FetchFailure : FetchResult
+{
+    /// <summary>Where a 3xx pointed, so the log answers "moved where?"
+    /// without a hand-run curl.</summary>
+    public string? RedirectTarget { get; init; }
+}
 
 /// <summary>
 /// The only code that talks to pricecharting.com. Every request carries a
@@ -105,6 +110,7 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
                 StatusCode = (int)response.StatusCode,
                 Latency = time.GetElapsedTime(started),
                 RetryAfter = response.Headers.RetryAfter?.Delta,
+                RedirectTarget = response.Headers.Location?.ToString(),
             };
         }
 

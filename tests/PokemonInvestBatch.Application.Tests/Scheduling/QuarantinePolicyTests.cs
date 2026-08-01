@@ -46,6 +46,18 @@ public class QuarantinePolicyTests
     }
 
     [Theory]
+    [InlineData(301)]
+    [InlineData(302)]
+    [InlineData(308)]
+    public void A_moved_page_is_the_cards_fault(int status)
+    {
+        // A redirect means the stored URL is stale — a renamed card 302s to
+        // a search page. Benching it hands the cure to the next set walk,
+        // which re-catalogs the card's URL by product id.
+        Assert.True(QuarantinePolicy.IsCardAttributable(status));
+    }
+
+    [Theory]
     [InlineData(429)]
     [InlineData(500)]
     [InlineData(503)]

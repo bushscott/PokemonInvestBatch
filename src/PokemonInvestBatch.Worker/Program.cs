@@ -65,11 +65,15 @@ builder.Services.AddSingleton(new IncidentThrottle(TimeSpan.FromHours(6)));
 builder.Services.AddSingleton<CrawlMetrics>();
 
 builder.Services.AddHttpClient(nameof(PriceChartingClient), (services, http) =>
-{
-    var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
-    http.BaseAddress = new Uri(scraper.BaseUrl);
-    http.Timeout = TimeSpan.FromSeconds(60);
-});
+    {
+        var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
+        http.BaseAddress = new Uri(scraper.BaseUrl);
+        http.Timeout = TimeSpan.FromSeconds(60);
+    })
+    // A 3xx is the site saying "this page moved" and the lanes must hear it
+    // verbatim: a renamed card's old URL redirects to a search page, which
+    // would arrive here as a 200 that parses as schema drift.
+    .ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler { AllowAutoRedirect = false });
 builder.Services.AddSingleton(services =>
 {
     var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;

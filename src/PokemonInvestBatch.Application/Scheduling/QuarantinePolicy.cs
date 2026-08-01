@@ -16,10 +16,13 @@ public static class QuarantinePolicy
 
     private static readonly TimeSpan MaxSentence = TimeSpan.FromDays(30);
 
-    /// <summary>Client errors are the card's fault; 429 and 5xx are the site's,
-    /// and the AIMD pause owns those — an outage must not convict innocents.</summary>
+    /// <summary>Client errors and redirects are the card's fault — a 3xx means
+    /// the stored URL went stale (the card was renamed or delisted) and stays
+    /// stale until the next set walk re-catalogs it. 429 and 5xx are the
+    /// site's, and the AIMD pause owns those — an outage must not convict
+    /// innocents.</summary>
     public static bool IsCardAttributable(int httpStatus) =>
-        httpStatus is >= 400 and < 500 and not 429;
+        httpStatus is >= 300 and < 500 and not 429;
 
     /// <summary>Null below the strike threshold; then 1d doubling per strike,
     /// capped so a delisted card settles into a cheap monthly probe.</summary>
