@@ -4,7 +4,7 @@ using PokemonInvestBatch.Infrastructure.Persistence;
 namespace PokemonInvestBatch.Integration.Tests;
 
 /// <summary>
-/// Proves the second-chance bench query is translatable by the Npgsql
+/// Proves the retry-queue bench query is translatable by the Npgsql
 /// provider. ToQueryString renders SQL without a connection, so this runs
 /// everywhere — an untranslatable expression would otherwise surface as a
 /// runtime crash in the detail lane on the Pi.

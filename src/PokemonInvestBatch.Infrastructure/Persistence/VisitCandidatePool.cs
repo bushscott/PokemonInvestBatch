@@ -63,10 +63,10 @@ public static class VisitCandidatePool
         db.Cards.Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
 
     /// <summary>
-    /// The retry queue, for the second-chance trickle: still-benched cards,
-    /// soonest comeback first (a fair proxy for benched-earliest — the exact
-    /// due ordering is the trickle's pure-code job). Bounded like the other
-    /// tier windows; three narrow columns cross the wire.
+    /// The retry queue, for the retry-queue trickle: still-benched cards,
+    /// soonest comeback first — a failed retry's doubled sentence pushes it
+    /// behind the others, so the trickle rotates instead of fixating.
+    /// Bounded like the other tier windows; two narrow columns cross the wire.
     /// </summary>
     public static IQueryable<BenchedCandidate> Benched(PokemonDbContext db, DateTimeOffset now) =>
         db.Cards
@@ -76,7 +76,6 @@ public static class VisitCandidatePool
             .Select(c => new BenchedCandidate
             {
                 Id = c.Id,
-                FailureStreak = c.FailureStreak,
                 QuarantinedUntil = c.QuarantinedUntil!.Value,
             });
 

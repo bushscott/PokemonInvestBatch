@@ -34,8 +34,8 @@ public sealed class DetailCrawlLane(
 
     private readonly SameCardFailureBreaker breaker = new();
 
-    private readonly SecondChanceTrickle secondChances =
-        new(TimeSpan.FromMinutes(options.Value.SecondChanceIntervalMinutes));
+    private readonly RetryTrickle retryTrickle =
+        new(TimeSpan.FromMinutes(options.Value.RetryTrickleIntervalMinutes));
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -82,9 +82,9 @@ public sealed class DetailCrawlLane(
             return;
         }
 
-        // A still-benched card can only reach us through the second-chance
-        // trickle; remembered so its failures skip the breaker below.
-        var isSecondChance = card.QuarantinedUntil is { } benchedUntil
+        // A still-benched card can only reach us through the retry trickle;
+        // remembered so its failures skip the breaker below.
+        var isBenchRetry = card.QuarantinedUntil is { } benchedUntil
             && benchedUntil > time.GetUtcNow();
 
         // The polite wait happens outside the span: card.visit measures work
@@ -108,6 +108,20 @@ public sealed class DetailCrawlLane(
         {
             await VisitAsync(db, card, visit, ct);
             breaker.Reset();
+            if (isBenchRetry)
+            {
+                // A cleared bench is the proof of healing; anything else —
+                // parse failure, HTTP trouble — means stand down. The visit
+                // itself already recorded why.
+                if (card.QuarantinedUntil is null)
+                {
+                    retryTrickle.RecordSuccess();
+                }
+                else
+                {
+                    retryTrickle.RecordFailure(time.GetUtcNow());
+                }
+            }
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -124,12 +138,14 @@ public sealed class DetailCrawlLane(
             // Unexpected failures ride the trace, not just the log stream.
             visit?.AddException(e);
             visit?.SetStatus(ActivityStatusCode.Error, e.Message);
-            if (isSecondChance)
+            if (isBenchRetry)
             {
                 // The breaker exists to attribute repeat failures to a card;
                 // a benched card is already attributed. One failed retry
                 // re-benches it immediately with the doubled sentence —
-                // otherwise the trickle would probe it again in minutes.
+                // sending it behind the other benched cards — and stands
+                // the trickle down for the interval.
+                retryTrickle.RecordFailure(time.GetUtcNow());
                 await StrikeUnattributedAsync(card.Id, ct);
             }
             else if (breaker.RecordUnexpectedFailure(card.Id))
@@ -383,14 +399,14 @@ public sealed class DetailCrawlLane(
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
         var now = time.GetUtcNow();
-        if (secondChances.IsSlotOpen(now))
+        if (retryTrickle.IsSlotOpen(now))
         {
             var benched = await VisitCandidatePool.Benched(db, now).ToListAsync(ct);
-            if (secondChances.TrySelect(benched, now) is { } retryId)
+            if (retryTrickle.TrySelect(benched, now) is { } retryId)
             {
                 var retried = await db.Cards.FirstAsync(c => c.Id == retryId, ct);
                 logger.LogInformation(
-                    "Second chance: retrying benched card {CardId} ({Name}) ahead of its {Until:u} comeback",
+                    "Retry queue: retrying benched card {CardId} ({Name}) ahead of its {Until:u} comeback",
                     retried.Id, retried.Name, retried.QuarantinedUntil);
                 return retried;
             }

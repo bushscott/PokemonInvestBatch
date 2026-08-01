@@ -56,27 +56,4 @@ public class QuarantinePolicyTests
         Assert.False(QuarantinePolicy.IsCardAttributable(status));
     }
 
-    [Fact]
-    public void A_first_bench_earns_its_second_chance_after_an_hour()
-    {
-        // Streak 3 = 1-day sentence, so 1/24th in = one hour after benching.
-        var until = QuarantinePolicy.QuarantineUntil(failureStreak: 3, Now)!.Value;
-        Assert.Equal(Now.AddHours(1), QuarantinePolicy.SecondChanceAt(3, until));
-    }
-
-    [Fact]
-    public void Each_further_strike_doubles_the_second_chance_wait_too()
-    {
-        var until = QuarantinePolicy.QuarantineUntil(failureStreak: 4, Now)!.Value;
-        Assert.Equal(Now.AddHours(2), QuarantinePolicy.SecondChanceAt(4, until));
-    }
-
-    [Fact]
-    public void A_capped_sentence_still_gets_a_second_chance_within_two_days()
-    {
-        // 30-day cap / 24 = 30 hours — even the monthly-probe cards stay
-        // reachable by a fix without waiting out the month.
-        var until = QuarantinePolicy.QuarantineUntil(failureStreak: 50, Now)!.Value;
-        Assert.Equal(Now.AddHours(30), QuarantinePolicy.SecondChanceAt(50, until));
-    }
 }

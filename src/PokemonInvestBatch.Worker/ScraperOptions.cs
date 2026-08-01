@@ -47,6 +47,6 @@ public sealed record ScraperOptions
     /// <summary>Cadence of the stats sweep publishing coverage and row-total gauges.</summary>
     public int StatsIntervalMinutes { get; init; } = 5;
 
-    /// <summary>At most one benched-card second-chance retry per this many minutes.</summary>
-    public int SecondChanceIntervalMinutes { get; init; } = 10;
+    /// <summary>At most one benched-card retry from the retry queue per this many minutes.</summary>
+    public int RetryTrickleIntervalMinutes { get; init; } = 10;
 }
