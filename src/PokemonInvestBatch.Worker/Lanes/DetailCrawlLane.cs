@@ -392,10 +392,13 @@ public sealed class DetailCrawlLane(
         }
     }
 
-    /// <summary>Unvisited first; otherwise the tested priority score over
-    /// VisitCandidatePool — the stalest 500 plus the cap-hit and
-    /// burn-window-due tiers, each queried on its own membership so no tier
-    /// is starved by staleness ordering.</summary>
+    /// <summary>The tested priority score over VisitCandidatePool — the
+    /// stalest 500 plus the cap-hit and burn-window-due tiers, each queried
+    /// on its own membership so no tier is starved by staleness ordering.
+    /// Never-visited cards sort out of every window (NULL staleness), so
+    /// their tier is applied here by comparison — a card due by burn window
+    /// outranks them, because waiting there tears a permanent gap in sales
+    /// history we already own, while a first visit only moves later.</summary>
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
         var now = time.GetUtcNow();
@@ -412,15 +415,6 @@ public sealed class DetailCrawlLane(
             }
         }
 
-        var unvisited = await VisitCandidatePool.Eligible(db, now)
-            .Where(c => c.LastVisitedAt == null)
-            .OrderBy(c => c.Id)
-            .FirstOrDefaultAsync(ct);
-        if (unvisited is not null)
-        {
-            return unvisited;
-        }
-
         var candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
         if (candidates.Count > 0 && candidates[0].State.LastVisitedAt is { } oldest)
         {
@@ -428,6 +422,23 @@ public sealed class DetailCrawlLane(
         }
 
         var winner = candidates.MaxBy(c => VisitPriority.Score(c.State, now, PriorityOptions));
+        var winnerScore = winner is null
+            ? double.NegativeInfinity
+            : VisitPriority.Score(winner.State, now, PriorityOptions);
+
+        var unvisitedScore = VisitPriority.Score(new CardVisitState(), now, PriorityOptions);
+        if (winnerScore < unvisitedScore)
+        {
+            var unvisited = await VisitCandidatePool.Eligible(db, now)
+                .Where(c => c.LastVisitedAt == null)
+                .OrderBy(c => c.Id)
+                .FirstOrDefaultAsync(ct);
+            if (unvisited is not null)
+            {
+                return unvisited;
+            }
+        }
+
         if (winner is null)
         {
             return null;
