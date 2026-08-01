@@ -246,6 +246,26 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "2xx",
+                  "color": "#008300"
+                },
+                {
+                  "seriesName": "3xx",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "4xx",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "5xx",
+                  "color": "#e34948"
+                }
+              ]
             }
           }
         },
@@ -263,10 +283,22 @@
           "rawConfiguration": {
             "colors": {
               "seriesOverrides": [
-                { "seriesName": "card pages", "color": "#2a78d6" },
-                { "seriesName": "set catalog", "color": "#c98500" },
-                { "seriesName": "spot check", "color": "#d55181" },
-                { "seriesName": "images", "color": "#008300" }
+                {
+                  "seriesName": "card pages",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "set catalog",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "spot check",
+                  "color": "#d55181"
+                },
+                {
+                  "seriesName": "images",
+                  "color": "#008300"
+                }
               ]
             },
             "nrqlQueries": [
@@ -304,6 +336,22 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "price",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "population",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "sale",
+                  "color": "#008300"
+                }
+              ]
             }
           }
         },
@@ -379,6 +427,22 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "price",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "population",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "sale",
+                  "color": "#008300"
+                }
+              ]
             }
           }
         },
@@ -609,6 +673,18 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "p50 duration (s)",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "p95 duration (s)",
+                  "color": "#c98500"
+                }
+              ]
             }
           }
         },
@@ -825,6 +901,30 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "server wait",
+                  "color": "#4a3aa7"
+                },
+                {
+                  "seriesName": "download",
+                  "color": "#2a78d6"
+                },
+                {
+                  "seriesName": "parse",
+                  "color": "#008300"
+                },
+                {
+                  "seriesName": "load history",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "write + commit",
+                  "color": "#d55181"
+                }
+              ]
             }
           }
         },
@@ -856,6 +956,18 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "host %",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "scraper % (peak)",
+                  "color": "#2a78d6"
+                }
+              ]
             }
           }
         },
@@ -887,6 +999,18 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "host %",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "scraper %",
+                  "color": "#2a78d6"
+                }
+              ]
             }
           }
         },
@@ -918,6 +1042,18 @@
             ],
             "platformOptions": {
               "ignoreTimeRange": false
+            },
+            "colors": {
+              "seriesOverrides": [
+                {
+                  "seriesName": "host",
+                  "color": "#c98500"
+                },
+                {
+                  "seriesName": "scraper (peak)",
+                  "color": "#2a78d6"
+                }
+              ]
             }
           }
         },
