@@ -144,7 +144,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.worst_case_days`) AS 'days' FROM Metric SINCE 1 day ago"
+                "query": "SELECT latest(`crawl.worst_case_days`) AS 'days' FROM Metric"
               }
             ],
             "thresholds": [
