@@ -929,7 +929,7 @@
           }
         },
         {
-          "title": "Pi CPU (%): host vs scraper",
+          "title": "Pi CPU (% of whole Pi): host avg vs scraper peak",
           "layout": {
             "column": 1,
             "row": 7,
@@ -945,13 +945,13 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT average(cpuPercent) AS 'host %' FROM SystemSample TIMESERIES SINCE 1 day ago"
+                "query": "SELECT average(cpuPercent) AS 'host (avg)' FROM SystemSample TIMESERIES SINCE 1 day ago"
               },
               {
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT max(cpuPercent) AS 'scraper % (peak)' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
+                "query": "SELECT max(cpuPercent) / 4 AS 'scraper (peak)' FROM ProcessSample WHERE (processDisplayName LIKE 'PokemonInvestBa%' OR processDisplayName LIKE 'pokemon-invest%') TIMESERIES SINCE 1 day ago"
               }
             ],
             "platformOptions": {
@@ -960,11 +960,11 @@
             "colors": {
               "seriesOverrides": [
                 {
-                  "seriesName": "host %",
+                  "seriesName": "host (avg)",
                   "color": "#c98500"
                 },
                 {
-                  "seriesName": "scraper % (peak)",
+                  "seriesName": "scraper (peak)",
                   "color": "#2a78d6"
                 }
               ]
