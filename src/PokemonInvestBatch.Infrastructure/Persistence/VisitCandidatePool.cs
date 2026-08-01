@@ -63,9 +63,9 @@ public static class VisitCandidatePool
         db.Cards.Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
 
     /// <summary>
-    /// The retry queue, for the retry-queue trickle: still-benched cards,
+    /// The retry queue, for the bench recheck: still-benched cards,
     /// soonest comeback first — a failed retry's doubled sentence pushes it
-    /// behind the others, so the trickle rotates instead of fixating.
+    /// behind the others, so the recheck rotates instead of fixating.
     /// Bounded like the other tier windows; two narrow columns cross the wire.
     /// </summary>
     public static IQueryable<BenchedCandidate> Benched(PokemonDbContext db, DateTimeOffset now) =>

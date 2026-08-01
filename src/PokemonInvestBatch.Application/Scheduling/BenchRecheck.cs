@@ -19,7 +19,7 @@ public sealed record BenchedCandidate
 /// failing and deserves a look. Pure state — no clock, no I/O; the detail
 /// lane owns the only instance and reports each retry's outcome back.
 /// </summary>
-public sealed class RetryTrickle(TimeSpan interval)
+public sealed class BenchRecheck(TimeSpan interval)
 {
     private DateTimeOffset? _lastFailureAt;
 

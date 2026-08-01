@@ -48,5 +48,5 @@ public sealed record ScraperOptions
     public int StatsIntervalMinutes { get; init; } = 5;
 
     /// <summary>At most one benched-card retry from the retry queue per this many minutes.</summary>
-    public int RetryTrickleIntervalMinutes { get; init; } = 10;
+    public int BenchRecheckIntervalMinutes { get; init; } = 10;
 }
