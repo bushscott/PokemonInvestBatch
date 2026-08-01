@@ -1074,7 +1074,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.cards_at_risk`) AS 'cards' FROM Metric SINCE 1 day ago"
+                "query": "SELECT latest(`crawl.cards_at_risk`) AS 'cards' FROM Metric"
               }
             ],
             "platformOptions": {
