@@ -53,7 +53,7 @@ public sealed class ImageLane(
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
         var pending = await db.Cards
-            .Where(c => c.ImageHash != null && c.ImageFetchedAt == null)
+            .Where(c => c.DelistedAt == null && c.ImageHash != null && c.ImageFetchedAt == null)
             .OrderBy(c => c.Id)
             .Take(50)
             .ToListAsync(ct);

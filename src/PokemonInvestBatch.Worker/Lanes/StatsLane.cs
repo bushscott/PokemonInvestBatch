@@ -53,22 +53,21 @@ public sealed class StatsLane(
         metrics.SetCorpusStats(
             corpusSize,
             corpusVisited,
-            imagesPending: await db.Cards.LongCountAsync(c => c.ImageHash != null && c.ImageFetchedAt == null, ct),
+            imagesPending: await db.Cards.LongCountAsync(
+                c => c.DelistedAt == null && c.ImageHash != null && c.ImageFetchedAt == null, ct),
             setsTotal: await db.Sets.LongCountAsync(ct));
 
         // Longest wait for a visit: the single most-neglected card. A
         // never-visited card has been waiting since the day enumeration
         // discovered it — measurable, not unbounded. The scheduler's floor
         // (MaxDaysBetweenVisits) promises this never passes 30; the
-        // dashboard reds when the promise breaks.
+        // dashboard reds when the promise breaks. Delisted cards are out of
+        // the running — never visiting them again is the plan, not neglect.
         var now = time.GetUtcNow();
-        var oldestVisit = corpusVisited > 0
-            ? await db.Cards.MinAsync(c => c.LastVisitedAt, ct)
-            : null;
-        var oldestUnseen = corpusSize > corpusVisited
-            ? await db.Cards.Where(c => c.LastVisitedAt == null)
-                .MinAsync(c => (DateTimeOffset?)c.FirstSeenAt, ct)
-            : null;
+        var living = db.Cards.Where(c => c.DelistedAt == null);
+        var oldestVisit = await living.MinAsync(c => c.LastVisitedAt, ct);
+        var oldestUnseen = await living.Where(c => c.LastVisitedAt == null)
+            .MinAsync(c => (DateTimeOffset?)c.FirstSeenAt, ct);
         var waitingSince = new[] { oldestVisit, oldestUnseen }.Min();
         if (waitingSince is { } since)
         {
@@ -89,7 +88,9 @@ public sealed class StatsLane(
 
         metrics.SetSchedulerStats(
             cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),
-            quarantinedNow: await db.Cards.LongCountAsync(c => c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct));
+            quarantinedNow: await db.Cards.LongCountAsync(
+                c => c.DelistedAt == null && c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
+            delisted: await db.Cards.LongCountAsync(c => c.DelistedAt != null, ct));
 
         metrics.SetTotalRows(
             prices: await db.PriceMonths.LongCountAsync(ct),

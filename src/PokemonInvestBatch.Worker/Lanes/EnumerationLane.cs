@@ -231,6 +231,15 @@ public sealed class EnumerationLane(
         {
             if (existing.TryGetValue(product.ProductId, out var card))
             {
+                if (card.DelistedAt is not null)
+                {
+                    // Delisting is a manual verdict, so only the operator may
+                    // reverse it — but a dead card walking deserves a shout.
+                    logger.LogWarning(
+                        "Card {CardId} ({Name}) is marked delisted but the set walk just saw it at {CardUrl} — clear delisted_at if it is back for good",
+                        card.Id, product.Name, product.Url);
+                }
+
                 card.Url = product.Url;
                 card.Name = product.Name;
                 card.LastSeenAt = now;

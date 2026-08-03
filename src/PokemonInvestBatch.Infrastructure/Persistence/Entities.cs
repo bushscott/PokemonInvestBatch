@@ -65,6 +65,15 @@ public class Card
     /// <summary>While set and in the future, the scheduler skips this card —
     /// a poisoned page must not wedge the crawl. See QuarantinePolicy.</summary>
     public DateTimeOffset? QuarantinedUntil { get; set; }
+
+    /// <summary>Set by hand when the product is gone from the site outright —
+    /// page and search both empty, so no set walk can ever heal the URL.
+    /// The application never writes this column, it only honors it: a
+    /// delisted card is invisible to scheduling, the bench recheck, the
+    /// image sweep, and the neglect/at-risk alarms, while its history rows
+    /// stay put. Clear it by hand if the card comes back; the set walk
+    /// warns when it sees a delisted card alive.</summary>
+    public DateTimeOffset? DelistedAt { get; set; }
 }
 
 /// <summary>

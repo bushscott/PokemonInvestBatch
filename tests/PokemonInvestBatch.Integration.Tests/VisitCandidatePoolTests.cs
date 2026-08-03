@@ -75,6 +75,62 @@ public class VisitCandidatePoolTests
         Assert.Equal(hot.Id, winner!.Id);
     }
 
+    [SkippableFact]
+    public async Task A_delisted_card_is_invisible_to_the_pool_and_the_bench()
+    {
+        Skip.If(ConnectionString is null, "POKEMON_TEST_DB not set (needs the Pi's pokemon_test database).");
+
+        await using var db = CreateContext();
+        await db.Database.MigrateAsync(CancellationToken.None);
+        await ResetAsync();
+        var now = DateTimeOffset.UtcNow;
+
+        db.Sets.Add(new CardSet
+        {
+            Id = 1,
+            Slug = "pokemon-base-set",
+            Name = "Pokemon Base Set",
+            DiscoveredAt = now,
+            LastSeenAt = now,
+        });
+
+        // Would top every tier it appears in: stalest of the corpus, burn-window
+        // due, benched with the soonest comeback. Delisting must beat them all.
+        db.Cards.Add(new Card
+        {
+            Id = 1,
+            SetId = 1,
+            Url = "/game/pokemon-base-set/delisted-1",
+            Name = "Delisted #1",
+            FirstSeenAt = now,
+            LastSeenAt = now,
+            LastVisitedAt = now.AddDays(-40),
+            ObservedSalesPerDay = 6,
+            FailureStreak = 3,
+            QuarantinedUntil = now.AddDays(1),
+            DelistedAt = now,
+        });
+        db.Cards.Add(new Card
+        {
+            Id = 2,
+            SetId = 1,
+            Url = "/game/pokemon-base-set/alive-2",
+            Name = "Alive #2",
+            FirstSeenAt = now,
+            LastSeenAt = now,
+            LastVisitedAt = now.AddDays(-1),
+        });
+        await db.SaveChangesAsync();
+
+        var pool = await VisitCandidatePool.LoadAsync(db, now, new VisitPriorityOptions(), CancellationToken.None);
+        Assert.DoesNotContain(pool, c => c.Id == 1);
+        Assert.Contains(pool, c => c.Id == 2);
+
+        Assert.Empty(await VisitCandidatePool.Benched(db, now).ToListAsync());
+
+        Assert.Empty(await VisitCandidatePool.PastBurnFraction(db.Cards, now, 0.75).ToListAsync());
+    }
+
     private static PokemonDbContext CreateContext() =>
         new(new DbContextOptionsBuilder<PokemonDbContext>()
             .UseNpgsql(ConnectionString!)
