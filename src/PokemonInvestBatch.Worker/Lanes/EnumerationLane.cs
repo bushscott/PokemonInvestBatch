@@ -242,9 +242,10 @@ public sealed class EnumerationLane(
 
                 if (card.SetId != set.Id)
                 {
-                    // Loud on purpose: a genuine move should be visible, and a
-                    // product listed under two sets would flip-flop here weekly.
-                    logger.LogWarning(
+                    // A genuine move is news, not trouble — but it is logged, so
+                    // a product listed under two sets flip-flopping weekly would
+                    // still leave a visible trail.
+                    logger.LogInformation(
                         "Card {CardId} ({Name}) moved from set {OldSetId} to {NewSetSlug} ({NewSetId})",
                         card.Id, product.Name, card.SetId, set.Slug, set.Id);
                     card.SetId = set.Id;
