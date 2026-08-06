@@ -1,4 +1,5 @@
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Application.Telemetry;
 
 namespace PokemonInvestBatch.Infrastructure.Http;
@@ -13,7 +14,11 @@ namespace PokemonInvestBatch.Infrastructure.Http;
 public static class FetchBookkeeping
 {
     /// <summary>429/503 are an explicit "stop" — answered with the ceiling,
-    /// not a doubling — no matter which lane hears them.</summary>
+    /// not a doubling — no matter which lane hears them. A 3xx/4xx is the
+    /// URL's own fault, not the site's, and the site-wide delay must not
+    /// hear it at all: quarantine owns broken URLs, and a single dead card
+    /// re-doubling the delay on every bench recheck once starved the whole
+    /// crawl to the ceiling.</summary>
     public static void RecordOutcome(
         this FetchResult fetched, CrawlMetrics metrics, AdaptiveDelay delay, string laneTag)
     {
@@ -26,7 +31,7 @@ public static class FetchBookkeeping
         {
             delay.RecordRateLimited(fetched.RetryAfter);
         }
-        else
+        else if (!QuarantinePolicy.IsCardAttributable(fetched.StatusCode))
         {
             delay.RecordFailure(fetched.RetryAfter);
         }

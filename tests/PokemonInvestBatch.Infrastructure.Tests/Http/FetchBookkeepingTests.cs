@@ -53,16 +53,51 @@ public class FetchBookkeepingTests
         Assert.Equal(TimeSpan.FromSeconds(150), delay.Current);
     }
 
-    [Fact]
-    public void A_plain_failure_doubles_the_delay()
+    [Theory]
+    [InlineData(500)]
+    [InlineData(0)]
+    public void A_site_failure_doubles_the_delay(int status)
     {
         var (metrics, delay) = NewLedger();
         using var _ = metrics;
         TightenToFloor(delay);
 
-        Fetch(404).RecordOutcome(metrics, delay, "spot check");
+        Fetch(status).RecordOutcome(metrics, delay, "spot check");
 
         Assert.Equal(TimeSpan.FromSeconds(20), delay.Current);
+    }
+
+    [Theory]
+    [InlineData(302)]
+    [InlineData(404)]
+    public void A_broken_url_is_the_cards_problem_not_the_sites(int status)
+    {
+        // The starvation loop this rule ends: a delisted card's bench
+        // recheck 302s every ~25 minutes, and each one re-doubled the
+        // site-wide delay to the ceiling faster than successes could
+        // claw it back — one dead card throttled the crawl 35x.
+        var (metrics, delay) = NewLedger();
+        using var _ = metrics;
+        TightenToFloor(delay);
+
+        Fetch(status).RecordOutcome(metrics, delay, "detail");
+
+        Assert.Equal(TimeSpan.FromSeconds(10), delay.Current);
+    }
+
+    [Fact]
+    public void Broken_urls_never_trip_the_site_trouble_pause()
+    {
+        var (metrics, delay) = NewLedger();
+        using var _ = metrics;
+        TightenToFloor(delay);
+
+        for (var i = 0; i < 3; i++)
+        {
+            Fetch(302).RecordOutcome(metrics, delay, "detail");
+        }
+
+        Assert.False(delay.ShouldPause);
     }
 
     [Theory]
