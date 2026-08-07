@@ -24,9 +24,16 @@ public sealed class RecordingAlerter : IAlerter
     }
 }
 
-/// <summary>Answers requests from a script, so a test can stage a run of
-/// failures and then a recovery. The last response repeats.</summary>
-public sealed class ScriptedHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
+/// <summary>
+/// Answers requests from a script, so a test can stage a run of failures and
+/// then a recovery. The last entry repeats for every request after it.
+///
+/// Entries are factories, not responses. HttpClient disposes a response's
+/// content once it has been read, so handing out the same instance twice fails
+/// on the second read with ObjectDisposedException — which looks exactly like
+/// a bug in the code under test until you read the stack trace.
+/// </summary>
+public sealed class ScriptedHandler(params Func<HttpResponseMessage>[] responses) : HttpMessageHandler
 {
     private int _index;
 
@@ -36,17 +43,17 @@ public sealed class ScriptedHandler(params HttpResponseMessage[] responses) : Ht
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Calls++;
-        return Task.FromResult(responses[Math.Min(_index++, responses.Length - 1)]);
+        return Task.FromResult(responses[Math.Min(_index++, responses.Length - 1)]());
     }
 
-    public static HttpResponseMessage Redirect(string to)
+    public static Func<HttpResponseMessage> Redirect(string to) => () =>
     {
         var response = new HttpResponseMessage(HttpStatusCode.Found);
         response.Headers.Location = new Uri(to, UriKind.RelativeOrAbsolute);
         return response;
-    }
+    };
 
-    public static HttpResponseMessage Page(string html) =>
+    public static Func<HttpResponseMessage> Page(string html) => () =>
         new(HttpStatusCode.OK) { Content = new StringContent(html) };
 }
 
