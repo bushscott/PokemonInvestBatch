@@ -249,33 +249,12 @@ public sealed class DetailCrawlLane(
         metrics.RecordVisitDuration(time.GetElapsedTime(started));
     }
 
+    /// <summary>Commits the page, then says what changed. The writing lives in
+    /// CardPageWriter; what remains here is the narration — metrics, the
+    /// summary line, and the two findings worth waking someone for.</summary>
     private async Task WritePageAsync(
         PokemonDbContext db, Card card, CardDetailPage page, string shapeHash, DateTimeOffset now, CancellationToken ct)
     {
-        // Phase span: this is the visit's only O(card history) section, so it
-        // gets its own band in the where-time-goes stack to watch it grow.
-        Dictionary<(PriceTier Tier, DateOnly Month), int> lastPrices;
-        Dictionary<(string Grader, short Grade), int> lastPops;
-        using (CrawlTracing.Source.StartActivity("card.load_history"))
-        {
-            var priceRows = await db.PriceMonths.AsNoTracking()
-                .Where(p => p.CardId == card.Id).ToListAsync(ct);
-            lastPrices = priceRows
-                .GroupBy(p => (p.Tier, p.Month))
-                .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.PriceCents);
-
-            var popRows = await db.Populations.AsNoTracking()
-                .Where(p => p.CardId == card.Id).ToListAsync(ct);
-            lastPops = popRows
-                .GroupBy(p => (p.Grader, p.Grade))
-                .ToDictionary(g => g.Key, g => g.MaxBy(p => p.ObservedAt)!.Population);
-        }
-
-        var newPrices = ChangeOnlyPlanner.NewPricePoints(card.Id, page.Chart, lastPrices, now);
-        var newPops = page.Population is null
-            ? []
-            : ChangeOnlyPlanner.NewPopulationCells(card.Id, page.Population, lastPops, now);
-
         var violations = GradeMonotonicity.Violations(page.Chart);
         metrics.RecordMonotonicityViolations(violations.Count);
         foreach (var violation in violations)
@@ -288,48 +267,21 @@ public sealed class DetailCrawlLane(
                 card.Id, violation.Lower, violation.LowerCents, violation.Higher, violation.HigherCents);
         }
 
-        if (page.Population is not null)
-        {
-            await FlagPopulationAnomaliesAsync(card, page.Population, lastPops, ct);
-        }
-
-        var observation = SalesObservation.From(page.Sales, card.LastVisitedAt, now);
-
-        // The flip into cap is the moment loss was proven; the fast-track
-        // revisits that follow re-observe hot buckets while the cure runs,
-        // and must not re-raise.
-        var newlyAtCap = observation.AnyBucketAtCap && !card.AnyBucketAtCap;
-
-        int newSales;
-        using (CrawlTracing.Source.StartActivity("card.write"))
-        {
-            await using var transaction = await db.Database.BeginTransactionAsync(ct);
-            db.PriceMonths.AddRange(newPrices);
-            db.Populations.AddRange(newPops);
-            newSales = await new SaleWriter(db).AppendNewAsync(card.Id, page.Sales, now, ct);
-            db.Visits.Add(NewVisit(card, 200, VisitOutcome.Parsed, shapeHash, now));
-
-            card.LastVisitedAt = now;
-            card.LastSeenAt = now;
-            card.ObservedSalesPerDay = observation.SalesPerDay;
-            card.AnyBucketAtCap = observation.AnyBucketAtCap;
-            card.ImageHash ??= page.ImageHash;
-            card.FailureStreak = 0;
-            card.QuarantinedUntil = null;
-
-            await db.SaveChangesAsync(ct);
-            await transaction.CommitAsync(ct);
-        }
-
-        metrics.RecordRowsAppended(newPrices.Count, newPops.Count, newSales);
+        var written = await CardPageWriter.WriteAsync(db, card, page, shapeHash, now, ct);
+        metrics.RecordRowsAppended(written.NewPriceRows, written.NewPopulationCells, written.NewSales);
 
         logger.Log(
-            observation.AnyBucketAtCap ? LogLevel.Warning : LogLevel.Information,
+            written.Observation.AnyBucketAtCap ? LogLevel.Warning : LogLevel.Information,
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
-            card.Id, card.Name, newPrices.Count, newPops.Count, newSales,
-            observation.SalesPerDay, observation.AnyBucketAtCap ? ", AT CAP" : "");
+            card.Id, card.Name, written.NewPriceRows, written.NewPopulationCells, written.NewSales,
+            written.Observation.SalesPerDay, written.Observation.AnyBucketAtCap ? ", AT CAP" : "");
 
-        if (newlyAtCap && throttle.ShouldAlert("sales-lost", now))
+        if (page.Population is not null)
+        {
+            await FlagPopulationAnomaliesAsync(card, page.Population, written.PreviousPopulations, ct);
+        }
+
+        if (written.NewlyAtCap && throttle.ShouldAlert("sales-lost", now))
         {
             await alerter.RaiseAsync(
                 "Sales lost to a hot card",
