@@ -58,7 +58,9 @@ public sealed class DetailCrawlLane(
         }
     }
 
-    private async Task CrawlOneAsync(CancellationToken ct)
+    /// <summary>One errand, start to finish. Internal so the tests can run a
+    /// single visit without the forever-loop around it.</summary>
+    internal async Task CrawlOneAsync(CancellationToken ct)
     {
         if (delay.ShouldPause)
         {

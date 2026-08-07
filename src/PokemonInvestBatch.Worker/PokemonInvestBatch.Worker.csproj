@@ -20,4 +20,14 @@
   <ItemGroup>
     <ProjectReference Include="..\PokemonInvestBatch.Infrastructure\PokemonInvestBatch.Infrastructure.csproj" />
   </ItemGroup>
+
+  <!-- The lanes are the imperative shell: they hold concrete collaborators on
+       purpose (see ADR-0003), so the test seam is the language's own rather
+       than an interface invented for the tests. One iteration of a lane is
+       internal; the loop around it is not worth testing. -->
+  <ItemGroup>
+    <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+      <_Parameter1>PokemonInvestBatch.Worker.Tests</_Parameter1>
+    </AssemblyAttribute>
+  </ItemGroup>
 </Project>

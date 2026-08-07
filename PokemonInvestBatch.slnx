@@ -10,5 +10,6 @@
     <Project Path="tests/PokemonInvestBatch.Domain.Tests/PokemonInvestBatch.Domain.Tests.csproj" />
     <Project Path="tests/PokemonInvestBatch.Infrastructure.Tests/PokemonInvestBatch.Infrastructure.Tests.csproj" />
     <Project Path="tests/PokemonInvestBatch.Integration.Tests/PokemonInvestBatch.Integration.Tests.csproj" />
+    <Project Path="tests/PokemonInvestBatch.Worker.Tests/PokemonInvestBatch.Worker.Tests.csproj" />
   </Folder>
 </Solution>
