@@ -81,6 +81,14 @@ builder.Services.AddSingleton(services =>
     return new PriceChartingClient(http, scraper.ContactEmail, services.GetRequiredService<TimeProvider>());
 });
 builder.Services.AddHttpClient(ImageLane.HttpClientName, http => http.Timeout = TimeSpan.FromSeconds(60));
+builder.Services.AddSingleton(services =>
+{
+    var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
+    return new PageShapeArchive(
+        services.GetRequiredService<IncidentThrottle>(),
+        services.GetRequiredService<IAlerter>(),
+        scraper.ShapeArchiveDirectory);
+});
 
 builder.Services.AddHostedService<EnumerationLane>();
 builder.Services.AddHostedService<DetailCrawlLane>();

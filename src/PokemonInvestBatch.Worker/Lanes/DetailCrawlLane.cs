@@ -25,6 +25,7 @@ public sealed class DetailCrawlLane(
     AdaptiveDelay delay,
     IncidentThrottle throttle,
     IAlerter alerter,
+    PageShapeArchive shapes,
     TimeProvider time,
     IOptions<ScraperOptions> options,
     CrawlMetrics metrics,
@@ -212,7 +213,7 @@ public sealed class DetailCrawlLane(
             return;
         }
 
-        var shapeHash = await RecordShapeAsync(db, card, fetchedPage.Html, now, ct);
+        var shapeHash = await shapes.RecordAsync(db, card.Url, fetchedPage.Html, now, ct);
 
         CardDetailPage page;
         try
@@ -453,43 +454,6 @@ public sealed class DetailCrawlLane(
             default:
                 return await db.Cards.FirstAsync(c => c.Id == choice.CardId!.Value, ct);
         }
-    }
-
-    /// <summary>Fingerprints the page; a never-before-seen shape is archived
-    /// to disk and alerted — it is the site telling us it changed.</summary>
-    private async Task<string> RecordShapeAsync(
-        PokemonDbContext db, Card card, string html, DateTimeOffset now, CancellationToken ct)
-    {
-        var print = PageFingerprint.OfCardDetailPage(html);
-        var known = await db.Shapes.FindAsync([print.Hash], ct);
-        if (known is not null)
-        {
-            known.LastSeenAt = now;
-            return print.Hash;
-        }
-
-        db.Shapes.Add(new PageShape
-        {
-            Hash = print.Hash,
-            ShapeJson = print.ShapeJson,
-            SampleUrl = card.Url,
-            FirstSeenAt = now,
-            LastSeenAt = now,
-        });
-
-        Directory.CreateDirectory(options.Value.ShapeArchiveDirectory);
-        var archivePath = Path.Combine(options.Value.ShapeArchiveDirectory, $"{print.Hash}.html");
-        await File.WriteAllTextAsync(archivePath, html, ct);
-
-        if (throttle.ShouldAlert($"new-page-shape:{print.Hash}", now))
-        {
-            await alerter.RaiseAsync(
-                "New page shape observed",
-                $"Card detail pages have a structure never seen before.\nSample: {card.Url}\nShape: {print.ShapeJson}\nArchived: {archivePath}",
-                ct);
-        }
-
-        return print.Hash;
     }
 
     private async Task CheckFailureRateAsync(PokemonDbContext db, CancellationToken ct)
