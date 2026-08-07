@@ -10,6 +10,45 @@ without ever hammering someone else's server.
 
 ---
 
+## Why this exists, and how it was built
+
+This is a portfolio project. I'm looking for my next role, and I wanted something whose hard parts
+were genuinely hard rather than tutorial-hard: a live system running unattended, against a data
+source I don't control and can't fix when it breaks.
+
+I also built it as a deliberate way to learn agentic AI development, which increasingly looks like
+the job rather than a novelty alongside it. Most of the code here was written by Claude Code
+working from my direction, and nearly every commit says so in its trailer. Hiding that would be
+dishonest, and it would also miss the point.
+
+The point is that writing the code was never the hard part. The skill is directing, reviewing, and
+overruling a system that produces *plausible* code very quickly — and plausible is not the same as
+correct. Some places where the difference mattered:
+
+- **[ADR-0002](docs/adr/0002-manual-only-delisting.md)** — I rejected a proposed feature that
+  would automatically retire dead cards. It would have worked. But it made a permanent decision
+  conditional on a parser being correct, and parsers break. The blast radius of a future bug was
+  worse than the manual work it saved.
+- **[ADR-0005](docs/adr/0005-pooled-grade-tiers.md)** — I turned down a suggested "CGC ≈ 0.68x
+  PSA" price adjustment. The corpus-wide figure was real, but applying it to individual cards
+  would have dressed an estimate up as an observation.
+- **[ADR-0004](docs/adr/0004-card-faults-do-not-slow-the-crawl.md)** — the one we got wrong.
+  Generated code treated a single broken page as evidence the whole website was struggling. It
+  took a production incident to surface: one deleted card page throttled the crawler from 350
+  requests an hour to about 10, and held it there for six hours. Code review didn't catch it;
+  reading the incident data did.
+
+I also learned to distrust a confident summary. At one point I was told a card set was probably
+finished growing — reasoning drawn from my own database's discovery dates, which only recorded
+when my scraper first ran and proved nothing whatsoever about the set. Checking an independent
+source answered the question properly and reversed the conclusion.
+
+None of that is an argument for or against building this way. It's what the work actually looks
+like. The ADRs in [`docs/adr/`](docs/adr/) are there so you can judge the reasoning rather than
+take my word for it.
+
+---
+
 ## What problem this solves
 
 Pokémon card prices move like a stock market, but there is no ticker tape. Prices are scattered
@@ -221,11 +260,3 @@ chosen, what was rejected, and what it costs.
 
 C# / .NET 10 · PostgreSQL · Entity Framework Core · AngleSharp (HTML parsing) ·
 OpenTelemetry · xUnit · Raspberry Pi
-
-## A note on authorship
-
-This project was built with heavy AI assistance (Claude Code), and the commit history says so
-openly rather than hiding it. The architecture, the trade-offs, and every judgement call recorded
-in the ADRs were mine — several of them made by overruling the assistant. I think that is the
-honest way to present work done this way, and the ADRs are there so you can judge the reasoning
-rather than take my word for it.
