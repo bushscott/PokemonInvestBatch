@@ -10,7 +10,6 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" Version="6.0.4" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
-    <PackageReference Include="Respawn" Version="7.0.0" />
     <PackageReference Include="xunit" Version="2.9.3" />
     <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
     <PackageReference Include="Xunit.SkippableFact" Version="1.5.61" />
@@ -23,6 +22,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PokemonInvestBatch.Worker\PokemonInvestBatch.Worker.csproj" />
     <ProjectReference Include="..\PokemonInvestBatch.Domain.Tests\PokemonInvestBatch.Domain.Tests.csproj" />
+    <ProjectReference Include="..\PokemonInvestBatch.TestSupport\PokemonInvestBatch.TestSupport.csproj" />
   </ItemGroup>
 
 </Project>

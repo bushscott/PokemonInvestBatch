@@ -1,29 +1,23 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Infrastructure.Persistence;
-using Respawn;
+using PokemonInvestBatch.TestSupport;
 
 namespace PokemonInvestBatch.Integration.Tests;
 
 /// <summary>
-/// Runs against pokemon_test on the Pi (see SaleWriterTests for the
-/// POKEMON_TEST_DB convention). Closes the stress tests' blind spot: they
+/// Closes the stress tests' blind spot: they
 /// score the full corpus, so they can never notice the candidate pool
 /// itself excluding a card the scorer would have picked.
 /// </summary>
-public class VisitCandidatePoolTests
+public class VisitCandidatePoolTests : DatabaseTest
 {
-    private static string? ConnectionString => Environment.GetEnvironmentVariable("POKEMON_TEST_DB");
-
     [SkippableFact]
     public async Task A_hot_card_reaches_the_scorer_despite_being_far_from_the_stalest_window()
     {
-        Skip.If(ConnectionString is null, "POKEMON_TEST_DB not set (needs the Pi's pokemon_test database).");
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
-        await using var db = CreateContext();
-        await db.Database.MigrateAsync(CancellationToken.None);
-        await ResetAsync();
+        await using var db = NewContext();
         var now = DateTimeOffset.UtcNow;
 
         // 2,000 cold cards, all far staler than the hot card — enough that a
@@ -78,11 +72,9 @@ public class VisitCandidatePoolTests
     [SkippableFact]
     public async Task A_delisted_card_is_invisible_to_the_pool_and_the_bench()
     {
-        Skip.If(ConnectionString is null, "POKEMON_TEST_DB not set (needs the Pi's pokemon_test database).");
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
-        await using var db = CreateContext();
-        await db.Database.MigrateAsync(CancellationToken.None);
-        await ResetAsync();
+        await using var db = NewContext();
         var now = DateTimeOffset.UtcNow;
 
         db.Sets.Add(new CardSet
@@ -129,25 +121,5 @@ public class VisitCandidatePoolTests
         Assert.Empty(await VisitCandidatePool.Benched(db, now).ToListAsync());
 
         Assert.Empty(await VisitCandidatePool.PastBurnFraction(db.Cards, now, 0.75).ToListAsync());
-    }
-
-    private static PokemonDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<PokemonDbContext>()
-            .UseNpgsql(ConnectionString!)
-            .UseSnakeCaseNamingConvention()
-            .Options);
-
-    private static async Task ResetAsync()
-    {
-        await using var connection = new NpgsqlConnection(ConnectionString!);
-        await connection.OpenAsync();
-        var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
-        {
-            DbAdapter = DbAdapter.Postgres,
-            // Respawn must never erase applied-migration bookkeeping, or the
-            // next MigrateAsync re-runs InitialCreate against existing tables.
-            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
-        });
-        await respawner.ResetAsync(connection);
     }
 }

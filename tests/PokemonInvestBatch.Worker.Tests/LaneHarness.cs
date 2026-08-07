@@ -2,20 +2,17 @@ using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using Npgsql;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
-using PokemonInvestBatch.Worker;
 using PokemonInvestBatch.Worker.Lanes;
-using Respawn;
 
 namespace PokemonInvestBatch.Worker.Tests;
 
 /// <summary>Records what a lane tried to tell a human, so tests can assert on
-/// the alarm as well as the data.</summary>
+/// the alarm as well as on the data.</summary>
 public sealed class RecordingAlerter : IAlerter
 {
     public List<(string Subject, string Body)> Raised { get; } = [];
@@ -27,8 +24,8 @@ public sealed class RecordingAlerter : IAlerter
     }
 }
 
-/// <summary>Answers every request with a queued response, so a test can script
-/// a run of failures followed by a recovery.</summary>
+/// <summary>Answers requests from a script, so a test can stage a run of
+/// failures and then a recovery. The last response repeats.</summary>
 public sealed class ScriptedHandler(params HttpResponseMessage[] responses) : HttpMessageHandler
 {
     private int _index;
@@ -39,9 +36,7 @@ public sealed class ScriptedHandler(params HttpResponseMessage[] responses) : Ht
         HttpRequestMessage request, CancellationToken cancellationToken)
     {
         Calls++;
-        // The last scripted response repeats, so "always 302" needs one entry.
-        var response = responses[Math.Min(_index++, responses.Length - 1)];
-        return Task.FromResult(response);
+        return Task.FromResult(responses[Math.Min(_index++, responses.Length - 1)]);
     }
 
     public static HttpResponseMessage Redirect(string to)
@@ -56,25 +51,21 @@ public sealed class ScriptedHandler(params HttpResponseMessage[] responses) : Ht
 }
 
 /// <summary>
-/// Builds a real DetailCrawlLane over the real database with a scripted site.
+/// Builds a real DetailCrawlLane over a real database with a scripted site.
 ///
-/// Everything here is genuine except the network: the same EF model, the same
+/// Everything is genuine except the network: the same EF model, the same
 /// migrations, the same transaction. The lanes hold concrete collaborators by
-/// design (ADR-0003), so the seam is the HTTP handler — the one boundary that
-/// must not be crossed in a test — rather than an interface per dependency.
+/// design (ADR-0003), so the seam is the HTTP handler — the one boundary a
+/// test must not cross — rather than an interface per dependency.
 /// </summary>
-public sealed class LaneHarness : IAsyncDisposable
+public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, string shapeDirectory) : IDisposable
 {
-    public static string? ConnectionString => Environment.GetEnvironmentVariable("POKEMON_TEST_DB");
-
-    private readonly string _shapeDirectory =
-        Path.Combine(Path.GetTempPath(), $"shapes-{Guid.NewGuid():N}");
-
     public RecordingAlerter Alerter { get; } = new();
 
     public AdaptiveDelay Delay { get; } = new(new AdaptiveDelayOptions
     {
-        // The polite wait is real in production and pure dead time here.
+        // The courtesy delay is load-bearing in production and pure dead time
+        // here; the tests that care about it assert on Current directly.
         Floor = TimeSpan.Zero,
         Ceiling = TimeSpan.Zero,
     });
@@ -87,69 +78,32 @@ public sealed class LaneHarness : IAsyncDisposable
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
         var client = new PriceChartingClient(http, "tests@example.com", TimeProvider.System);
         var throttle = new IncidentThrottle(TimeSpan.FromHours(6));
-        var options = Options.Create(new ScraperOptions
-        {
-            ContactEmail = "tests@example.com",
-            ShapeArchiveDirectory = _shapeDirectory,
-            // A tripped pause must not park the test for half an hour.
-            PauseCooldownMinutes = 0,
-        });
 
         return new DetailCrawlLane(
-            new Factory(DbOptions()),
+            new Factory(options),
             client,
             new PoliteGate(Delay, TimeProvider.System),
             Delay,
             throttle,
             Alerter,
-            new PageShapeArchive(throttle, Alerter, _shapeDirectory),
+            new PageShapeArchive(throttle, Alerter, shapeDirectory),
             TimeProvider.System,
-            options,
+            Options.Create(new ScraperOptions
+            {
+                ContactEmail = "tests@example.com",
+                ShapeArchiveDirectory = shapeDirectory,
+                // A tripped pause must not park the test for half an hour.
+                PauseCooldownMinutes = 0,
+            }),
             Metrics,
             NullLogger<DetailCrawlLane>.Instance);
     }
 
-    public PokemonDbContext NewContext() => new(DbOptions());
+    public void Dispose() => Metrics?.Dispose();
 
-    /// <summary>Migrates and empties the database, then seeds one set so cards
-    /// have somewhere to belong.</summary>
-    public async Task ResetAsync()
-    {
-        await using var db = NewContext();
-        await db.Database.MigrateAsync();
-
-        await using var connection = new NpgsqlConnection(ConnectionString!);
-        await connection.OpenAsync();
-        var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
-        {
-            DbAdapter = DbAdapter.Postgres,
-            // Erasing applied-migration bookkeeping would make the next
-            // MigrateAsync re-run InitialCreate against existing tables.
-            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
-        });
-        await respawner.ResetAsync(connection);
-    }
-
-    private static DbContextOptions<PokemonDbContext> DbOptions() =>
-        new DbContextOptionsBuilder<PokemonDbContext>()
-            .UseNpgsql(ConnectionString!)
-            .UseSnakeCaseNamingConvention()
-            .Options;
-
-    private sealed class Factory(DbContextOptions<PokemonDbContext> options)
+    private sealed class Factory(DbContextOptions<PokemonDbContext> contextOptions)
         : IDbContextFactory<PokemonDbContext>
     {
-        public PokemonDbContext CreateDbContext() => new(options);
-    }
-
-    public ValueTask DisposeAsync()
-    {
-        Metrics?.Dispose();
-        if (Directory.Exists(_shapeDirectory))
-        {
-            Directory.Delete(_shapeDirectory, recursive: true);
-        }
-
-        return ValueTask.CompletedTask;
+        public PokemonDbContext CreateDbContext() => new(contextOptions);
     }
 }

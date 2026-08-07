@@ -12,11 +12,17 @@ CREATE ROLE pokemon_owner LOGIN PASSWORD 'CHANGE_ME_OWNER';
 -- append-only by design, and the role enforces it.
 CREATE ROLE pokemon_app LOGIN PASSWORD 'CHANGE_ME_APP';
 
--- Test role: integration tests only. Full rights on pokemon_test (Respawn
--- truncates between tests); no rights at all on the real database.
-CREATE ROLE pokemon_tester LOGIN PASSWORD 'CHANGE_ME_TEST';
+-- Test role: integration tests only, and no rights at all on the real
+-- database. CREATEDB because each test builds its own throwaway database and
+-- drops it again — a shared test database means one suite can truncate
+-- another's fixtures mid-assertion, and the failure looks like a bug in the
+-- code under test rather than in the harness.
+CREATE ROLE pokemon_tester LOGIN PASSWORD 'CHANGE_ME_TEST' CREATEDB;
 
 CREATE DATABASE pokemon OWNER pokemon_owner;
+
+-- Only a template: the tests read its connection string for host and
+-- credentials, then create and drop databases of their own beside it.
 CREATE DATABASE pokemon_test OWNER pokemon_tester;
 
 \connect pokemon

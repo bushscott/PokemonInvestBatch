@@ -1,29 +1,24 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
 using PokemonInvestBatch.Domain.Parsing;
 using PokemonInvestBatch.Domain.Tests.Fixtures;
 using PokemonInvestBatch.Infrastructure.Persistence;
-using Respawn;
+using PokemonInvestBatch.TestSupport;
 
 namespace PokemonInvestBatch.Integration.Tests;
 
 /// <summary>
-/// Runs against pokemon_test on the Pi. Set POKEMON_TEST_DB to e.g.
-/// "Host=&lt;pi-ip&gt;;Database=pokemon_test;Username=pokemon_tester;Password=..."
-/// — tests skip when it is not set.
+/// Dedup and hostile-input handling, against real PostgreSQL. Each test builds
+/// and drops its own database; see DatabaseTest.
 /// </summary>
-public class SaleWriterTests
+public class SaleWriterTests : DatabaseTest
 {
-    private static string? ConnectionString => Environment.GetEnvironmentVariable("POKEMON_TEST_DB");
 
     [SkippableFact]
     public async Task Appending_the_same_page_twice_inserts_nothing_new()
     {
-        Skip.If(ConnectionString is null, "POKEMON_TEST_DB not set (needs the Pi's pokemon_test database).");
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
-        await using var db = CreateContext();
-        await db.Database.MigrateAsync(CancellationToken.None);
-        await ResetAsync();
+        await using var db = NewContext();
         await SeedCharizardAsync(db);
         var writer = new SaleWriter(db);
 
@@ -45,11 +40,9 @@ public class SaleWriterTests
     [SkippableFact]
     public async Task Hostile_titles_are_stored_verbatim_not_executed()
     {
-        Skip.If(ConnectionString is null, "POKEMON_TEST_DB not set (needs the Pi's pokemon_test database).");
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
-        await using var db = CreateContext();
-        await db.Database.MigrateAsync(CancellationToken.None);
-        await ResetAsync();
+        await using var db = NewContext();
         await SeedCharizardAsync(db);
 
         const string hostile = "'); DROP TABLE sales;--";
@@ -68,26 +61,6 @@ public class SaleWriterTests
 
         var stored = await db.Sales.SingleAsync(CancellationToken.None);
         Assert.Equal(hostile, stored.Title);
-    }
-
-    private static PokemonDbContext CreateContext() =>
-        new(new DbContextOptionsBuilder<PokemonDbContext>()
-            .UseNpgsql(ConnectionString!)
-            .UseSnakeCaseNamingConvention()
-            .Options);
-
-    private static async Task ResetAsync()
-    {
-        await using var connection = new NpgsqlConnection(ConnectionString!);
-        await connection.OpenAsync();
-        var respawner = await Respawner.CreateAsync(connection, new RespawnerOptions
-        {
-            DbAdapter = DbAdapter.Postgres,
-            // Respawn must never erase applied-migration bookkeeping, or the
-            // next MigrateAsync re-runs InitialCreate against existing tables.
-            TablesToIgnore = [new Respawn.Graph.Table("__EFMigrationsHistory")],
-        });
-        await respawner.ResetAsync(connection);
     }
 
     private static async Task SeedCharizardAsync(PokemonDbContext db)
