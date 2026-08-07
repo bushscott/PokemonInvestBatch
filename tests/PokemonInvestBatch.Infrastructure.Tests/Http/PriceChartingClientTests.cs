@@ -27,7 +27,7 @@ public class PriceChartingClientTests
             Content = new StringContent("<html/>"),
         });
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
-        return (new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System), handler);
+        return (new PriceChartingClient(http, "bushscott@icloud.com", TimeProvider.System), handler);
     }
 
     [Theory]
@@ -103,7 +103,7 @@ public class PriceChartingClientTests
 
         var userAgent = handler.LastRequest!.Headers.UserAgent.ToString();
         Assert.Contains("PokemonInvestBatch", userAgent);
-        Assert.Contains("scbush88@gmail.com", userAgent);
+        Assert.Contains("bushscott@icloud.com", userAgent);
     }
 
     [Fact]
@@ -174,7 +174,7 @@ public class PriceChartingClientTests
         {
             BaseAddress = new Uri("https://www.pricecharting.com"),
         };
-        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+        var client = new PriceChartingClient(http, "bushscott@icloud.com", TimeProvider.System);
 
         var result = await client.GetAsync("/game/x", CancellationToken.None);
 
@@ -226,7 +226,7 @@ public class PriceChartingClientTests
         {
             BaseAddress = new Uri("https://www.pricecharting.com"),
         };
-        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+        var client = new PriceChartingClient(http, "bushscott@icloud.com", TimeProvider.System);
 
         var result = await client.GetAsync("/game/x", CancellationToken.None);
 
@@ -241,7 +241,7 @@ public class PriceChartingClientTests
         {
             BaseAddress = new Uri("https://www.pricecharting.com"),
         };
-        var client = new PriceChartingClient(http, "scbush88@gmail.com", TimeProvider.System);
+        var client = new PriceChartingClient(http, "bushscott@icloud.com", TimeProvider.System);
         using var cts = new CancellationTokenSource();
         cts.Cancel();
 
