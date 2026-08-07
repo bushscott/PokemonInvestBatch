@@ -12,6 +12,28 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
 
+    # Matches the Pi's PostgreSQL 15, because the tests assert on SQL the
+    # Npgsql provider generates — a version drift here would pass in CI and
+    # fail in production, which is the one failure a test suite must not have.
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      # Only a template: each test creates and drops a database of its own
+      # beside this one. The superuser is used because the tests need CREATEDB,
+      # exactly as pokemon_tester does on the Pi.
+      POKEMON_TEST_DB: "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -35,10 +57,9 @@ jobs:
       - name: Build
         run: dotnet build PokemonInvestBatch.slnx --no-restore -c Release
 
-      # Integration tests that need a live PostgreSQL instance are
-      # [SkippableFact] and skip themselves when POKEMON_TEST_DB is unset,
-      # which it is here. Everything else — including the SQL-translation
-      # tests, which render SQL without a connection — runs for real.
+      # Every test runs here, including the ones that need real PostgreSQL:
+      # each builds its own database against the service container above and
+      # drops it again. Nothing is skipped, so a green tick means green.
       - name: Test
         run: dotnet test PokemonInvestBatch.slnx --no-build -c Release
 
