@@ -10,6 +10,9 @@ The interesting part is not the scraping. It is everything built around the assu
 website *will* change, break, and lie — and that the system has to keep going anyway, unattended,
 without ever hammering someone else's server.
 
+![Card coverage: 66,719 of 72,083 known cards visited; 351 cards in the last hour; 328 sets known,
+none pending; a full lap of the corpus every 12.4 days](docs/images/dashboard-coverage.png)
+
 ---
 
 ## Why this exists, and how it was built
@@ -219,6 +222,24 @@ The system runs unattended, so it has to be able to report on itself.
   card at risk of losing sales, a census restatement.
 - **Structured JSON logs** go to `journalctl`, with every log line inside a card visit tagged with
   that card's URL, so one bad visit can be traced end to end.
+
+![Politeness delay at its 10-second floor; zero consecutive failed site requests; zero famous-card
+spot-check failures; zero percent parse failures](docs/images/dashboard-health.png)
+
+Every tile is phrased as a promise the system makes, so a glance is enough: the courtesy delay
+sits at its 10-second floor rather than backed off, nothing has failed in a row, and the parser
+still understands the site.
+
+![Three charts: average milliseconds per visit phase, HTTP responses by status code over 24 hours,
+and visit duration p50 versus p95](docs/images/dashboard-timings.png)
+
+The middle chart is the one worth reading closely. Volume collapses at about 2am and does not
+recover until nearly 10am — that is a real outage, caught here rather than by a user. A single
+deleted card page had convinced the politeness controller that the whole site was struggling, and
+the crawl throttled itself from roughly 350 requests an hour to about 10 for six hours. The
+diagnosis, the fix, and what it cost are written up in
+[ADR-0004](docs/adr/0004-card-faults-do-not-slow-the-crawl.md); the recovery is the vertical wall
+on the right-hand side of the same chart.
 
 ---
 
