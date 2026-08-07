@@ -116,7 +116,22 @@ the sample HTML to disk on a first sighting, and alerts.
 and logging scope, dispatching on fetch/parse outcome, and failure attribution (the breaker, the
 bench recheck, strike recording).
 
-**Projected size: roughly 200 lines, down from 534.** No longer the largest file in the repo.
+**Projected size: roughly 200 lines, down from 534.**
+
+### Outcome (recorded after the work)
+
+**Actual: 445 lines, down from 534 — a 17% cut, not the 60% projected.** The estimate was wrong
+and it is worth saying why rather than quietly restating the goal.
+
+What moved out was everything that was *not* the lane's job: the ranking (stage 1a), the spike
+rule (1b), the shape archive (2b), and the write transaction (2a). What remains is ten methods,
+each under about 110 lines, and every one of them is genuinely crawl orchestration — the loop, the
+pause, the fetch/parse dispatch, failure attribution, the pick, and the two alarms.
+
+Cutting further would mean inventing classes to hold things that only belong together because they
+are the same size, which trades a large honest file for several small dishonest ones. The original
+criticism was that this file was nearly double the next largest; at 445 against 302 it is no
+longer an outlier, and the decisions it used to hide are now tested elsewhere. That was the point.
 
 ---
 
