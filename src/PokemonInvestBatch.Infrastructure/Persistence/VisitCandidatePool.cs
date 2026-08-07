@@ -108,15 +108,6 @@ public static class VisitCandidatePool
     /// consumed the safety fraction of the bucket — translated to SQL, most
     /// overdue first. Must stay the same inequality as VisitPriority.Score.
     /// </summary>
-    /// <summary>One scoring candidate: the card's id plus the three facts the
-    /// scorer reads. Nothing else leaves the database until a winner is picked.</summary>
-    public sealed record VisitCandidate
-    {
-        public required long Id { get; init; }
-
-        public required CardVisitState State { get; init; }
-    }
-
     public static IQueryable<Card> DueByBurnWindow(
         IQueryable<Card> eligible, DateTimeOffset now, VisitPriorityOptions options)
     {

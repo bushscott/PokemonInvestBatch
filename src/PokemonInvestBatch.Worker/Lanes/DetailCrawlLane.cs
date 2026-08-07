@@ -401,60 +401,58 @@ public sealed class DetailCrawlLane(
         }
     }
 
-    /// <summary>The tested priority score over VisitCandidatePool — the
-    /// stalest 500 plus the cap-hit and burn-window-due tiers, each queried
-    /// on its own membership so no tier is starved by staleness ordering.
-    /// Never-visited cards sort out of every window (NULL staleness), so
-    /// their tier is applied here by comparison — a card due by burn window
-    /// outranks them, because waiting there tears a permanent gap in sales
-    /// history we already own, while a first visit only moves later.</summary>
+    /// <summary>Runs the queries VisitSelection's ranking needs, then executes
+    /// the choice it returns. Only the chosen card is loaded for real — the
+    /// visit writes to it; the ~600 candidates cross the wire as three columns.</summary>
     private async Task<Card?> PickNextCardAsync(PokemonDbContext db, CancellationToken ct)
     {
         var now = time.GetUtcNow();
+
+        long? benchRetryId = null;
         if (benchRecheck.IsSlotOpen(now))
         {
             var benched = await VisitCandidatePool.Benched(db, now).ToListAsync(ct);
-            if (benchRecheck.TrySelect(benched, now) is { } retryId)
+            benchRetryId = benchRecheck.TrySelect(benched, now);
+        }
+
+        IReadOnlyList<VisitCandidate> candidates = [];
+        if (benchRetryId is null)
+        {
+            candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
+            if (candidates.Count > 0 && candidates[0].State.LastVisitedAt is { } oldest)
             {
-                var retried = await db.Cards.FirstAsync(c => c.Id == retryId, ct);
+                metrics.SetQueueStaleness(now - oldest);
+            }
+        }
+
+        var choice = VisitSelection.Choose(benchRetryId, candidates, now, PriorityOptions);
+        switch (choice.Kind)
+        {
+            case VisitChoiceKind.RetryBenched:
+                var retried = await db.Cards.FirstAsync(c => c.Id == choice.CardId!.Value, ct);
                 logger.LogInformation(
                     "Bench recheck: retrying card {CardId} ({Name}) ahead of its {Until:u} comeback",
                     retried.Id, retried.Name, retried.QuarantinedUntil);
                 return retried;
-            }
+
+            case VisitChoiceKind.PreferUnvisited:
+                var unvisited = await VisitCandidatePool.Eligible(db, now)
+                    .Where(c => c.LastVisitedAt == null)
+                    .OrderBy(c => c.Id)
+                    .FirstOrDefaultAsync(ct);
+                if (unvisited is not null)
+                {
+                    return unvisited;
+                }
+
+                // The backlog is drained; the runner-up gets the slot after all.
+                return choice.CardId is { } fallback
+                    ? await db.Cards.FirstAsync(c => c.Id == fallback, ct)
+                    : null;
+
+            default:
+                return await db.Cards.FirstAsync(c => c.Id == choice.CardId!.Value, ct);
         }
-
-        var candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
-        if (candidates.Count > 0 && candidates[0].State.LastVisitedAt is { } oldest)
-        {
-            metrics.SetQueueStaleness(now - oldest);
-        }
-
-        var winner = candidates.MaxBy(c => VisitPriority.Score(c.State, now, PriorityOptions));
-        var winnerScore = winner is null
-            ? double.NegativeInfinity
-            : VisitPriority.Score(winner.State, now, PriorityOptions);
-
-        var unvisitedScore = VisitPriority.Score(new CardVisitState(), now, PriorityOptions);
-        if (winnerScore < unvisitedScore)
-        {
-            var unvisited = await VisitCandidatePool.Eligible(db, now)
-                .Where(c => c.LastVisitedAt == null)
-                .OrderBy(c => c.Id)
-                .FirstOrDefaultAsync(ct);
-            if (unvisited is not null)
-            {
-                return unvisited;
-            }
-        }
-
-        if (winner is null)
-        {
-            return null;
-        }
-
-        // Only the winner is loaded for real — the visit writes to it.
-        return await db.Cards.FirstAsync(c => c.Id == winner.Id, ct);
     }
 
     /// <summary>Fingerprints the page; a never-before-seen shape is archived
