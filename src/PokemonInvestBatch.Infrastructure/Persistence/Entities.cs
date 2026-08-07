@@ -71,8 +71,9 @@ public class Card
     /// The application never writes this column, it only honors it: a
     /// delisted card is invisible to scheduling, the bench recheck, the
     /// image sweep, and the neglect/at-risk alarms, while its history rows
-    /// stay put. Clear it by hand if the card comes back; the set walk
-    /// warns when it sees a delisted card alive.</summary>
+    /// stay put. Clear it by hand if the card comes back — the catalog
+    /// cannot tell you when that happens, since it also lists phantom
+    /// products whose pages never existed at all.</summary>
     public DateTimeOffset? DelistedAt { get; set; }
 }
 

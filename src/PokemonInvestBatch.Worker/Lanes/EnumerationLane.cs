@@ -233,10 +233,15 @@ public sealed class EnumerationLane(
             {
                 if (card.DelistedAt is not null)
                 {
-                    // Delisting is a manual verdict, so only the operator may
-                    // reverse it — but a dead card walking deserves a shout.
-                    logger.LogWarning(
-                        "Card {CardId} ({Name}) is marked delisted but the set walk just saw it at {CardUrl} — clear delisted_at if it is back for good",
+                    // Not an alarm, and deliberately not advice: the catalog
+                    // lists phantom products whose pages never existed, so a
+                    // delisted card appearing here is the normal case and
+                    // proves nothing. Only a successful fetch would, and
+                    // delisted cards are never fetched. Logged so the
+                    // operator — the only one who may reverse the verdict —
+                    // still has a trail.
+                    logger.LogInformation(
+                        "Card {CardId} ({Name}) is delisted but the catalog still lists it at {CardUrl}",
                         card.Id, product.Name, product.Url);
                 }
 
