@@ -7,22 +7,10 @@ using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
+using PokemonInvestBatch.TestSupport;
 using PokemonInvestBatch.Worker.Lanes;
 
 namespace PokemonInvestBatch.Worker.Tests;
-
-/// <summary>Records what a lane tried to tell a human, so tests can assert on
-/// the alarm as well as on the data.</summary>
-public sealed class RecordingAlerter : IAlerter
-{
-    public List<(string Subject, string Body)> Raised { get; } = [];
-
-    public Task RaiseAsync(string subject, string body, CancellationToken ct)
-    {
-        Raised.Add((subject, body));
-        return Task.CompletedTask;
-    }
-}
 
 /// <summary>
 /// Answers requests from a script, so a test can stage a run of failures and
