@@ -49,4 +49,14 @@ public sealed record ScraperOptions
 
     /// <summary>At most one benched-card retry from the retry queue per this many minutes.</summary>
     public int BenchRecheckIntervalMinutes { get; init; } = 10;
+
+    /// <summary>How often the delisted probe wakes to ask one retired card
+    /// whether its page came back. Four chances a day is ample headroom for a
+    /// bench of dozens on a monthly rotation.</summary>
+    public int DelistedProbeIntervalHours { get; init; } = 6;
+
+    /// <summary>How long a retired card rests between probes. Long on purpose:
+    /// a delisted page is expected to stay dead, and the whole point of
+    /// retiring it was to stop spending the polite budget on it.</summary>
+    public int DelistedProbeAgeDays { get; init; } = 30;
 }

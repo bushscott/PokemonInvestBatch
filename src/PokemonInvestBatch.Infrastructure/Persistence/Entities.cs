@@ -73,8 +73,13 @@ public class Card
     /// image sweep, and the neglect/at-risk alarms, while its history rows
     /// stay put. Clear it by hand if the card comes back — the catalog
     /// cannot tell you when that happens, since it also lists phantom
-    /// products whose pages never existed at all.</summary>
+    /// products whose pages never existed at all. The delisted probe is
+    /// what can: it fetches the page itself and shouts on a 200.</summary>
     public DateTimeOffset? DelistedAt { get; set; }
+
+    /// <summary>Last time the delisted probe asked whether this retired card's
+    /// page came back. Null = never asked, so it goes first.</summary>
+    public DateTimeOffset? DelistedProbedAt { get; set; }
 }
 
 /// <summary>

@@ -85,6 +85,25 @@ public static class VisitCandidatePool
             });
 
     /// <summary>
+    /// The one query that deliberately looks at delisted cards: the rare
+    /// "are you back?" probe. A retired card's page is the only witness that
+    /// can answer — the catalog keeps listing phantom products whose pages
+    /// never existed — so the probe asks the page itself, oldest-asked
+    /// first (never-asked leads), one card at a time.
+    /// </summary>
+    public static IQueryable<Card> DueForDelistedProbe(
+        PokemonDbContext db, DateTimeOffset now, TimeSpan minAge)
+    {
+        var cutoff = now - minAge;
+        return db.Cards
+            .Where(c => c.DelistedAt != null)
+            .Where(c => c.DelistedProbedAt == null || c.DelistedProbedAt < cutoff)
+            .OrderBy(c => c.DelistedProbedAt != null)
+            .ThenBy(c => c.DelistedProbedAt)
+            .Take(1);
+    }
+
+    /// <summary>
     /// VisitPriority's burn-window condition — staleness × sales rate has
     /// consumed the safety fraction of the bucket — translated to SQL, most
     /// overdue first. Must stay the same inequality as VisitPriority.Score.
