@@ -28,6 +28,18 @@ public class CardDetailParserChartTests
     }
 
     [Fact]
+    public void A_famous_card_carries_every_tier_the_canary_demands()
+    {
+        // The canary names the tiers it expects rather than counting them, so
+        // a single tier can no longer go missing in silence. That assertion is
+        // only safe while a real, liquid card genuinely carries all six —
+        // this is that premise, pinned to a live capture.
+        var page = CardDetailParser.Parse(Fixture.Load("charizard-live-a"));
+
+        Assert.DoesNotContain(Enum.GetValues<PriceTier>(), t => !page.Chart.ContainsKey(t));
+    }
+
+    [Fact]
     public void Parse_rejects_unknown_chart_series_keys()
     {
         // Synthetic drift: a series key we have no tier mapping for must fail

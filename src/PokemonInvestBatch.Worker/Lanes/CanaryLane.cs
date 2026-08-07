@@ -67,9 +67,17 @@ public sealed class CanaryLane(
             try
             {
                 var page = CardDetailParser.Parse(fetchedPage.Html);
-                if (page.Chart.Count < 5)
+
+                // Named, not counted. A canary is a famous, liquid card and
+                // carries every tier the site publishes; "at least five of
+                // six" let one tier go missing in silence, which is the one
+                // way the site can change that the page-shape vocabulary
+                // cannot see — a name that stops appearing introduces no new
+                // name to notice.
+                var missing = Enum.GetValues<PriceTier>().Where(t => !page.Chart.ContainsKey(t)).ToArray();
+                if (missing.Length > 0)
                 {
-                    failures.Add($"only {page.Chart.Count} chart tiers");
+                    failures.Add($"chart tiers missing: {string.Join(", ", missing)}");
                 }
 
                 if (page.Chart.TryGetValue(PriceTier.Ungraded, out var ungraded) && ungraded.Count < 60)
