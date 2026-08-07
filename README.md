@@ -1,5 +1,7 @@
 # PokemonInvestBatch
 
+[![CI](https://github.com/bushscott/PokemonInvestBatch/actions/workflows/ci.yml/badge.svg)](https://github.com/bushscott/PokemonInvestBatch/actions/workflows/ci.yml)
+
 A polite, self-healing web scraper that builds a long-term price history of the Pokémon card
 market. It runs continuously on a Raspberry Pi and has collected **13.7 million rows** of price,
 sales, and grading data across **72,000 cards** in **328 sets**.

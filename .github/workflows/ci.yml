@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore PokemonInvestBatch.slnx
+
+      # Directory.Build.props sets TreatWarningsAsErrors, so any new warning
+      # fails the build here rather than accumulating unnoticed.
+      - name: Build
+        run: dotnet build PokemonInvestBatch.slnx --no-restore -c Release
+
+      # Integration tests that need a live PostgreSQL instance are
+      # [SkippableFact] and skip themselves when POKEMON_TEST_DB is unset,
+      # which it is here. Everything else — including the SQL-translation
+      # tests, which render SQL without a connection — runs for real.
+      - name: Test
+        run: dotnet test PokemonInvestBatch.slnx --no-build -c Release
+
+      # EF scaffolds its migrations with a byte-order mark that the shared
+      # .editorconfig rejects, so generated code is excluded rather than
+      # hand-edited after every scaffold.
+      - name: Verify formatting
+        run: dotnet format PokemonInvestBatch.slnx --verify-no-changes --severity error --exclude '**/Migrations/**'
