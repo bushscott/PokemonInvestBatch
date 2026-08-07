@@ -280,3 +280,7 @@ chosen, what was rejected, and what it costs.
 
 C# / .NET 10 · PostgreSQL · Entity Framework Core · AngleSharp (HTML parsing) ·
 OpenTelemetry · xUnit · Raspberry Pi
+
+## Licence
+
+[MIT](LICENSE).
