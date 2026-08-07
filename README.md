@@ -281,6 +281,16 @@ chosen, what was rejected, and what it costs.
 C# / .NET 10 · PostgreSQL · Entity Framework Core · AngleSharp (HTML parsing) ·
 OpenTelemetry · xUnit · Raspberry Pi
 
-## Licence
+## Licence — please read, please don't run
 
-[MIT](LICENSE).
+All rights reserved. The source is here to be read and reviewed; it is not
+licensed for use. See [LICENSE](LICENSE).
+
+That is deliberate, and it is not about protecting the code. Everything above
+about politeness — the single shared gate, the delay that backs off at the
+first sign of strain, the contact address in every User-Agent — only works
+while exactly one copy is running. A hundred individually well-behaved clients
+arriving at the same time is not good manners; it is an outage, and the people
+who would deal with it never asked to be scraped in the first place.
+
+So take the ideas freely. Just don't point another copy at their servers.
