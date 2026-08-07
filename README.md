@@ -21,31 +21,49 @@ the job rather than a novelty alongside it. Most of the code here was written by
 working from my direction, and nearly every commit says so in its trailer. Hiding that would be
 dishonest, and it would also miss the point.
 
-The point is that writing the code was never the hard part. The skill is directing, reviewing, and
-overruling a system that produces *plausible* code very quickly — and plausible is not the same as
-correct. Some places where the difference mattered:
+**My value as a senior developer was never typing speed.** It's scar tissue — the accumulated
+memory of how things actually fail. It's the instinct that says *this will be fine right up until
+the day it isn't*, along with the specific reason why, because I watched it happen once and never
+forgot. Nobody pays a senior engineer to write the loop. They pay for the pause before the loop
+ships.
 
-- **[ADR-0002](docs/adr/0002-manual-only-delisting.md)** — I rejected a proposed feature that
-  would automatically retire dead cards. It would have worked. But it made a permanent decision
-  conditional on a parser being correct, and parsers break. The blast radius of a future bug was
-  worse than the manual work it saved.
-- **[ADR-0005](docs/adr/0005-pooled-grade-tiers.md)** — I turned down a suggested "CGC ≈ 0.68x
-  PSA" price adjustment. The corpus-wide figure was real, but applying it to individual cards
-  would have dressed an estimate up as an observation.
-- **[ADR-0004](docs/adr/0004-card-faults-do-not-slow-the-crawl.md)** — the one we got wrong.
-  Generated code treated a single broken page as evidence the whole website was struggling. It
-  took a production incident to surface: one deleted card page throttled the crawler from 350
-  requests an hour to about 10, and held it there for six hours. Code review didn't catch it;
-  reading the incident data did.
+That skill did not become less valuable when a machine started writing the code. It became the
+only part that mattered.
+
+Prompt engineering is not the hard part of AI-assisted development. Prompts are cheap, and if one
+doesn't work you write another. The hard part is reading code that is fluent, confident,
+well-commented, internally consistent — and quietly wrong — and knowing which one is in front of
+you. AI produces *plausible*. Plausible is not correct, and the distance between them is exactly
+where experience lives.
+
+Three places in this repo where that distance mattered:
+
+- **[ADR-0002](docs/adr/0002-manual-only-delisting.md)** — a proposed feature would have
+  automatically retired dead cards. The code was correct. I killed it anyway, because it made a
+  permanent decision conditional on a parser staying correct, and parsers break. That is a shape
+  I have seen before: the automation works perfectly until the day its input is wrong, and then it
+  is wrong at scale, quietly, across thousands of rows. Nothing in the diff was flawed. The
+  problem was the blast radius, and blast radius is not visible in a diff.
+- **[ADR-0005](docs/adr/0005-pooled-grade-tiers.md)** — a suggested "CGC ≈ 0.68x PSA" price
+  adjustment, backed by a real corpus-wide figure. I turned it down. The number was true in
+  aggregate and would have been fiction per card, and I have watched estimates get laundered into
+  facts by nothing more than being displayed next to real ones.
+- **[ADR-0004](docs/adr/0004-card-faults-do-not-slow-the-crawl.md)** — the one I had no scar for,
+  and therefore missed. Generated code treated a single broken page as evidence the whole website
+  was struggling. It reviewed clean, because two individually sensible safety mechanisms only
+  combine into a trap under conditions neither of them can see. Production found it instead: one
+  deleted card page throttled the crawler from 350 requests an hour to about 10 and held it there
+  for six hours. I have the scar now.
 
 I also learned to distrust a confident summary. At one point I was told a card set was probably
 finished growing — reasoning drawn from my own database's discovery dates, which only recorded
 when my scraper first ran and proved nothing whatsoever about the set. Checking an independent
 source answered the question properly and reversed the conclusion.
 
-None of that is an argument for or against building this way. It's what the work actually looks
-like. The ADRs in [`docs/adr/`](docs/adr/) are there so you can judge the reasoning rather than
-take my word for it.
+None of that is an argument for or against building this way. It is what the work actually looks
+like: the machine writes fast, and the judgement about what to keep is still the job. The ADRs in
+[`docs/adr/`](docs/adr/) exist so you can assess that judgement directly rather than take my word
+for it.
 
 ---
 
