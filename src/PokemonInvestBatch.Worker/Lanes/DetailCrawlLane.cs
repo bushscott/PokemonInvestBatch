@@ -501,21 +501,18 @@ public sealed class DetailCrawlLane(
             .Select(v => v.Outcome)
             .ToListAsync(ct);
 
-        if (recent.Count < 20)
+        var failures = recent.Count(o => o == VisitOutcome.ParseFailed);
+        if (!ParseFailureRate.IsSpike(failures, recent.Count, options.Value.ParseFailureAlertThreshold)
+            || !throttle.ShouldAlert("parse-failure-spike", time.GetUtcNow()))
         {
             return;
         }
 
-        var failureRate = (double)recent.Count(o => o == VisitOutcome.ParseFailed) / recent.Count;
-        if (failureRate > options.Value.ParseFailureAlertThreshold
-            && throttle.ShouldAlert("parse-failure-spike", time.GetUtcNow()))
-        {
-            await alerter.RaiseAsync(
-                "Parse failure rate spike",
-                $"{failureRate:P0} of the last {recent.Count} detail pages failed to parse — "
-                + "pricecharting.com has probably changed its markup. See parse_failures and shapes/.",
-                ct);
-        }
+        await alerter.RaiseAsync(
+            "Parse failure rate spike",
+            $"{(double)failures / recent.Count:P0} of the last {recent.Count} detail pages failed to "
+            + "parse — pricecharting.com has probably changed its markup. See parse_failures and shapes/.",
+            ct);
     }
 
     private static PageVisit NewVisit(Card card, int status, VisitOutcome outcome, string? shapeHash, DateTimeOffset now) =>
