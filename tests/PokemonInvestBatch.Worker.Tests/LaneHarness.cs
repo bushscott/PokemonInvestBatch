@@ -53,7 +53,7 @@ public sealed class ScriptedHandler(params Func<HttpResponseMessage>[] responses
 /// design (ADR-0003), so the seam is the HTTP handler — the one boundary a
 /// test must not cross — rather than an interface per dependency.
 /// </summary>
-public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, string shapeDirectory) : IDisposable
+public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, string fingerprintDirectory) : IDisposable
 {
     public RecordingAlerter Alerter { get; } = new();
 
@@ -81,12 +81,12 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             Delay,
             throttle,
             Alerter,
-            new PageShapeArchive(throttle, Alerter, shapeDirectory),
+            new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
             TimeProvider.System,
             Options.Create(new ScraperOptions
             {
                 ContactEmail = "tests@example.com",
-                ShapeArchiveDirectory = shapeDirectory,
+                FingerprintArchiveDirectory = fingerprintDirectory,
                 // A tripped pause must not park the test for half an hour.
                 PauseCooldownMinutes = 0,
             }),

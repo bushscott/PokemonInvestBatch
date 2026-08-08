@@ -47,7 +47,7 @@ public static class CardPageWriter
         PokemonDbContext db,
         Card card,
         CardDetailPage page,
-        string shapeHash,
+        string fingerprintHash,
         DateTimeOffset now,
         CancellationToken ct)
     {
@@ -91,7 +91,7 @@ public static class CardPageWriter
                 FetchedAt = now,
                 HttpStatus = 200,
                 Outcome = VisitOutcome.Parsed,
-                ShapeHash = shapeHash,
+                FingerprintHash = fingerprintHash,
             });
 
             card.LastVisitedAt = now;

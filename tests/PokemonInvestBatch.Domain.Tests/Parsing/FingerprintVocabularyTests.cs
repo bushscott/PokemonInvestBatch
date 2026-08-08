@@ -3,7 +3,7 @@ using PokemonInvestBatch.Domain.Tests.Fixtures;
 
 namespace PokemonInvestBatch.Domain.Tests.Parsing;
 
-public class PageShapeVocabularyTests
+public class FingerprintVocabularyTests
 {
     private const string FullCard = """
         {"auction_tiers":["completed-auctions-graded","completed-auctions-used"],
@@ -16,7 +16,7 @@ public class PageShapeVocabularyTests
     public void A_card_carrying_less_data_brings_no_unfamiliar_names()
     {
         // The false positive this rule exists to kill. An obscure promo with
-        // one price tier and no census is a shape never seen before and news
+        // one price tier and no census is a fingerprint never seen before and news
         // to nobody; ten of them buried the alert channel on 2026-08-07.
         var promo = """
             {"auction_tiers":["completed-auctions-used"],
@@ -25,11 +25,11 @@ public class PageShapeVocabularyTests
              "vgpc":["category","chart_data","console_uid","product"]}
             """;
 
-        Assert.Empty(PageShapeVocabulary.NamesAbsentFrom(promo, [FullCard]));
+        Assert.Empty(FingerprintVocabulary.NamesAbsentFrom(promo, [FullCard]));
     }
 
     [Fact]
-    public void A_name_seen_in_no_earlier_shape_is_reported()
+    public void A_name_seen_in_no_earlier_fingerprint_is_reported()
     {
         var remapped = """
             {"auction_tiers":["completed-auctions-graded","completed-auctions-used"],
@@ -38,7 +38,7 @@ public class PageShapeVocabularyTests
              "vgpc":["category","chart_data","console_uid","pop_data","product"]}
             """;
 
-        var unfamiliar = PageShapeVocabulary.NamesAbsentFrom(remapped, [FullCard]);
+        var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(remapped, [FullCard]);
 
         Assert.Equal("chart_data:grade-twenty-three", Assert.Single(unfamiliar));
     }
@@ -52,15 +52,15 @@ public class PageShapeVocabularyTests
             {"auction_tiers":[],"chart_data":["psa"],"pop_data":[],"vgpc":[]}
             """;
 
-        var unfamiliar = PageShapeVocabulary.NamesAbsentFrom(moved, [FullCard]);
+        var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(moved, [FullCard]);
 
         Assert.Equal("chart_data:psa", Assert.Single(unfamiliar));
     }
 
     [Fact]
-    public void Every_known_shape_contributes_to_the_vocabulary()
+    public void Every_known_fingerprint_contributes_to_the_vocabulary()
     {
-        // Familiar means seen in ANY earlier shape, not in the newest one:
+        // Familiar means seen in ANY earlier fingerprint, not in the newest one:
         // the census columns come from the full card, the tier from the promo.
         var older = """
             {"auction_tiers":["completed-auctions-cib"],"chart_data":[],"pop_data":[],"vgpc":[]}
@@ -72,13 +72,13 @@ public class PageShapeVocabularyTests
              "vgpc":["category"]}
             """;
 
-        Assert.Empty(PageShapeVocabulary.NamesAbsentFrom(arrival, [FullCard, older]));
+        Assert.Empty(FingerprintVocabulary.NamesAbsentFrom(arrival, [FullCard, older]));
     }
 
     [Fact]
     public void Of_qualifies_every_name_with_the_bucket_it_came_from()
     {
-        var names = PageShapeVocabulary.Of(FullCard);
+        var names = FingerprintVocabulary.Of(FullCard);
 
         Assert.Contains("pop_data:psa", names);
         Assert.Contains("chart_data:graded", names);
@@ -91,6 +91,6 @@ public class PageShapeVocabularyTests
     {
         var print = PageFingerprint.OfCardDetailPage(Fixture.Load("charizard-live-a"));
 
-        Assert.Empty(PageShapeVocabulary.NamesAbsentFrom(print.ShapeJson, [print.ShapeJson]));
+        Assert.Empty(FingerprintVocabulary.NamesAbsentFrom(print.Names, [print.Names]));
     }
 }

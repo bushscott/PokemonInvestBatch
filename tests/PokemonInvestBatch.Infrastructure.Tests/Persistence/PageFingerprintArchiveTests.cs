@@ -7,12 +7,12 @@ using PokemonInvestBatch.TestSupport;
 namespace PokemonInvestBatch.Infrastructure.Tests.Persistence;
 
 /// <summary>
-/// The alarm that cried wolf, pinned down. Archiving a shape and alerting on
-/// it are separate decisions: a page is novel whenever the card carries an
+/// The alarm that cried wolf, pinned down. Archiving a fingerprint and alerting
+/// on it are separate decisions: a page is novel whenever the card carries an
 /// amount of data no other card has carried, which is common and harmless.
 /// Only a name nothing in the archive can account for is the site moving.
 /// </summary>
-public class PageShapeArchiveTests : DatabaseTest, IDisposable
+public class PageFingerprintArchiveTests : DatabaseTest, IDisposable
 {
     private const string FullPage = """
         <script>
@@ -32,8 +32,8 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
         <div class="completed-auctions-used"></div>
         """;
 
-    private readonly string _shapeDirectory =
-        Path.Combine(Path.GetTempPath(), $"shapes-{Guid.NewGuid():N}");
+    private readonly string _fingerprintDirectory =
+        Path.Combine(Path.GetTempPath(), $"fingerprints-{Guid.NewGuid():N}");
 
     private readonly RecordingAlerter _alerter = new();
 
@@ -58,7 +58,7 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
         await RecordAsync(promo);
 
         await using var db = NewContext();
-        Assert.Equal(2, await db.Shapes.CountAsync());
+        Assert.Equal(2, await db.Fingerprints.CountAsync());
         Assert.Empty(_alerter.Raised);
     }
 
@@ -94,7 +94,7 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
         await RecordAsync(sameTierQuieterCard);
 
         await using var db = NewContext();
-        Assert.Equal(3, await db.Shapes.CountAsync());
+        Assert.Equal(3, await db.Fingerprints.CountAsync());
         Assert.Single(_alerter.Raised);
     }
 
@@ -115,7 +115,7 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
     }
 
     [SkippableFact]
-    public async Task A_shape_seen_before_only_moves_its_last_seen()
+    public async Task A_fingerprint_seen_before_only_moves_its_last_seen()
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
@@ -124,8 +124,8 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
         await RecordAsync(FullPage, first.AddMinutes(5));
 
         await using var db = NewContext();
-        var shape = Assert.Single(await db.Shapes.ToListAsync());
-        Assert.True(shape.LastSeenAt > shape.FirstSeenAt);
+        var fingerprint = Assert.Single(await db.Fingerprints.ToListAsync());
+        Assert.True(fingerprint.LastSeenAt > fingerprint.FirstSeenAt);
         Assert.Empty(_alerter.Raised);
     }
 
@@ -140,15 +140,15 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
         await RecordAsync(FullPage);
 
         await using var db = NewContext();
-        Assert.Single(await db.Shapes.ToListAsync());
+        Assert.Single(await db.Fingerprints.ToListAsync());
         Assert.Empty(_alerter.Raised);
     }
 
     public void Dispose()
     {
-        if (Directory.Exists(_shapeDirectory))
+        if (Directory.Exists(_fingerprintDirectory))
         {
-            Directory.Delete(_shapeDirectory, recursive: true);
+            Directory.Delete(_fingerprintDirectory, recursive: true);
         }
 
         GC.SuppressFinalize(this);
@@ -157,7 +157,7 @@ public class PageShapeArchiveTests : DatabaseTest, IDisposable
     private async Task RecordAsync(string html, DateTimeOffset? at = null)
     {
         await using var db = NewContext();
-        var archive = new PageShapeArchive(_throttle, _alerter, _shapeDirectory);
+        var archive = new PageFingerprintArchive(_throttle, _alerter, _fingerprintDirectory);
         await archive.RecordAsync(
             db, "/game/set/card", html, at ?? DateTimeOffset.UtcNow, CancellationToken.None);
         await db.SaveChangesAsync();

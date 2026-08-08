@@ -71,7 +71,7 @@ public sealed class CanaryLane(
                 // Named, not counted. A canary is a famous, liquid card and
                 // carries every tier the site publishes; "at least five of
                 // six" let one tier go missing in silence, which is the one
-                // way the site can change that the page-shape vocabulary
+                // way the site can change that the page-fingerprint vocabulary
                 // cannot see — a name that stops appearing introduces no new
                 // name to notice.
                 var missing = Enum.GetValues<PriceTier>().Where(t => !page.Chart.ContainsKey(t)).ToArray();

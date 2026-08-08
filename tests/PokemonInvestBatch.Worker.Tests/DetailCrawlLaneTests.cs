@@ -17,10 +17,10 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
 
     private const long CardId = 630417;
 
-    private readonly string _shapeDirectory =
-        Path.Combine(Path.GetTempPath(), $"shapes-{Guid.NewGuid():N}");
+    private readonly string _fingerprintDirectory =
+        Path.Combine(Path.GetTempPath(), $"fingerprints-{Guid.NewGuid():N}");
 
-    private LaneHarness NewHarness() => new(ContextOptions(), _shapeDirectory);
+    private LaneHarness NewHarness() => new(ContextOptions(), _fingerprintDirectory);
 
     private async Task SeedCardAsync(Action<Card>? adjust = null)
     {
@@ -176,9 +176,9 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_shapeDirectory))
+        if (Directory.Exists(_fingerprintDirectory))
         {
-            Directory.Delete(_shapeDirectory, recursive: true);
+            Directory.Delete(_fingerprintDirectory, recursive: true);
         }
 
         GC.SuppressFinalize(this);

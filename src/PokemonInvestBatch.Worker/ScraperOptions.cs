@@ -14,8 +14,8 @@ public sealed record ScraperOptions
 
     public string ImageDirectory { get; init; } = "images";
 
-    /// <summary>HTML captures of never-before-seen page shapes, for parser fixes.</summary>
-    public string ShapeArchiveDirectory { get; init; } = "shapes";
+    /// <summary>HTML captures of never-before-seen page fingerprints, for parser fixes.</summary>
+    public string FingerprintArchiveDirectory { get; init; } = "fingerprints";
 
     /// <summary>Famous, liquid cards asserted hard on a fast cadence.</summary>
     public string[] CanaryPaths { get; init; } =

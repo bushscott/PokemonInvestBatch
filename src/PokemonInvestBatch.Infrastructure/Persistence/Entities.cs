@@ -179,15 +179,15 @@ public class PageVisit
 
     public VisitOutcome Outcome { get; set; }
 
-    public string? ShapeHash { get; set; }
+    public string? FingerprintHash { get; set; }
 }
 
 /// <summary>A structural fingerprint we have seen. A hash not in this table is an alert.</summary>
-public class PageShape
+public class KnownFingerprint
 {
     public required string Hash { get; set; }
 
-    public required string ShapeJson { get; set; }
+    public required string Names { get; set; }
 
     public required string SampleUrl { get; set; }
 
@@ -207,5 +207,5 @@ public class ParseFailure
 
     public required string Reason { get; set; }
 
-    public string? ShapeHash { get; set; }
+    public string? FingerprintHash { get; set; }
 }

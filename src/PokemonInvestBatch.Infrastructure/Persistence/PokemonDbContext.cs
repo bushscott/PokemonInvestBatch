@@ -17,7 +17,7 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
 
     public DbSet<PageVisit> Visits => Set<PageVisit>();
 
-    public DbSet<PageShape> Shapes => Set<PageShape>();
+    public DbSet<KnownFingerprint> Fingerprints => Set<KnownFingerprint>();
 
     public DbSet<ParseFailure> ParseFailures => Set<ParseFailure>();
 
@@ -73,23 +73,23 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
         modelBuilder.Entity<PageVisit>(visit =>
         {
             visit.Property(v => v.Url).HasMaxLength(500);
-            visit.Property(v => v.ShapeHash).HasMaxLength(64);
+            visit.Property(v => v.FingerprintHash).HasMaxLength(64);
             // Rolling failure-rate window reads recent visits.
             visit.HasIndex(v => v.FetchedAt);
         });
 
-        modelBuilder.Entity<PageShape>(shape =>
+        modelBuilder.Entity<KnownFingerprint>(fingerprint =>
         {
-            shape.HasKey(s => s.Hash);
-            shape.Property(s => s.Hash).HasMaxLength(64);
-            shape.Property(s => s.SampleUrl).HasMaxLength(500);
-            shape.Property(s => s.ShapeJson).HasColumnType("jsonb");
+            fingerprint.HasKey(s => s.Hash);
+            fingerprint.Property(s => s.Hash).HasMaxLength(64);
+            fingerprint.Property(s => s.SampleUrl).HasMaxLength(500);
+            fingerprint.Property(s => s.Names).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<ParseFailure>(failure =>
         {
             failure.Property(f => f.Url).HasMaxLength(500);
-            failure.Property(f => f.ShapeHash).HasMaxLength(64);
+            failure.Property(f => f.FingerprintHash).HasMaxLength(64);
             failure.HasIndex(f => f.FetchedAt);
         });
     }

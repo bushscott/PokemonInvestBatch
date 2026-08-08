@@ -84,10 +84,10 @@ builder.Services.AddHttpClient(ImageLane.HttpClientName, http => http.Timeout = 
 builder.Services.AddSingleton(services =>
 {
     var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
-    return new PageShapeArchive(
+    return new PageFingerprintArchive(
         services.GetRequiredService<IncidentThrottle>(),
         services.GetRequiredService<IAlerter>(),
-        scraper.ShapeArchiveDirectory);
+        scraper.FingerprintArchiveDirectory);
 });
 
 builder.Services.AddHostedService<EnumerationLane>();

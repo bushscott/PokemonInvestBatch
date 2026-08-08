@@ -29,7 +29,7 @@ public class PageFingerprintTests
     [Fact]
     public void Fingerprint_captures_structure_not_content()
     {
-        // Same schema generation, different prices/sales/dates → same shape.
+        // Same schema generation, different prices/sales/dates → same fingerprint.
         var june = PageFingerprint.OfCardDetailPage(Fixture.Load("charizard-2026-06-psa-cgc"));
         var live = PageFingerprint.OfCardDetailPage(Fixture.Load("charizard-live-a"));
 
@@ -37,13 +37,13 @@ public class PageFingerprintTests
     }
 
     [Fact]
-    public void Shape_json_names_the_structures_it_saw()
+    public void Names_json_lists_the_structures_it_saw()
     {
         var print = PageFingerprint.OfCardDetailPage(Fixture.Load("charizard-live-a"));
 
-        Assert.Contains("chart_data", print.ShapeJson);
-        Assert.Contains("psa", print.ShapeJson);
-        Assert.Contains("completed-auctions-manual-only", print.ShapeJson);
+        Assert.Contains("chart_data", print.Names);
+        Assert.Contains("psa", print.Names);
+        Assert.Contains("completed-auctions-manual-only", print.Names);
     }
 
     [Fact]

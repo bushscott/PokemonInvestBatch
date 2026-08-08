@@ -25,7 +25,7 @@ public sealed class DetailCrawlLane(
     AdaptiveDelay delay,
     IncidentThrottle throttle,
     IAlerter alerter,
-    PageShapeArchive shapes,
+    PageFingerprintArchive fingerprints,
     TimeProvider time,
     IOptions<ScraperOptions> options,
     CrawlMetrics metrics,
@@ -205,7 +205,7 @@ public sealed class DetailCrawlLane(
                     card.Id, card.Name, fetched.StatusCode);
             }
             visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
-            db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, shapeHash: null, now));
+            db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, fingerprintHash: null, now));
             if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))
             {
                 await RecordStrikeAsync(card, $"http-{fetched.StatusCode}", now, ct);
@@ -215,7 +215,7 @@ public sealed class DetailCrawlLane(
             return;
         }
 
-        var shapeHash = await shapes.RecordAsync(db, card.Url, fetchedPage.Html, now, ct);
+        var fingerprintHash = await fingerprints.RecordAsync(db, card.Url, fetchedPage.Html, now, ct);
 
         CardDetailPage page;
         try
@@ -236,16 +236,16 @@ public sealed class DetailCrawlLane(
                 Url = card.Url,
                 FetchedAt = now,
                 Reason = drift.Message,
-                ShapeHash = shapeHash,
+                FingerprintHash = fingerprintHash,
             });
-            db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.ParseFailed, shapeHash, now));
+            db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.ParseFailed, fingerprintHash, now));
             await RecordStrikeAsync(card, "parse", now, ct);
             await db.SaveChangesAsync(ct);
             await CheckFailureRateAsync(db, ct);
             return;
         }
 
-        await WritePageAsync(db, card, page, shapeHash, now, ct);
+        await WritePageAsync(db, card, page, fingerprintHash, now, ct);
         metrics.RecordPageParsed();
         metrics.RecordCardVisited();
         metrics.RecordVisitDuration(time.GetElapsedTime(started));
@@ -255,7 +255,7 @@ public sealed class DetailCrawlLane(
     /// CardPageWriter; what remains here is the narration — metrics, the
     /// summary line, and the two findings worth waking someone for.</summary>
     private async Task WritePageAsync(
-        PokemonDbContext db, Card card, CardDetailPage page, string shapeHash, DateTimeOffset now, CancellationToken ct)
+        PokemonDbContext db, Card card, CardDetailPage page, string fingerprintHash, DateTimeOffset now, CancellationToken ct)
     {
         var violations = GradeMonotonicity.Violations(page.Chart);
         metrics.RecordMonotonicityViolations(violations.Count);
@@ -269,7 +269,7 @@ public sealed class DetailCrawlLane(
                 card.Id, violation.Lower, violation.LowerCents, violation.Higher, violation.HigherCents);
         }
 
-        var written = await CardPageWriter.WriteAsync(db, card, page, shapeHash, now, ct);
+        var written = await CardPageWriter.WriteAsync(db, card, page, fingerprintHash, now, ct);
         metrics.RecordRowsAppended(written.NewPriceRows, written.NewPopulationCells, written.NewSales);
 
         logger.Log(
@@ -429,11 +429,11 @@ public sealed class DetailCrawlLane(
         await alerter.RaiseAsync(
             "Parse failure rate spike",
             $"{(double)failures / recent.Count:P0} of the last {recent.Count} detail pages failed to "
-            + "parse — pricecharting.com has probably changed its markup. See parse_failures and shapes/.",
+            + "parse — pricecharting.com has probably changed its markup. See parse_failures and fingerprints/.",
             ct);
     }
 
-    private static PageVisit NewVisit(Card card, int status, VisitOutcome outcome, string? shapeHash, DateTimeOffset now) =>
+    private static PageVisit NewVisit(Card card, int status, VisitOutcome outcome, string? fingerprintHash, DateTimeOffset now) =>
         new()
         {
             Kind = PageKind.CardDetail,
@@ -442,6 +442,6 @@ public sealed class DetailCrawlLane(
             FetchedAt = now,
             HttpStatus = status,
             Outcome = outcome,
-            ShapeHash = shapeHash,
+            FingerprintHash = fingerprintHash,
         };
 }

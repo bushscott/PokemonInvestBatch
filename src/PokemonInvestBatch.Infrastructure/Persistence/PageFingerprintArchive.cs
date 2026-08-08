@@ -12,7 +12,7 @@ namespace PokemonInvestBatch.Infrastructure.Persistence;
 /// investigates, the live page has usually moved on, so the sample is the only
 /// evidence of what the parser actually saw.
 ///
-/// Archiving is not alerting. A shape counts how much data a card carries as
+/// Archiving is not alerting. A fingerprint counts how much data a card carries as
 /// well as how the page is built, so an obscure promo with one price tier and
 /// no census is structurally novel and perfectly healthy; alerting on every
 /// such card buried the channel under ten Criticals in half an hour on
@@ -21,33 +21,33 @@ namespace PokemonInvestBatch.Infrastructure.Persistence;
 /// markup change lands on every card at once and a thousand identical emails
 /// is the same information as one.
 /// </summary>
-public sealed class PageShapeArchive(
+public sealed class PageFingerprintArchive(
     IncidentThrottle throttle,
     IAlerter alerter,
     string archiveDirectory)
 {
-    /// <summary>Records the page's shape and returns its hash. The caller
+    /// <summary>Records the page's fingerprint and returns its hash. The caller
     /// saves — the row rides the same transaction as the visit it describes.</summary>
     public async Task<string> RecordAsync(
         PokemonDbContext db, string cardUrl, string html, DateTimeOffset now, CancellationToken ct)
     {
         var print = PageFingerprint.OfCardDetailPage(html);
-        var known = await db.Shapes.FindAsync([print.Hash], ct);
+        var known = await db.Fingerprints.FindAsync([print.Hash], ct);
         if (known is not null)
         {
             known.LastSeenAt = now;
             return print.Hash;
         }
 
-        // Read the vocabulary before this shape joins it, or every name it
+        // Read the vocabulary before this fingerprint joins it, or every name it
         // brings is its own precedent and nothing is ever unfamiliar.
-        var vocabulary = await db.Shapes.Select(s => s.ShapeJson).ToListAsync(ct);
-        var unfamiliar = PageShapeVocabulary.NamesAbsentFrom(print.ShapeJson, vocabulary);
+        var vocabulary = await db.Fingerprints.Select(s => s.Names).ToListAsync(ct);
+        var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(print.Names, vocabulary);
 
-        db.Shapes.Add(new PageShape
+        db.Fingerprints.Add(new KnownFingerprint
         {
             Hash = print.Hash,
-            ShapeJson = print.ShapeJson,
+            Names = print.Names,
             SampleUrl = cardUrl,
             FirstSeenAt = now,
             LastSeenAt = now,
@@ -66,14 +66,14 @@ public sealed class PageShapeArchive(
         }
 
         // Keyed on the names, not the hash: one new tier reaches us through
-        // however many shapes, and they are all the same piece of news.
+        // however many fingerprints, and they are all the same piece of news.
         if (throttle.ShouldAlert($"new-page-element:{string.Join(",", unfamiliar)}", now))
         {
             await alerter.RaiseAsync(
                 "New page element observed",
                 $"Card detail pages carry a name we have never seen.\nSample: {cardUrl}\n"
                 + $"New: {string.Join(", ", unfamiliar)}\n"
-                + $"Shape: {print.ShapeJson}\nArchived: {archivePath}",
+                + $"Names: {print.Names}\nArchived: {archivePath}",
                 ct);
         }
 

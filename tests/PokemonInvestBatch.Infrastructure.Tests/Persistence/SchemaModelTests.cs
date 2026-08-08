@@ -84,12 +84,12 @@ public class SchemaModelTests
     }
 
     [Fact]
-    public void Page_shapes_are_keyed_by_hash()
+    public void Page_fingerprints_are_keyed_by_hash()
     {
-        var shape = Model().FindEntityType(typeof(PageShape))!;
+        var fingerprint = Model().FindEntityType(typeof(KnownFingerprint))!;
 
         Assert.Equal(
-            [nameof(PageShape.Hash)],
-            shape.FindPrimaryKey()!.Properties.Select(p => p.Name).ToArray());
+            [nameof(KnownFingerprint.Hash)],
+            fingerprint.FindPrimaryKey()!.Properties.Select(p => p.Name).ToArray());
     }
 }
