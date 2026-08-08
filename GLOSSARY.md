@@ -29,7 +29,7 @@ These words mean exactly one thing everywhere on the dashboard:
 
 | Jargon (code / metrics / alerts) | Plain English | Where it lives |
 |---|---|---|
-| corpus | all cards known to exist (~100k when discovery completes) | `crawl.corpus_size/_visited` metrics; "Card coverage" widget |
+| corpus | all cards known to exist (~91k across all 788 sets, once the last set walk lands) | `crawl.corpus_size/_visited` metrics; "Card coverage" widget |
 | canary | famous-card spot check: ~5 well-known cards re-fetched every 6h and hard-verified, as an early tripwire for site changes | `CanaryLane.cs`, `crawl.canary_failures`, "Famous-card spot checks failing" widget, NR alert "Canary failed" |
 | quarantine | the retry queue: a card that failed 3 visits in a row *by its own fault* (unparseable page or 404-class error — never site-wide trouble) is set aside with a comeback date: 1 day, doubling per repeat, 30-day cap; one success clears it | `QuarantinePolicy.cs`, `cards.failure_streak/quarantined_until` columns, `crawl.cards_quarantined*` metrics, "Cards queued for retry" widgets |
 | delisted | retired by hand: the product left the site entirely (page gone *and* search finds nothing), so no set walk can ever heal its URL; the operator stamps `delisted_at` via SQL and the app skips the card everywhere — scheduling, retry queue, image sweep, neglect/at-risk alarms — while keeping every history row; only the operator un-delists, and the catalog can't signal when to — it also lists *phantom* products whose pages never existed (PriceCharting auto-generates a variant entry per card, so e.g. mirror-holo rows appear for secret rares that were never printed that way) | `cards.delisted_at` column, `crawl.cards_delisted` metric |
