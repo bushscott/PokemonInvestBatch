@@ -71,7 +71,7 @@ POKEMON_DB="Host=<pi-ip>;Database=pokemon;Username=pokemon_owner;Password=..." \
 Then apply the post-migration grants noted at the bottom of `postgres-setup.sql`:
 
 ```bash
-sudo -u postgres psql -d pokemon -c "GRANT UPDATE ON cards, shapes, sets TO pokemon_app;"
+sudo -u postgres psql -d pokemon -c "GRANT UPDATE ON cards, fingerprints, sets TO pokemon_app;"
 ```
 
 ## 5. App deployment

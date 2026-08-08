@@ -127,7 +127,7 @@ External data lies, and the system is built to notice rather than absorb it:
 
 - **Canary checks** re-fetch a handful of famous cards every 6 hours with strict assertions. If
   the site's structure changes, this catches it within hours instead of at the end of a full pass.
-- **Schema drift detection** refuses to guess. If a page's shape changes, parsing fails loudly and
+- **Schema drift detection** refuses to guess. If a page's structure changes, parsing fails loudly and
   the card is quarantined — the system never writes data it is unsure about.
 - **Impossible-value detection** flags census counts that shrink or multiply beyond any plausible
   pace. Graded cards do not become ungraded, so a shrinking count means the source restated its
@@ -217,8 +217,8 @@ erDiagram
     cards ||--o{ populations    : "graded census"
     cards ||--o{ sales          : "individual sales"
     cards ||..o{ visits         : "one row per fetch"
-    shapes ||..o{ visits        : "page fingerprint"
-    shapes ||..o{ parse_failures : "page fingerprint"
+    fingerprints ||..o{ visits        : "page fingerprint"
+    fingerprints ||..o{ parse_failures : "page fingerprint"
 
     sets {
         bigint      id             PK
@@ -265,18 +265,18 @@ erDiagram
         timestamptz fetched_at
         integer     http_status
         smallint    outcome
-        varchar     shape_hash
+        varchar     fingerprint_hash
     }
-    shapes {
+    fingerprints {
         varchar     hash          PK "sha256 of the structure"
-        jsonb       shape_json    "names of things, never values"
+        jsonb       names    "names of things, never values"
         timestamptz last_seen_at
     }
     parse_failures {
         bigint      id      PK
         varchar     url
         varchar     reason
-        varchar     shape_hash
+        varchar     fingerprint_hash
     }
 ```
 
@@ -293,10 +293,10 @@ last one seen, so a quiet month costs nothing while a moving one is preserved fo
 simpler: a sale is a discrete event with the site's own listing id, so it is written once and never
 touched again.
 
-**The diary** — `visits`, `shapes`, `parse_failures` — records what happened rather than what is
+**The diary** — `visits`, `fingerprints`, `parse_failures` — records what happened rather than what is
 true. `visits` holds one row per fetch, successful or not, which is what makes it possible to ask
 "how often did we actually look at this card?" as opposed to "when did we last succeed?".
-`shapes` is the site's changelog, kept by us because the site does not publish one.
+`fingerprints` is the site's changelog, kept by us because the site does not publish one.
 
 Deliberately, `visits` has **no** foreign key to `cards` while the three record tables do, with
 `ON DELETE RESTRICT`. The diary should survive its subject; the facts should be impossible to
