@@ -359,7 +359,7 @@ cp src/PokemonInvestBatch.Worker/appsettings.Production.example.json \
 dotnet ef database update -p src/PokemonInvestBatch.Infrastructure \
                           -s src/PokemonInvestBatch.Infrastructure
 
-# 4. Run the tests (178 of them)
+# 4. Run the tests (219 of them)
 dotnet test
 
 # 5. Run it
