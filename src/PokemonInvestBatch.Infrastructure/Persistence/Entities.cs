@@ -167,6 +167,13 @@ public enum VisitOutcome : short
     Parsed,
     ParseFailed,
     HttpError,
+
+    /// <summary>The page was read and understood, and is not a card. Kept
+    /// distinct from ParseFailed because the parse-failure rate is the
+    /// site-changed alarm: counting a miscatalogued console here would let a
+    /// cataloging mistake raise an outage. Appended, never reordered — the
+    /// values are stored as smallint.</summary>
+    NotACard,
 }
 
 /// <summary>

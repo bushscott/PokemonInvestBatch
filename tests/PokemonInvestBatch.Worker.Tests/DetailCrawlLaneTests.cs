@@ -235,8 +235,55 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         Assert.Empty(await VisitCandidatePool.Benched(db, now).ToListAsync());
 
         // And the audit trail survives — this is the evidence for why.
-        Assert.Equal(VisitOutcome.ParseFailed, (await db.Visits.SingleAsync()).Outcome);
+        Assert.Equal(VisitOutcome.NotACard, (await db.Visits.SingleAsync()).Outcome);
         Assert.Single(await db.ParseFailures.ToListAsync());
+    }
+
+    [SkippableFact]
+    public async Task Retirements_do_not_push_the_parse_failure_rate_into_a_spike()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The spike detector reads the visits table, not the metric — so filing
+        // retirements as ParseFailed would let a miscatalogued set raise "the
+        // site changed and the parser is blind". Six in one hundred-visit window
+        // clears the 5% threshold on its own.
+        await SeedCardAsync();
+
+        await using (var seed = NewContext())
+        {
+            var start = DateTimeOffset.UtcNow.AddHours(-2);
+            for (var i = 0; i < 100; i++)
+            {
+                seed.Visits.Add(new PageVisit
+                {
+                    Kind = PageKind.CardDetail,
+                    Url = CardUrl,
+                    CardId = CardId,
+                    FetchedAt = start.AddSeconds(i),
+                    HttpStatus = 200,
+                    // The six most recent are retirements, so they are certain to
+                    // fall inside the window the detector samples.
+                    Outcome = i >= 94 ? VisitOutcome.NotACard : VisitOutcome.Parsed,
+                });
+            }
+
+            await seed.SaveChangesAsync();
+        }
+
+        // One genuine drift failure, which is what runs the check.
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(
+            ScriptedHandler.Page(Fixture.Load("charizard-2024-06-pop-schema"))));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        Assert.Equal(1, await db.Visits.CountAsync(v => v.Outcome == VisitOutcome.ParseFailed));
+        Assert.Equal(6, await db.Visits.CountAsync(v => v.Outcome == VisitOutcome.NotACard));
+
+        // 1 real failure in 100 is 1%. Counting the six retirements would make it
+        // 7% and wake someone for a cataloging mistake.
+        Assert.DoesNotContain(harness.Alerter.Raised, a => a.Subject == "Parse failure rate spike");
     }
 
     public void Dispose()

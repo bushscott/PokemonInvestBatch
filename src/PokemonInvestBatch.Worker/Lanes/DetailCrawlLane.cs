@@ -330,7 +330,12 @@ public sealed class DetailCrawlLane(
             Reason = verdict.Message,
             FingerprintHash = fingerprintHash,
         });
-        db.Visits.Add(NewVisit(card, statusCode, VisitOutcome.ParseFailed, fingerprintHash, now));
+        // NotACard, never ParseFailed: CheckFailureRateAsync counts ParseFailed
+        // rows in the last hundred visits, so filing these there would let a
+        // miscatalogued set raise the alarm that means "the site changed and the
+        // parser is now blind" — the exact false emergency this path exists to
+        // avoid. Six of them in one window is all it would take.
+        db.Visits.Add(NewVisit(card, statusCode, VisitOutcome.NotACard, fingerprintHash, now));
 
         card.NotACardAt = now;
 
