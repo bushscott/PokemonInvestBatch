@@ -24,5 +24,26 @@ public class BenchedQueryTranslationTests
         var sql = VisitCandidatePool.Benched(db, now).ToQueryString();
 
         Assert.Contains("SELECT", sql);
+
+        // The retirement filter is what ends the ten-minute retry loop for a
+        // page that will never be a card. If it ever stops reaching SQL the
+        // bench silently refills and nothing else in the suite would say so.
+        Assert.Contains("not_a_card_at", sql);
+    }
+
+    [Fact]
+    public void Eligible_query_excludes_retired_pages_in_sql()
+    {
+        var options = new DbContextOptionsBuilder<PokemonDbContext>()
+            .UseNpgsql("Host=localhost;Database=translation-check-only")
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        using var db = new PokemonDbContext(options);
+        var now = new DateTimeOffset(2026, 7, 31, 0, 0, 0, TimeSpan.Zero);
+
+        var sql = VisitCandidatePool.Eligible(db, now).ToQueryString();
+
+        Assert.Contains("not_a_card_at", sql);
+        Assert.Contains("delisted_at", sql);
     }
 }

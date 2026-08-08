@@ -227,6 +227,11 @@ public sealed class DetailCrawlLane(
                 page = CardDetailParser.Parse(fetchedPage.Html);
             }
         }
+        catch (NotACardPageException verdict)
+        {
+            await RetireNotACardAsync(db, card, verdict, fetched.StatusCode, fingerprintHash, visit, now, ct);
+            return;
+        }
         catch (SchemaDriftException drift)
         {
             metrics.RecordParseFailure();
@@ -292,6 +297,71 @@ public sealed class DetailCrawlLane(
                 + $"than the newest {SalesObservation.BucketCap} rows is gone for good. It is "
                 + $"fast-tracked until its buckets calm down.\n"
                 + $"https://www.pricecharting.com{card.Url}",
+                ct);
+        }
+    }
+
+    /// <summary>
+    /// A page that parsed cleanly and simply is not a card — a console, a game,
+    /// an accessory the catalog filed under Pokemon. The trail is recorded like
+    /// a parse failure, but deliberately NOT counted as one: the parse-failure
+    /// rate is the site-changed alarm, and a miscatalogued set must never read
+    /// as an outage while the crawl is perfectly healthy.
+    ///
+    /// The verdict is permanent — no strike, no sentence, no comeback date — so
+    /// the card leaves the rotation for good instead of returning every ten
+    /// minutes forever the way a benched card does.
+    /// </summary>
+    private async Task RetireNotACardAsync(
+        PokemonDbContext db,
+        Card card,
+        NotACardPageException verdict,
+        int statusCode,
+        string fingerprintHash,
+        Activity? visit,
+        DateTimeOffset now,
+        CancellationToken ct)
+    {
+        visit?.SetStatus(ActivityStatusCode.Error, verdict.Message);
+        db.ParseFailures.Add(new ParseFailure
+        {
+            Url = card.Url,
+            FetchedAt = now,
+            Reason = verdict.Message,
+            FingerprintHash = fingerprintHash,
+        });
+        db.Visits.Add(NewVisit(card, statusCode, VisitOutcome.ParseFailed, fingerprintHash, now));
+
+        card.NotACardAt = now;
+
+        // Any streak and sentence are cleared on the way out. They described a
+        // card that kept failing; this was never a card, and leaving them set
+        // would keep it counted among the benched forever.
+        card.FailureStreak = 0;
+        card.QuarantinedUntil = null;
+        await db.SaveChangesAsync(ct);
+
+        var slug = await db.Sets
+            .Where(s => s.Id == card.SetId)
+            .Select(s => s.Slug)
+            .FirstOrDefaultAsync(ct) ?? "unknown";
+        metrics.RecordNotACard(slug);
+
+        logger.LogWarning(
+            "Card {CardId} ({Name}) is not a card and has been retired from set {SetSlug} — {Reason}",
+            card.Id, card.Name, slug, verdict.Message);
+
+        // Throttled per SET, not per card: one miscatalogued set should produce
+        // one alert you can act on, not seventeen you learn to dismiss.
+        if (throttle.ShouldAlert($"not-a-card:{slug}", now))
+        {
+            await alerter.RaiseAsync(
+                "A set in the catalog is not cards",
+                $"Card {card.Id} ({card.Name}) in set '{slug}' is not a card: {verdict.Message}\n\n"
+                + $"{options.Value.BaseUrl}{card.Url}\n\n"
+                + "It has been retired and will not be visited again. If the whole set is "
+                + $"miscatalogued, add \"{slug}\" to blacklist.json so enumeration stops walking "
+                + "it, then retire its siblings — they are still being visited until you do.",
                 ct);
         }
     }

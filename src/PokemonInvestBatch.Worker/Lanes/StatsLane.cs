@@ -54,7 +54,8 @@ public sealed class StatsLane(
             corpusSize,
             corpusVisited,
             imagesPending: await db.Cards.LongCountAsync(
-                c => c.DelistedAt == null && c.ImageHash != null && c.ImageFetchedAt == null, ct),
+                c => c.DelistedAt == null && c.NotACardAt == null
+                     && c.ImageHash != null && c.ImageFetchedAt == null, ct),
             setsTotal: await db.Sets.LongCountAsync(ct));
 
         // Longest wait for a visit: the single most-neglected card. A
@@ -64,7 +65,7 @@ public sealed class StatsLane(
         // dashboard reds when the promise breaks. Delisted cards are out of
         // the running — never visiting them again is the plan, not neglect.
         var now = time.GetUtcNow();
-        var living = db.Cards.Where(c => c.DelistedAt == null);
+        var living = db.Cards.Where(c => c.DelistedAt == null && c.NotACardAt == null);
         var oldestVisit = await living.MinAsync(c => c.LastVisitedAt, ct);
         var oldestUnseen = await living.Where(c => c.LastVisitedAt == null)
             .MinAsync(c => (DateTimeOffset?)c.FirstSeenAt, ct);
@@ -89,7 +90,8 @@ public sealed class StatsLane(
         metrics.SetSchedulerStats(
             cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),
             quarantinedNow: await db.Cards.LongCountAsync(
-                c => c.DelistedAt == null && c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
+                c => c.DelistedAt == null && c.NotACardAt == null
+                     && c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
             delisted: await db.Cards.LongCountAsync(c => c.DelistedAt != null, ct));
 
         metrics.SetTotalRows(

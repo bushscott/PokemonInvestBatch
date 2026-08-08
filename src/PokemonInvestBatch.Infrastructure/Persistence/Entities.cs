@@ -80,6 +80,16 @@ public class Card
     /// <summary>Last time the delisted probe asked whether this retired card's
     /// page came back. Null = never asked, so it goes first.</summary>
     public DateTimeOffset? DelistedProbedAt { get; set; }
+
+    /// <summary>Set when the parser proved the page is not a card at all — a
+    /// handheld console, a game, an accessory the catalog filed under Pokemon.
+    /// The machine's verdict, deliberately kept apart from DelistedAt, which is
+    /// only ever yours: this one is written by code and needs no probe, because
+    /// unlike a vanished page a Game Boy will not become a card later. Like
+    /// delisting it hides the card from scheduling and from the bench, so the
+    /// retry loop ends the moment the verdict lands rather than reopening every
+    /// time a sentence lapses.</summary>
+    public DateTimeOffset? NotACardAt { get; set; }
 }
 
 /// <summary>

@@ -59,10 +59,12 @@ public static class VisitCandidatePool
         };
 
     /// <summary>Quarantined cards are invisible until their sentence lapses;
-    /// delisted cards are invisible for good.</summary>
+    /// delisted cards and things that were never cards are invisible for
+    /// good.</summary>
     public static IQueryable<Card> Eligible(PokemonDbContext db, DateTimeOffset now) =>
         db.Cards.Where(c =>
-            c.DelistedAt == null && (c.QuarantinedUntil == null || c.QuarantinedUntil < now));
+            c.DelistedAt == null && c.NotACardAt == null
+            && (c.QuarantinedUntil == null || c.QuarantinedUntil < now));
 
     /// <summary>
     /// The retry queue, for the bench recheck: still-benched cards,
@@ -70,11 +72,13 @@ public static class VisitCandidatePool
     /// behind the others, so the recheck rotates instead of fixating.
     /// Delisted cards are excluded: the retry exists to catch a page coming
     /// back, and a product pulled from the site has no page to come back.
+    /// Pages that were never cards are excluded for a blunter reason — there is
+    /// nothing to come back to, so retrying one forever is pure waste.
     /// Bounded like the other tier windows; two narrow columns cross the wire.
     /// </summary>
     public static IQueryable<BenchedCandidate> Benched(PokemonDbContext db, DateTimeOffset now) =>
         db.Cards
-            .Where(c => c.DelistedAt == null)
+            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
             .Where(c => c.QuarantinedUntil != null && c.QuarantinedUntil >= now)
             .OrderBy(c => c.QuarantinedUntil)
             .Take(TierTake)

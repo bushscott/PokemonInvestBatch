@@ -20,6 +20,8 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _monotonicityViolations;
     private readonly Counter<long> _popAnomalies;
     private readonly Counter<long> _cardsQuarantined;
+
+    private readonly Counter<long> _notACard;
     private readonly Histogram<double> _visitDuration;
 
     private double _queueStalenessDays;
@@ -56,6 +58,7 @@ public sealed class CrawlMetrics : IDisposable
         _monotonicityViolations = Meter.CreateCounter<long>("crawl.monotonicity_violations", description: "Grade-price monotonicity violations; a step change is a silent tier remap");
         _popAnomalies = Meter.CreateCounter<long>("crawl.pop_anomalies", description: "Population cells that spiked or shrank beyond grading pace, by grader and kind");
         _cardsQuarantined = Meter.CreateCounter<long>("crawl.cards_quarantined", description: "Cards benched after repeated card-attributable failures, by reason");
+        _notACard = Meter.CreateCounter<long>("crawl.not_a_card", description: "Pages retired because they are not cards — consoles, games, accessories — by set");
         _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
 
         Meter.CreateObservableGauge(
@@ -123,6 +126,7 @@ public sealed class CrawlMetrics : IDisposable
         _monotonicityViolations.Add(0);
         _popAnomalies.Add(0);
         _cardsQuarantined.Add(0);
+        _notACard.Add(0);
     }
 
     /// <summary>Exposed for MetricCollector-based tests and host registration.</summary>
@@ -151,6 +155,11 @@ public sealed class CrawlMetrics : IDisposable
 
     public void RecordCardQuarantined(string reason) =>
         _cardsQuarantined.Add(1, new KeyValuePair<string, object?>("reason", reason));
+
+    /// <summary>Tagged by set, never by card: one console in a set means the
+    /// whole set is miscatalogued, and the set is what you act on.</summary>
+    public void RecordNotACard(string set) =>
+        _notACard.Add(1, new KeyValuePair<string, object?>("set", set));
 
     public void RecordPopAnomaly(string grader, string kind) =>
         _popAnomalies.Add(1, new KeyValuePair<string, object?>("grader", grader), new KeyValuePair<string, object?>("kind", kind));

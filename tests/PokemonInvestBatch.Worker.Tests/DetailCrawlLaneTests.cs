@@ -174,6 +174,71 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         Assert.Equal(2, await second.Visits.CountAsync(v => v.CardId == CardId));
     }
 
+    [SkippableFact]
+    public async Task A_console_page_is_retired_instead_of_benched()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The pokemon-mini incident, as a test. A handheld console page parses
+        // perfectly as a card — same markup, same chart series — and wrote 421
+        // months of console prices under grade-tier names before anyone noticed.
+        // Seeded mid-sentence, because the point is that the verdict ends the
+        // retry loop rather than joining it.
+        await SeedCardAsync(c =>
+        {
+            c.FailureStreak = 3;
+            c.QuarantinedUntil = DateTimeOffset.UtcNow.AddDays(1);
+        });
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(
+            ScriptedHandler.Page(Fixture.Load("pokemon-mini-pinball"))));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var card = await db.Cards.SingleAsync(c => c.Id == CardId);
+        Assert.NotNull(card.NotACardAt);
+
+        // Cleared on the way out: they described a card that kept failing, and
+        // leaving them set would keep it counted among the benched forever.
+        Assert.Equal(0, card.FailureStreak);
+        Assert.Null(card.QuarantinedUntil);
+
+        // Not one row of console history may reach the corpus.
+        Assert.Empty(await db.PriceMonths.ToListAsync());
+        Assert.Empty(await db.Sales.ToListAsync());
+
+        // One alert, naming the set — that is the thing you act on.
+        var alert = Assert.Single(harness.Alerter.Raised, a => a.Subject == "A set in the catalog is not cards");
+        Assert.Contains("pokemon-base-set", alert.Body);
+        Assert.Contains("blacklist.json", alert.Body);
+    }
+
+    [SkippableFact]
+    public async Task A_console_page_leaves_the_rotation_for_good()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The flatline this whole change exists to end: a benched card returns
+        // every ten minutes forever. A retired one must never be picked again,
+        // by the ordinary pool or by the bench recheck.
+        await SeedCardAsync();
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(
+            ScriptedHandler.Page(Fixture.Load("pokemon-mini-pinball"))));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var now = DateTimeOffset.UtcNow;
+        Assert.Empty(await VisitCandidatePool.Eligible(db, now).ToListAsync());
+        Assert.Empty(await VisitCandidatePool.Benched(db, now).ToListAsync());
+
+        // And the audit trail survives — this is the evidence for why.
+        Assert.Equal(VisitOutcome.ParseFailed, (await db.Visits.SingleAsync()).Outcome);
+        Assert.Single(await db.ParseFailures.ToListAsync());
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_fingerprintDirectory))

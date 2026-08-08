@@ -40,12 +40,16 @@ public static partial class CardDetailParser
         {
             return ParseCore(html);
         }
-        catch (Exception e) when (e is not SchemaDriftException)
+        catch (Exception e) when (e is not SchemaDriftException and not NotACardPageException)
         {
             // The contract: page-shaped trouble is ALWAYS SchemaDriftException,
             // so the crawl lane can attribute it to the card and quarantine.
             // Any other type escaping here is retried against the same card
             // forever — a livelock. Full cause preserved for parse_failures.
+            //
+            // NotACardPageException is exempt for the opposite reason: it is a
+            // verdict, not trouble, and rewrapping it as drift here would erase
+            // the distinction the whole check exists to draw.
             throw new SchemaDriftException(
                 $"Unexpected {e.GetType().Name} while parsing: {e.Message}", e);
         }
@@ -58,6 +62,7 @@ public static partial class CardDetailParser
 
         var document = new HtmlParser().ParseDocument(html);
         AssertUsd(document);
+        AssertIsCard(document);
         var image = ProductImageUrl().Match(html);
         return new CardDetailPage
         {
@@ -83,6 +88,43 @@ public static partial class CardDetailParser
             throw new SchemaDriftException(
                 $"Page rendered in {currency}, not USD — every price on it would be stored wrong.");
         }
+    }
+
+    /// <summary>
+    /// The one question the rest of the parser cannot ask: is this a card at
+    /// all? Everything else about a console page is indistinguishable from a
+    /// card — same markup, same chart series names — so the condition labels
+    /// are the only witness, and they are read here rather than in ParseSales
+    /// because that method returns early when a page has no completed auctions,
+    /// which would let a game with no sales walk straight through.
+    /// </summary>
+    private static void AssertIsCard(IDocument document)
+    {
+        var labels = document
+            .QuerySelectorAll("select#completed-auctions-condition option")
+            .Where(o => !string.IsNullOrWhiteSpace(o.GetAttribute("value")))
+            .Select(o => StripCount(o.TextContent))
+            .ToList();
+
+        // No selector is no evidence, not evidence of absence: a card nobody
+        // has ever sold renders none. Absence must never convict — ParseSales
+        // still demands the selector when sales tables actually exist.
+        if (labels.Count == 0 || GradeTierVocabulary.LooksLikeCard(labels))
+        {
+            return;
+        }
+
+        // Labels are truncated because the site's unclosed <span> tags let one
+        // option swallow the rest of the page; the reason lands in
+        // parse_failures and must stay readable.
+        var seen = labels
+            .Select(l => GradeTierVocabulary.Normalize(l))
+            .Select(l => l.Length > 24 ? l[..24] + "…" : l)
+            .Take(8);
+
+        throw new NotACardPageException(
+            $"Condition options [{string.Join(", ", seen)}] contain no card grade — "
+            + "this is a video game, console, or accessory page, not a card.");
     }
 
     private static IReadOnlyList<SaleRecord> ParseSales(IDocument document)
