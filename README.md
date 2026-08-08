@@ -210,8 +210,12 @@ Three rules govern the database:
 Nine tables, in three groups: a **catalog** of what exists, an **append-only record** of what the
 site said, and a **diary** of what the crawler did.
 
-[![Schema map: catalog (sets, cards), append-only record (price_months, populations, sales),
-and diary (visits, fingerprints, parse_failures)](docs/images/data-model.svg)](docs/images/data-model.svg)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/data-model-dark.svg">
+  <img alt="Schema map: catalog (sets, cards), append-only record (price_months, populations,
+  sales), and diary (visits, fingerprints, parse_failures), with every relationship drawn to the
+  exact column it references" src="docs/images/data-model.svg">
+</picture>
 
 **The catalog** — `sets` and `cards` — is the only mutable part. A card's row carries both its
 identity (url, name) and the scheduler's working notes: when it was last read, how fast it sells,
