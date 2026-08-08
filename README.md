@@ -205,6 +205,106 @@ Three rules govern the database:
 3. **Bookkeeping is separate from facts.** Scheduler state (last visit, failure counts) is
    mutable; observations are not.
 
+### The map
+
+Nine tables, in three groups: a **catalog** of what exists, an **append-only record** of what the
+site said, and a **diary** of what the crawler did.
+
+```mermaid
+erDiagram
+    sets  ||--o{ cards          : "contains"
+    cards ||--o{ price_months   : "monthly price history"
+    cards ||--o{ populations    : "graded census"
+    cards ||--o{ sales          : "individual sales"
+    cards ||..o{ visits         : "one row per fetch"
+    shapes ||..o{ visits        : "page fingerprint"
+    shapes ||..o{ parse_failures : "page fingerprint"
+
+    sets {
+        bigint      id             PK
+        varchar     slug           UK
+        timestamptz last_walked_at "null until first walk"
+    }
+    cards {
+        bigint      id                     PK "the site's own product id"
+        bigint      set_id                 FK
+        varchar     url                    "path on the source site"
+        timestamptz last_visited_at        "null = never successfully read"
+        float       observed_sales_per_day "churn, drives scheduling"
+        boolean     any_bucket_at_cap      "proof sales were missed"
+        integer     failure_streak         "consecutive card-attributable failures"
+        timestamptz quarantined_until      "benched until this moment"
+        timestamptz delisted_at            "retired by hand; never automatic"
+    }
+    price_months {
+        bigint      card_id     FK
+        integer     tier        PK "Ungraded, Grade 7-9.5, PSA 10"
+        date        month       PK
+        timestamptz observed_at PK "the append-only axis"
+        integer     price_cents
+    }
+    populations {
+        bigint      card_id     FK
+        varchar     grader      PK "psa, cgc"
+        varchar     grade       PK
+        timestamptz observed_at PK
+        integer     population
+    }
+    sales {
+        bigint      id           PK
+        bigint      card_id      FK
+        varchar     source_id    "the listing's id on the source"
+        date        sold_on
+        varchar     grade_tier
+        integer     price_cents
+        varchar     title
+    }
+    visits {
+        bigint      id          PK
+        bigint      card_id     "nullable - set walks have no card"
+        timestamptz fetched_at
+        integer     http_status
+        smallint    outcome
+        varchar     shape_hash
+    }
+    shapes {
+        varchar     hash          PK "sha256 of the structure"
+        jsonb       shape_json    "names of things, never values"
+        timestamptz last_seen_at
+    }
+    parse_failures {
+        bigint      id      PK
+        varchar     url
+        varchar     reason
+        varchar     shape_hash
+    }
+```
+
+**The catalog** — `sets` and `cards` — is the only mutable part. A card's row carries both its
+identity (url, name) and the scheduler's working notes: when it was last read, how fast it sells,
+whether it is benched. These change constantly, and that is fine, because nothing here is a fact
+about the market.
+
+**The record** — `price_months`, `populations`, `sales` — is never edited. The first two end their
+primary key in `observed_at`, which is what makes them append-only by construction rather than by
+convention: writing the same value twice is impossible to do wrongly, because a new observation is
+simply a new row. And they are *change-only* — a price is written only when it differs from the
+last one seen, so a quiet month costs nothing while a moving one is preserved forever. `sales` is
+simpler: a sale is a discrete event with the site's own listing id, so it is written once and never
+touched again.
+
+**The diary** — `visits`, `shapes`, `parse_failures` — records what happened rather than what is
+true. `visits` holds one row per fetch, successful or not, which is what makes it possible to ask
+"how often did we actually look at this card?" as opposed to "when did we last succeed?".
+`shapes` is the site's changelog, kept by us because the site does not publish one.
+
+Deliberately, `visits` has **no** foreign key to `cards` while the three record tables do, with
+`ON DELETE RESTRICT`. The diary should survive its subject; the facts should be impossible to
+orphan.
+
+As of August 2026 that is roughly 9.5M price rows, 4.0M sales and 354k population cells across
+74,798 cards in 586 sets — about 13.9M observations, none of which has ever been updated in place.
+
 Every table is defined in the EF Core model under
 [`src/PokemonInvestBatch.Infrastructure/Persistence/`](src/PokemonInvestBatch.Infrastructure/Persistence/),
 and those rules are asserted as tests against the compiled model — so a careless mapping change
