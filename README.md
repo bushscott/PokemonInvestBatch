@@ -3,8 +3,8 @@
 [![CI](https://github.com/bushscott/PokemonInvestBatch/actions/workflows/ci.yml/badge.svg)](https://github.com/bushscott/PokemonInvestBatch/actions/workflows/ci.yml)
 
 A polite, self-healing web scraper that builds a long-term price history of the Pokémon card
-market. It runs continuously on a Raspberry Pi and has collected **13.9 million rows** of price,
-sales, and grading data across **82,000 cards** in **788 sets**.
+market. It runs continuously on a Raspberry Pi and has collected **14.6 million rows** of price,
+sales, and grading data across **91,000 cards** in **788 sets**.
 
 The interesting part is not the scraping. It is everything built around the assumption that the
 website *will* change, break, and lie — and that the system has to keep going anyway, unattended,
@@ -239,8 +239,8 @@ Deliberately, `visits` has **no** foreign key to `cards` while the three record 
 `ON DELETE RESTRICT`. The diary should survive its subject; the facts should be impossible to
 orphan.
 
-As of August 2026 that is 9.55M price rows, 4.02M sales and 355k population cells across 82,000
-cards in 788 sets — about 13.9M observations, none of which has ever been updated in place.
+As of August 2026 that is 10.1M price rows, 4.16M sales and 375k population cells across 91,000
+cards in 788 sets — about 14.6M observations, none of which has ever been updated in place.
 
 Every table is defined in the EF Core model under
 [`src/PokemonInvestBatch.Infrastructure/Persistence/`](src/PokemonInvestBatch.Infrastructure/Persistence/),
@@ -296,7 +296,7 @@ cp src/PokemonInvestBatch.Worker/appsettings.Production.example.json \
 dotnet ef database update -p src/PokemonInvestBatch.Infrastructure \
                           -s src/PokemonInvestBatch.Infrastructure
 
-# 4. Run the tests (219 of them)
+# 4. Run the tests (240 of them)
 dotnet test
 
 # 5. Run it

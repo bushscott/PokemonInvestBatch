@@ -15,8 +15,8 @@
 </g>
 <g id="clust2" class="cluster">
 <title>cluster_catalog</title>
-<path fill="none" stroke="#c9d3de" stroke-width="1.2" d="M346,-445C346,-445 894,-445 894,-445 900,-445 906,-451 906,-457 906,-457 906,-768 906,-768 906,-774 900,-780 894,-780 894,-780 346,-780 346,-780 340,-780 334,-774 334,-768 334,-768 334,-457 334,-457 334,-451 340,-445 346,-445"/>
-<text xml:space="preserve" text-anchor="middle" x="620" y="-762.7" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2a78d6">catalog — mutable</text>
+<path fill="none" stroke="#c9d3de" stroke-width="1.2" d="M346,-433C346,-433 894,-433 894,-433 900,-433 906,-439 906,-445 906,-445 906,-780 906,-780 906,-786 900,-792 894,-792 894,-792 346,-792 346,-792 340,-792 334,-786 334,-780 334,-780 334,-445 334,-445 334,-439 340,-433 346,-433"/>
+<text xml:space="preserve" text-anchor="middle" x="620" y="-774.7" font-family="Helvetica,sans-Serif" font-size="14.00" fill="#2a78d6">catalog — mutable</text>
 </g>
 <g id="clust3" class="cluster">
 <title>cluster_diary</title>
@@ -43,28 +43,29 @@
 <!-- cards -->
 <g id="node5" class="node">
 <title>cards</title>
-<path fill="#ffffff" stroke="none" d="M368,-462.75C368,-462.75 546,-462.75 546,-462.75 552,-462.75 558,-468.75 558,-474.75 558,-474.75 558,-727.25 558,-727.25 558,-733.25 552,-739.25 546,-739.25 546,-739.25 368,-739.25 368,-739.25 362,-739.25 356,-733.25 356,-727.25 356,-727.25 356,-474.75 356,-474.75 356,-468.75 362,-462.75 368,-462.75"/>
-<path fill="none" stroke="#2a78d6" d="M368,-462.75C368,-462.75 546,-462.75 546,-462.75 552,-462.75 558,-468.75 558,-474.75 558,-474.75 558,-727.25 558,-727.25 558,-733.25 552,-739.25 546,-739.25 546,-739.25 368,-739.25 368,-739.25 362,-739.25 356,-733.25 356,-727.25 356,-727.25 356,-474.75 356,-474.75 356,-468.75 362,-462.75 368,-462.75"/>
-<polygon fill="#eaf2fc" stroke="none" points="357,-706.25 357,-738.25 557,-738.25 557,-706.25 357,-706.25"/>
-<text xml:space="preserve" text-anchor="start" x="364" y="-718" font-family="Menlo" font-weight="bold" font-size="15.00" fill="#2a78d6">cards</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-690" font-family="Menlo" font-size="12.00" fill="#1f2933">id</text>
-<text xml:space="preserve" text-anchor="start" x="387" y="-692.2" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">PK</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-665.75" font-family="Menlo" font-size="12.00" fill="#1f2933">set_id</text>
-<text xml:space="preserve" text-anchor="start" x="417" y="-667.95" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">FK</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-641.5" font-family="Menlo" font-size="12.00" fill="#1f2933">url</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-617.25" font-family="Menlo" font-size="12.00" fill="#1f2933">name</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-593" font-family="Menlo" font-size="12.00" fill="#1f2933">last_visited_at</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-568.75" font-family="Menlo" font-size="12.00" fill="#1f2933">observed_sales_per_day</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-544.5" font-family="Menlo" font-size="12.00" fill="#1f2933">any_bucket_at_cap</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-520.25" font-family="Menlo" font-size="12.00" fill="#1f2933">failure_streak</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-496" font-family="Menlo" font-size="12.00" fill="#1f2933">quarantined_until</text>
-<text xml:space="preserve" text-anchor="start" x="362" y="-471.75" font-family="Menlo" font-size="12.00" fill="#1f2933">delisted_at</text>
+<path fill="#ffffff" stroke="none" d="M368,-450.62C368,-450.62 546,-450.62 546,-450.62 552,-450.62 558,-456.62 558,-462.62 558,-462.62 558,-739.38 558,-739.38 558,-745.38 552,-751.38 546,-751.38 546,-751.38 368,-751.38 368,-751.38 362,-751.38 356,-745.38 356,-739.38 356,-739.38 356,-462.62 356,-462.62 356,-456.62 362,-450.62 368,-450.62"/>
+<path fill="none" stroke="#2a78d6" d="M368,-450.62C368,-450.62 546,-450.62 546,-450.62 552,-450.62 558,-456.62 558,-462.62 558,-462.62 558,-739.38 558,-739.38 558,-745.38 552,-751.38 546,-751.38 546,-751.38 368,-751.38 368,-751.38 362,-751.38 356,-745.38 356,-739.38 356,-739.38 356,-462.62 356,-462.62 356,-456.62 362,-450.62 368,-450.62"/>
+<polygon fill="#eaf2fc" stroke="none" points="357,-718.38 357,-750.38 557,-750.38 557,-718.38 357,-718.38"/>
+<text xml:space="preserve" text-anchor="start" x="364" y="-730.12" font-family="Menlo" font-weight="bold" font-size="15.00" fill="#2a78d6">cards</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-702.12" font-family="Menlo" font-size="12.00" fill="#1f2933">id</text>
+<text xml:space="preserve" text-anchor="start" x="387" y="-704.33" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">PK</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-677.88" font-family="Menlo" font-size="12.00" fill="#1f2933">set_id</text>
+<text xml:space="preserve" text-anchor="start" x="417" y="-680.08" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">FK</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-653.62" font-family="Menlo" font-size="12.00" fill="#1f2933">url</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-629.38" font-family="Menlo" font-size="12.00" fill="#1f2933">name</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-605.12" font-family="Menlo" font-size="12.00" fill="#1f2933">last_visited_at</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-580.88" font-family="Menlo" font-size="12.00" fill="#1f2933">observed_sales_per_day</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-556.62" font-family="Menlo" font-size="12.00" fill="#1f2933">any_bucket_at_cap</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-532.38" font-family="Menlo" font-size="12.00" fill="#1f2933">failure_streak</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-508.12" font-family="Menlo" font-size="12.00" fill="#1f2933">quarantined_until</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-483.88" font-family="Menlo" font-size="12.00" fill="#1f2933">delisted_at</text>
+<text xml:space="preserve" text-anchor="start" x="362" y="-459.62" font-family="Menlo" font-size="12.00" fill="#1f2933">not_a_card_at</text>
 </g>
 <!-- price_months&#45;&gt;cards -->
 <g id="edge2" class="edge">
 <title>price_months:e&#45;&gt;cards:w</title>
-<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-542.5C315.48,-542.5 272.83,-681.94 345.96,-693.38"/>
-<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.55,-696.16 353.74,-693.96 345.96,-690.57 345.55,-696.16"/>
+<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-542.5C319.72,-542.5 269.06,-693.71 345.97,-705.52"/>
+<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.55,-708.3 353.74,-706.09 345.96,-702.71 345.55,-708.3"/>
 </g>
 <!-- populations -->
 <g id="node2" class="node">
@@ -86,8 +87,8 @@
 <!-- populations&#45;&gt;cards -->
 <g id="edge3" class="edge">
 <title>populations:e&#45;&gt;cards:w</title>
-<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-725.5C285.29,-725.5 297.68,-697.92 345.86,-694.48"/>
-<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.83,-697.28 353.73,-694.2 345.64,-691.68 345.83,-697.28"/>
+<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-725.5C284.18,-725.5 298.44,-708.65 345.73,-706.48"/>
+<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.79,-709.28 353.73,-706.3 345.67,-703.68 345.79,-709.28"/>
 </g>
 <!-- sales -->
 <g id="node3" class="node">
@@ -109,29 +110,29 @@
 <!-- sales&#45;&gt;cards -->
 <g id="edge4" class="edge">
 <title>sales:e&#45;&gt;cards:w</title>
-<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-933.5C348.19,-933.5 242.97,-708.4 345.75,-694.77"/>
-<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.93,-697.56 353.73,-694.27 345.57,-691.98 345.93,-697.56"/>
+<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M232,-933.5C343.46,-933.5 247.36,-720.23 345.85,-706.9"/>
+<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.93,-709.7 353.73,-706.4 345.57,-704.11 345.93,-709.7"/>
 </g>
 <!-- sets -->
 <g id="node4" class="node">
 <title>sets</title>
-<path fill="#ffffff" stroke="none" d="M694,-559.38C694,-559.38 872,-559.38 872,-559.38 878,-559.38 884,-565.38 884,-571.38 884,-571.38 884,-702.62 884,-702.62 884,-708.62 878,-714.62 872,-714.62 872,-714.62 694,-714.62 694,-714.62 688,-714.62 682,-708.62 682,-702.62 682,-702.62 682,-571.38 682,-571.38 682,-565.38 688,-559.38 694,-559.38"/>
-<path fill="none" stroke="#2a78d6" d="M694,-559.38C694,-559.38 872,-559.38 872,-559.38 878,-559.38 884,-565.38 884,-571.38 884,-571.38 884,-702.62 884,-702.62 884,-708.62 878,-714.62 872,-714.62 872,-714.62 694,-714.62 694,-714.62 688,-714.62 682,-708.62 682,-702.62 682,-702.62 682,-571.38 682,-571.38 682,-565.38 688,-559.38 694,-559.38"/>
-<polygon fill="#eaf2fc" stroke="none" points="683,-681.62 683,-713.62 883,-713.62 883,-681.62 683,-681.62"/>
-<text xml:space="preserve" text-anchor="start" x="690" y="-693.38" font-family="Menlo" font-weight="bold" font-size="15.00" fill="#2a78d6">sets</text>
-<text xml:space="preserve" text-anchor="start" x="688" y="-665.38" font-family="Menlo" font-size="12.00" fill="#1f2933">id</text>
-<text xml:space="preserve" text-anchor="start" x="713" y="-667.58" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">PK</text>
-<text xml:space="preserve" text-anchor="start" x="688" y="-641.12" font-family="Menlo" font-size="12.00" fill="#1f2933">slug</text>
-<text xml:space="preserve" text-anchor="start" x="728" y="-643.33" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">UK</text>
-<text xml:space="preserve" text-anchor="start" x="688" y="-616.88" font-family="Menlo" font-size="12.00" fill="#1f2933">name</text>
-<text xml:space="preserve" text-anchor="start" x="688" y="-592.62" font-family="Menlo" font-size="12.00" fill="#1f2933">discovered_at</text>
-<text xml:space="preserve" text-anchor="start" x="688" y="-568.38" font-family="Menlo" font-size="12.00" fill="#1f2933">last_walked_at</text>
+<path fill="#ffffff" stroke="none" d="M694,-571.38C694,-571.38 872,-571.38 872,-571.38 878,-571.38 884,-577.38 884,-583.38 884,-583.38 884,-714.62 884,-714.62 884,-720.62 878,-726.62 872,-726.62 872,-726.62 694,-726.62 694,-726.62 688,-726.62 682,-720.62 682,-714.62 682,-714.62 682,-583.38 682,-583.38 682,-577.38 688,-571.38 694,-571.38"/>
+<path fill="none" stroke="#2a78d6" d="M694,-571.38C694,-571.38 872,-571.38 872,-571.38 878,-571.38 884,-577.38 884,-583.38 884,-583.38 884,-714.62 884,-714.62 884,-720.62 878,-726.62 872,-726.62 872,-726.62 694,-726.62 694,-726.62 688,-726.62 682,-720.62 682,-714.62 682,-714.62 682,-583.38 682,-583.38 682,-577.38 688,-571.38 694,-571.38"/>
+<polygon fill="#eaf2fc" stroke="none" points="683,-693.62 683,-725.62 883,-725.62 883,-693.62 683,-693.62"/>
+<text xml:space="preserve" text-anchor="start" x="690" y="-705.38" font-family="Menlo" font-weight="bold" font-size="15.00" fill="#2a78d6">sets</text>
+<text xml:space="preserve" text-anchor="start" x="688" y="-677.38" font-family="Menlo" font-size="12.00" fill="#1f2933">id</text>
+<text xml:space="preserve" text-anchor="start" x="713" y="-679.58" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">PK</text>
+<text xml:space="preserve" text-anchor="start" x="688" y="-653.12" font-family="Menlo" font-size="12.00" fill="#1f2933">slug</text>
+<text xml:space="preserve" text-anchor="start" x="728" y="-655.33" font-family="Menlo" font-weight="bold" font-size="9.00" fill="#2a78d6">UK</text>
+<text xml:space="preserve" text-anchor="start" x="688" y="-628.88" font-family="Menlo" font-size="12.00" fill="#1f2933">name</text>
+<text xml:space="preserve" text-anchor="start" x="688" y="-604.62" font-family="Menlo" font-size="12.00" fill="#1f2933">discovered_at</text>
+<text xml:space="preserve" text-anchor="start" x="688" y="-580.38" font-family="Menlo" font-size="12.00" fill="#1f2933">last_walked_at</text>
 </g>
 <!-- cards&#45;&gt;sets -->
 <g id="edge1" class="edge">
 <title>cards:e&#45;&gt;sets:w</title>
-<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M558,-669.88C609.56,-669.88 624.94,-669.55 671.84,-669.5"/>
-<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="671.73,-672.3 679.73,-669.5 671.73,-666.7 671.73,-672.3"/>
+<path fill="none" stroke="#5b6b7c" stroke-width="1.5" d="M558,-682C609.56,-682 624.94,-681.56 671.84,-681.51"/>
+<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="671.73,-684.31 679.73,-681.5 671.73,-678.71 671.73,-684.31"/>
 </g>
 <!-- visits -->
 <g id="node6" class="node">
@@ -151,8 +152,8 @@
 <!-- visits&#45;&gt;cards -->
 <g id="edge5" class="edge">
 <title>visits:e&#45;&gt;cards:w</title>
-<path fill="none" stroke="#5b6b7c" stroke-width="1.5" stroke-dasharray="5,2" d="M232,-295.38C414.15,-295.38 179.43,-679.46 346.11,-693.72"/>
-<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.62,-696.5 353.73,-694.03 345.85,-690.91 345.62,-696.5"/>
+<path fill="none" stroke="#5b6b7c" stroke-width="1.5" stroke-dasharray="5,2" d="M232,-295.38C419.21,-295.38 174.66,-691.14 345.84,-705.83"/>
+<polygon fill="#5b6b7c" stroke="#5b6b7c" stroke-width="1.5" points="345.62,-708.62 353.73,-706.16 345.85,-703.03 345.62,-708.62"/>
 </g>
 <!-- fingerprints -->
 <g id="node7" class="node">
