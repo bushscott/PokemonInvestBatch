@@ -14,18 +14,33 @@ public sealed record BenchedCandidate
 /// that succeeds keeps the slot open — whatever was broken may be fixed for
 /// every benched card, so the retry queue drains back-to-back and the
 /// dashboard shows it emptying within minutes of a fix. A retry that fails
-/// closes the slot for the interval: still broken, stand down. A queue that
-/// visibly refuses to drain is itself the alarm — a card in it keeps
-/// failing and deserves a look. Pure state — no clock, no I/O; the detail
-/// lane owns the only instance and reports each retry's outcome back.
+/// closes the slot — and every consecutive failure doubles the stand-down,
+/// because a bench that keeps flunking its retries is a bench of genuinely
+/// broken cards, and re-confirming that costs a crawl slot whose price
+/// inverts with AIMD: noise at the ten-second floor, half of everything at
+/// the five-minute ceiling. One success resets the backoff, so a healed
+/// site is still noticed within the base interval. A queue that visibly
+/// refuses to drain is itself the alarm — a card in it keeps failing and
+/// deserves a look. Pure state — no clock, no I/O; the detail lane owns the
+/// only instance and reports each retry's outcome back.
 /// </summary>
 public sealed class BenchRecheck(TimeSpan interval)
 {
+    /// <summary>With the default ten-minute interval the longest stand-down is
+    /// 2^5 × 10m ≈ five hours — rare enough to be cheap at the AIMD ceiling,
+    /// frequent enough that a healed site is noticed the same afternoon.</summary>
+    private const int MaxDoublings = 5;
+
     private DateTimeOffset? _lastFailureAt;
 
-    /// <summary>Open unless a failed retry closed it within the interval.</summary>
+    private int _consecutiveFailures;
+
+    /// <summary>Open unless a failed retry closed it within the current
+    /// stand-down: the base interval after one failure, doubling per
+    /// consecutive failure up to the cap.</summary>
     public bool IsSlotOpen(DateTimeOffset now) =>
-        _lastFailureAt is not { } last || now - last >= interval;
+        _lastFailureAt is not { } last
+        || now - last >= interval * Math.Pow(2, Math.Min(_consecutiveFailures - 1, MaxDoublings));
 
     /// <summary>The next benched card to retry — soonest comeback first, so a
     /// re-benched failure's doubled sentence sends it to the back — or null
@@ -40,7 +55,15 @@ public sealed class BenchRecheck(TimeSpan interval)
         return benched.OrderBy(b => b.QuarantinedUntil).FirstOrDefault()?.Id;
     }
 
-    public void RecordSuccess() => _lastFailureAt = null;
+    public void RecordSuccess()
+    {
+        _lastFailureAt = null;
+        _consecutiveFailures = 0;
+    }
 
-    public void RecordFailure(DateTimeOffset now) => _lastFailureAt = now;
+    public void RecordFailure(DateTimeOffset now)
+    {
+        _lastFailureAt = now;
+        _consecutiveFailures++;
+    }
 }

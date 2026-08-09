@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Diagnostics.Metrics.Testing;
 using PokemonInvestBatch.Domain.Tests.Fixtures;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.TestSupport;
@@ -172,6 +173,34 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         await using var second = NewContext();
         Assert.Equal(afterOne, await second.PriceMonths.CountAsync(p => p.CardId == CardId));
         Assert.Equal(2, await second.Visits.CountAsync(v => v.CardId == CardId));
+    }
+
+    [SkippableFact]
+    public async Task Re_benching_counts_a_card_once_not_once_per_retry()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The flatline mechanism, measured: the 24h "cards added to retry
+        // queue" panel used to re-count a benched card on every failed retry,
+        // so three broken pages pinned it at ~144 forever. Three strikes bench
+        // the card; the fourth failure arrives through the bench recheck and
+        // re-benches it. One card, one count.
+        await SeedCardAsync();
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(
+            ScriptedHandler.Redirect("https://www.pricecharting.com/search-products?q=charizard")));
+        using var quarantined = new MetricCollector<long>(harness.Metrics.Meter, "crawl.cards_quarantined");
+        for (var i = 0; i < 4; i++)
+        {
+            await lane.CrawlOneAsync(CancellationToken.None);
+        }
+
+        await using var db = NewContext();
+        var card = await db.Cards.SingleAsync(c => c.Id == CardId);
+        Assert.Equal(4, card.FailureStreak);
+        Assert.NotNull(card.QuarantinedUntil);
+        Assert.Equal(1, quarantined.GetMeasurementSnapshot().Sum(m => m.Value));
     }
 
     [SkippableFact]

@@ -365,8 +365,8 @@ public sealed class DetailCrawlLane(
                 $"Card {card.Id} ({card.Name}) in set '{slug}' is not a card: {verdict.Message}\n\n"
                 + $"{options.Value.BaseUrl}{card.Url}\n\n"
                 + "It has been retired and will not be visited again. If the whole set is "
-                + $"miscatalogued, add \"{slug}\" to blacklist.json so enumeration stops walking "
-                + "it, then retire its siblings — they are still being visited until you do.",
+                + $"miscatalogued, add \"{slug}\" to blacklist.json so enumeration stops "
+                + "re-walking it; its siblings retire themselves as their visits come up.",
                 ct);
         }
     }
@@ -382,8 +382,16 @@ public sealed class DetailCrawlLane(
             return;
         }
 
+        // Joining the bench is news; still sitting on it is not. Re-benching
+        // used to re-fire this counter on every failed retry, which is how
+        // three broken pages once held the 24h dashboard panel at a permanent
+        // ~144 — the count now matches the panel's own words, "cards added".
+        var joiningBench = card.QuarantinedUntil is not { } sentence || sentence <= now;
         card.QuarantinedUntil = until;
-        metrics.RecordCardQuarantined(reason);
+        if (joiningBench)
+        {
+            metrics.RecordCardQuarantined(reason);
+        }
         logger.LogWarning(
             "Card {CardId} ({Name}) quarantined until {Until:u} after {Streak} consecutive failures ({Reason})",
             card.Id, card.Name, until.Value, card.FailureStreak, reason);
