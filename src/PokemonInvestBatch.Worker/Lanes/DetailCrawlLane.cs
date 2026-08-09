@@ -323,13 +323,13 @@ public sealed class DetailCrawlLane(
         CancellationToken ct)
     {
         visit?.SetStatus(ActivityStatusCode.Error, verdict.Message);
-        db.ParseFailures.Add(new ParseFailure
-        {
-            Url = card.Url,
-            FetchedAt = now,
-            Reason = verdict.Message,
-            FingerprintHash = fingerprintHash,
-        });
+
+        // No parse_failures row. That table is the drift ledger — the thing you
+        // grep when the site has moved and you need to know what broke — and
+        // filling it with consoles makes the one investigation it exists for
+        // harder. The verdict lives on the card, the visit records that it
+        // happened, and the reason goes to the log and the alert.
+
         // NotACard, never ParseFailed: CheckFailureRateAsync counts ParseFailed
         // rows in the last hundred visits, so filing these there would let a
         // miscatalogued set raise the alarm that means "the site changed and the

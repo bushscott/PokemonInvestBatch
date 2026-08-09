@@ -234,9 +234,13 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         Assert.Empty(await VisitCandidatePool.Eligible(db, now).ToListAsync());
         Assert.Empty(await VisitCandidatePool.Benched(db, now).ToListAsync());
 
-        // And the audit trail survives — this is the evidence for why.
+        // The visit records that it happened, under its own outcome.
         Assert.Equal(VisitOutcome.NotACard, (await db.Visits.SingleAsync()).Outcome);
-        Assert.Single(await db.ParseFailures.ToListAsync());
+
+        // But nothing lands in the drift ledger. That table is what you grep
+        // when pricecharting has changed its markup, and a shelf of consoles in
+        // it would bury the one signal it exists to carry.
+        Assert.Empty(await db.ParseFailures.ToListAsync());
     }
 
     [SkippableFact]
