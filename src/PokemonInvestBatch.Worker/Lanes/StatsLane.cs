@@ -98,5 +98,11 @@ public sealed class StatsLane(
             prices: await db.PriceMonths.LongCountAsync(ct),
             populations: await db.Populations.LongCountAsync(ct),
             sales: await db.Sales.LongCountAsync(ct));
+
+        // Delisted and retired cards are excluded the same way the pool
+        // excludes them: their asks are inert, and an inert ask on the gauge
+        // would read as a scheduler falling behind.
+        metrics.SetRefreshRequestsPending(await db.Cards.LongCountAsync(
+            c => c.RefreshRequestedAt != null && c.DelistedAt == null && c.NotACardAt == null, ct));
     }
 }

@@ -37,6 +37,10 @@ public sealed class CardVisitor(
     public async Task<VisitResult> VisitAsync(
         PokemonDbContext db, Card card, Activity? visit, string laneTag, CancellationToken ct)
     {
+        // Read before the write path clears it: the wait metric measures
+        // filed → served, and "served" is the commit about to happen.
+        var requestedAt = card.RefreshRequestedAt;
+
         var started = time.GetTimestamp();
         var fetched = await client.GetAsync(card.Url, ct);
         var now = time.GetUtcNow();
@@ -106,6 +110,11 @@ public sealed class CardVisitor(
         metrics.RecordPageParsed();
         metrics.RecordCardVisited();
         metrics.RecordVisitDuration(time.GetElapsedTime(started));
+        if (requestedAt is { } asked)
+        {
+            metrics.RecordRefreshServed(now - asked);
+        }
+
         return new VisitResult(VisitOutcome.Parsed, fetched.StatusCode);
     }
 

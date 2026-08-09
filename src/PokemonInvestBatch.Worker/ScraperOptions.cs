@@ -59,4 +59,21 @@ public sealed record ScraperOptions
     /// a delisted page is expected to stay dead, and the whole point of
     /// retiring it was to stop spending the polite budget on it.</summary>
     public int DelistedProbeAgeDays { get; init; } = 30;
+
+    /// <summary>The intake API's bind address. Loopback by default and on
+    /// purpose: the API trusts its callers, so only this machine may be one.</summary>
+    public string IntakeAddress { get; init; } = "127.0.0.1";
+
+    /// <summary>Port the intake API (refresh requests + express visits) listens on.</summary>
+    public int IntakePort { get; init; } = 5155;
+
+    /// <summary>Floor between consecutive express fetches — the express path's
+    /// own spacing, since it deliberately skips the polite gate. Matches the
+    /// AIMD floor.</summary>
+    public int ExpressSpacingSeconds { get; init; } = 10;
+
+    /// <summary>How long an express visit may run — waits included — before
+    /// the caller gets a 504. The ask is not lost on timeout; the visit
+    /// finishes on its own and the card's history lands regardless.</summary>
+    public int ExpressTimeoutSeconds { get; init; } = 120;
 }

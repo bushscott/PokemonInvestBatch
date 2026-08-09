@@ -22,7 +22,13 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _cardsQuarantined;
 
     private readonly Counter<long> _notACard;
+    private readonly Counter<long> _refreshRequests;
+    private readonly Counter<long> _expressVisits;
     private readonly Histogram<double> _visitDuration;
+    private readonly Histogram<double> _refreshWait;
+    private readonly Histogram<double> _expressVisitDuration;
+
+    private long _refreshRequestsPending;
 
     private double _queueStalenessDays;
 
@@ -59,7 +65,14 @@ public sealed class CrawlMetrics : IDisposable
         _popAnomalies = Meter.CreateCounter<long>("crawl.pop_anomalies", description: "Population cells that spiked or shrank beyond grading pace, by grader and kind");
         _cardsQuarantined = Meter.CreateCounter<long>("crawl.cards_quarantined", description: "Cards benched after repeated card-attributable failures, by reason");
         _notACard = Meter.CreateCounter<long>("crawl.not_a_card", description: "Pages retired because they are not cards — consoles, games, accessories — by set");
+        _refreshRequests = Meter.CreateCounter<long>("crawl.refresh_requests", description: "Refresh requests accepted from the intake API");
+        _expressVisits = Meter.CreateCounter<long>("crawl.express_visits", description: "Express visits run for the intake API, by outcome — a facet of cards_visited/requests, not a disjoint series");
         _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
+        _refreshWait = Meter.CreateHistogram<double>("crawl.refresh_wait_seconds", unit: "s", description: "Refresh request filed → served by a successful visit");
+        _expressVisitDuration = Meter.CreateHistogram<double>("crawl.express_visit_duration_seconds", unit: "s", description: "Express visit wall time, fetch through commit — same boundary as visit_duration");
+        Meter.CreateObservableGauge(
+            "crawl.refresh_requests_pending", () => _refreshRequestsPending,
+            description: "Living cards with a refresh ask not yet served — refreshed by the stats sweep");
 
         Meter.CreateObservableGauge(
             "crawl.delay_seconds", () => delay.Current.TotalSeconds,
@@ -127,6 +140,8 @@ public sealed class CrawlMetrics : IDisposable
         _popAnomalies.Add(0);
         _cardsQuarantined.Add(0);
         _notACard.Add(0);
+        _refreshRequests.Add(0);
+        _expressVisits.Add(0);
     }
 
     /// <summary>Exposed for MetricCollector-based tests and host registration.</summary>
@@ -160,6 +175,21 @@ public sealed class CrawlMetrics : IDisposable
     /// whole set is miscatalogued, and the set is what you act on.</summary>
     public void RecordNotACard(string set) =>
         _notACard.Add(1, new KeyValuePair<string, object?>("set", set));
+
+    public void RecordRefreshRequested() => _refreshRequests.Add(1);
+
+    /// <summary>How long the ask stood before a successful visit served it —
+    /// whichever path delivered the visit.</summary>
+    public void RecordRefreshServed(TimeSpan wait) => _refreshWait.Record(wait.TotalSeconds);
+
+    public void RecordExpressVisit(string outcome, TimeSpan duration)
+    {
+        _expressVisits.Add(1, new KeyValuePair<string, object?>("outcome", outcome));
+        _expressVisitDuration.Record(duration.TotalSeconds);
+    }
+
+    /// <summary>Refreshed by the stats sweep each interval.</summary>
+    public void SetRefreshRequestsPending(long pending) => _refreshRequestsPending = pending;
 
     public void RecordPopAnomaly(string grader, string kind) =>
         _popAnomalies.Add(1, new KeyValuePair<string, object?>("grader", grader), new KeyValuePair<string, object?>("kind", kind));

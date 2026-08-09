@@ -8,6 +8,7 @@ using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.TestSupport;
+using PokemonInvestBatch.Worker.Intake;
 using PokemonInvestBatch.Worker.Lanes;
 
 namespace PokemonInvestBatch.Worker.Tests;
@@ -105,6 +106,48 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             scraperOptions,
             Metrics,
             NullLogger<DetailCrawlLane>.Instance);
+    }
+
+    /// <summary>The express path over the same scripted site. Any
+    /// HttpMessageHandler is accepted so a test can gate a response open
+    /// while a second caller coalesces onto the in-flight visit.</summary>
+    public ExpressVisitRunner BuildExpressRunner(
+        HttpMessageHandler handler,
+        TimeProvider? clock = null,
+        ScraperOptions? scraper = null)
+    {
+        clock ??= TimeProvider.System;
+        Metrics = new CrawlMetrics(Delay);
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
+        var client = new PriceChartingClient(http, "tests@example.com", clock);
+        var throttle = new IncidentThrottle(TimeSpan.FromHours(6));
+        var scraperOptions = Options.Create(scraper ?? new ScraperOptions
+        {
+            ContactEmail = "tests@example.com",
+            FingerprintArchiveDirectory = fingerprintDirectory,
+            PauseCooldownMinutes = 0,
+        });
+
+        Visitor = new CardVisitor(
+            client,
+            Delay,
+            throttle,
+            Alerter,
+            new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
+            clock,
+            scraperOptions,
+            Metrics,
+            NullLogger<CardVisitor>.Instance);
+
+        return new ExpressVisitRunner(
+            new Factory(options),
+            Visitor,
+            new PoliteGate(Delay, clock),
+            clock,
+            scraperOptions,
+            Metrics,
+            applicationStopping: CancellationToken.None,
+            NullLogger<ExpressVisitRunner>.Instance);
     }
 
     public void Dispose() => Metrics?.Dispose();

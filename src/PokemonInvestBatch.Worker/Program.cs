@@ -1,3 +1,6 @@
+using System.Net;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Npgsql;
@@ -10,9 +13,13 @@ using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.Worker;
+using PokemonInvestBatch.Worker.Intake;
 using PokemonInvestBatch.Worker.Lanes;
 
-var builder = Host.CreateApplicationBuilder(args);
+// WebApplication instead of a plain host for one reason: the intake API — a
+// loopback-only Kestrel endpoint inside the same process (ADR-0006). Every
+// registration below is unchanged; the lanes run exactly as before.
+var builder = WebApplication.CreateBuilder(args);
 
 // Stamp TraceId/SpanId into log scopes so a log line links to its trace in NR.
 builder.Logging.Configure(o =>
@@ -21,6 +28,10 @@ builder.Logging.Configure(o =>
 builder.Services.AddOptions<ScraperOptions>()
     .Bind(builder.Configuration.GetSection("Scraper"))
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")
+    .Validate(o => o.IntakePort is >= 1 and <= 65535, "Scraper:IntakePort must be 1-65535.")
+    .Validate(o => IPAddress.TryParse(o.IntakeAddress, out _), "Scraper:IntakeAddress must be an IP literal.")
+    .Validate(o => o.ExpressSpacingSeconds >= 0, "Scraper:ExpressSpacingSeconds must be >= 0.")
+    .Validate(o => o.ExpressTimeoutSeconds >= 1, "Scraper:ExpressTimeoutSeconds must be >= 1.")
     .ValidateOnStart();
 
 // Alert decisions live in New Relic; the app emits Critical logs and metrics.
@@ -93,6 +104,18 @@ builder.Services.AddSingleton(services =>
 // One visit implementation for both paths: the detail lane's turn and the
 // intake API's express visits.
 builder.Services.AddSingleton<CardVisitor>();
+builder.Services.AddSingleton<RefreshRequestIntake>();
+builder.Services.AddSingleton(services => new ExpressVisitRunner(
+    services.GetRequiredService<IDbContextFactory<PokemonDbContext>>(),
+    services.GetRequiredService<CardVisitor>(),
+    services.GetRequiredService<PoliteGate>(),
+    services.GetRequiredService<TimeProvider>(),
+    services.GetRequiredService<IOptions<ScraperOptions>>(),
+    services.GetRequiredService<CrawlMetrics>(),
+    // The worker's own lifetime, not any request's: a caller hanging up must
+    // never abort a visit a coalesced waiter still shares.
+    services.GetRequiredService<IHostApplicationLifetime>().ApplicationStopping,
+    services.GetRequiredService<ILogger<ExpressVisitRunner>>()));
 
 builder.Services.AddHostedService<EnumerationLane>();
 builder.Services.AddHostedService<DetailCrawlLane>();
@@ -101,5 +124,15 @@ builder.Services.AddHostedService<ImageLane>();
 builder.Services.AddHostedService<StatsLane>();
 builder.Services.AddHostedService<DelistedProbeLane>();
 
-var host = builder.Build();
-host.Run();
+// Loopback-only, port from validated config. The explicit Listen overrides
+// ASPNETCORE_URLS/launchSettings (Kestrel logs a benign "overriding" line) —
+// the config file is the only truth for where this listens.
+builder.WebHost.ConfigureKestrel(kestrel =>
+{
+    var scraper = kestrel.ApplicationServices.GetRequiredService<IOptions<ScraperOptions>>().Value;
+    kestrel.Listen(IPAddress.Parse(scraper.IntakeAddress), scraper.IntakePort);
+});
+
+var app = builder.Build();
+IntakeApi.Map(app);
+app.Run();
