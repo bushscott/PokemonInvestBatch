@@ -14,3 +14,4 @@ The format is Michael Nygard's, from *Documenting Architecture Decisions* (2011)
 | [0003](0003-functional-core-over-ports-and-adapters.md) | Pure decision classes instead of interfaces everywhere | 2026-07-27 |
 | [0004](0004-card-faults-do-not-slow-the-crawl.md) | A broken page must not slow down the whole crawl | 2026-08-06 |
 | [0005](0005-pooled-grade-tiers.md) | Grading companies are pooled below grade 10 | 2026-08-04 |
+| [0006](0006-localhost-intake-api-and-express-visits.md) | A localhost intake API, with express visits outside the polite gate | 2026-08-09 |

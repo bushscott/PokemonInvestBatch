@@ -83,3 +83,30 @@ dotnet publish src/PokemonInvestBatch.Worker -c Release -r linux-arm64 --self-co
 ```
 
 systemd unit and connection config land with the Worker task.
+
+## 6. The intake API (ADR-0006)
+
+The worker hosts a loopback-only HTTP listener for sibling apps on the Pi — refresh
+requests (queued) and express visits (immediate, synchronous). Port comes from
+`Scraper:IntakePort` (default **5155**, `appsettings.Production.json`); the bind address
+stays `127.0.0.1` unless you have a reason it shouldn't.
+
+Smoke and debugging over SSH:
+
+```bash
+curl localhost:5155/healthz                                 # -> ok
+curl -X POST localhost:5155/cards/630417/refresh-request    # 202: queued at the ask tier
+curl -X POST localhost:5155/cards/630417/express-visit      # blocks until the visit commits
+ss -ltn | grep 5155                                         # confirm the bind (loopback only)
+```
+
+Express responses: 200 parsed (fresh rows committed), 502 the site failed us, 422 we
+fetched a page and refused it, 504 the visit outran `Scraper:ExpressTimeoutSeconds`
+(it still finishes on its own), 404 unknown card, 409 not-a-card.
+
+Deployment deltas: **none**. Same binary, same systemd unit; no firewall or
+`pg_hba.conf` change (loopback never leaves the box); no new grants — the worker's
+`pokemon_app` role already holds `UPDATE ON cards`, which covers the new
+`refresh_requested_at` column, and sibling apps speak HTTP to the worker, never SQL
+to its tables. The one migration (`AddCardRefreshRequestedAt`) applies with the usual
+owner-role `dotnet ef database update`.
