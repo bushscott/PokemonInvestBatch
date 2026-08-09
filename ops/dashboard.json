@@ -590,6 +590,37 @@
           }
         },
         {
+          "title": "Pages retired (not cards), 24h",
+          "layout": {
+            "column": 1,
+            "row": 36,
+            "width": 4,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT sum(`crawl.not_a_card`) AS 'pages' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "thresholds": [
+              {
+                "alertSeverity": "WARNING",
+                "value": 1
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
           "title": "Impossible census changes, 24h (a graded-card count shrank or jumped 10x)",
           "layout": {
             "column": 1,

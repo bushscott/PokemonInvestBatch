@@ -24,5 +24,10 @@ public class AtRiskQueryTranslationTests
         var sql = VisitCandidatePool.PastBurnFraction(db.Cards, now, 0.75).ToQueryString();
 
         Assert.Contains("SELECT", sql);
+
+        // Retired non-cards and delisted cards will never be visited again, so
+        // counting them at-risk would ratchet into a permanent false alarm.
+        Assert.Contains("delisted_at", sql);
+        Assert.Contains("not_a_card_at", sql);
     }
 }

@@ -129,16 +129,17 @@ public static class VisitCandidatePool
     /// Selling cards whose staleness × sales rate has consumed the given
     /// fraction of the bucket — the stats sweep's at-risk count. Unbounded
     /// and quarantine-blind on purpose: a quarantined hot card is still
-    /// losing margin, so it must still be counted. Delisted cards are the
-    /// one exclusion — with no page left to visit their staleness only
-    /// grows, and a permanent false alarm teaches everyone to ignore it.
+    /// losing margin, so it must still be counted. Delisted cards and pages
+    /// that were never cards are the two exclusions — with no page worth
+    /// visiting again their staleness only grows, and a permanent false
+    /// alarm teaches everyone to ignore it.
     /// </summary>
     public static IQueryable<Card> PastBurnFraction(
         IQueryable<Card> cards, DateTimeOffset now, double fraction)
     {
         var threshold = SalesObservation.BucketCap * fraction;
         return cards
-            .Where(c => c.DelistedAt == null)
+            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
             .Where(c => c.LastVisitedAt != null && c.ObservedSalesPerDay > 0)
             .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
                         > threshold);
