@@ -319,6 +319,111 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         Assert.DoesNotContain(harness.Alerter.Raised, a => a.Subject == "Parse failure rate spike");
     }
 
+    [SkippableFact]
+    public async Task A_refresh_request_takes_the_next_slot_and_the_ask_clears()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // A sibling app's ask outranks the unvisited backlog: a card visited
+        // yesterday goes again, ahead of a card never seen at all — and the
+        // ask clears with the visit, so it is served exactly once.
+        await SeedCardAsync(c =>
+        {
+            c.LastVisitedAt = DateTimeOffset.UtcNow.AddDays(-1);
+            c.RefreshRequestedAt = DateTimeOffset.UtcNow;
+        });
+        await using (var seed = NewContext())
+        {
+            seed.Cards.Add(new Card
+            {
+                Id = 111,
+                SetId = 1,
+                Url = "/game/pokemon-base-set/blastoise-2",
+                Name = "Blastoise #2",
+                FirstSeenAt = DateTimeOffset.UtcNow,
+                LastSeenAt = DateTimeOffset.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(ScriptedHandler.Page(Fixture.Load("charizard-live-a"))));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var visit = await db.Visits.SingleAsync();
+        Assert.Equal(CardId, visit.CardId);
+
+        var card = await db.Cards.SingleAsync(c => c.Id == CardId);
+        Assert.Null(card.RefreshRequestedAt);
+    }
+
+    [SkippableFact]
+    public async Task A_burn_window_due_card_still_goes_before_a_refresh_request()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The zero-missed-sales guarantee survives the intake API: prevention
+        // first, the ask exactly one slot later.
+        await SeedCardAsync(c =>
+        {
+            // 6/day against a 30-row bucket burns in 5 days; at 4 the card is due.
+            c.LastVisitedAt = DateTimeOffset.UtcNow.AddDays(-4);
+            c.ObservedSalesPerDay = 6;
+        });
+        await using (var seed = NewContext())
+        {
+            seed.Cards.Add(new Card
+            {
+                Id = 111,
+                SetId = 1,
+                Url = "/game/pokemon-base-set/blastoise-2",
+                Name = "Blastoise #2",
+                FirstSeenAt = DateTimeOffset.UtcNow,
+                LastSeenAt = DateTimeOffset.UtcNow,
+                LastVisitedAt = DateTimeOffset.UtcNow.AddDays(-1),
+                RefreshRequestedAt = DateTimeOffset.UtcNow,
+            });
+            await seed.SaveChangesAsync();
+        }
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(ScriptedHandler.Page(Fixture.Load("charizard-live-a"))));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var visit = await db.Visits.SingleAsync();
+        Assert.Equal(CardId, visit.CardId);
+
+        // The ask is still standing, first in line for the next slot.
+        var requested = await db.Cards.SingleAsync(c => c.Id == 111);
+        Assert.NotNull(requested.RefreshRequestedAt);
+    }
+
+    [SkippableFact]
+    public async Task A_failed_visit_leaves_the_refresh_request_standing()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The ask survives failure — and therefore quarantine: only a
+        // successful visit or the not-a-card verdict satisfies it.
+        await SeedCardAsync(c =>
+        {
+            c.LastVisitedAt = DateTimeOffset.UtcNow.AddDays(-1);
+            c.RefreshRequestedAt = DateTimeOffset.UtcNow;
+        });
+
+        using var harness = NewHarness();
+        var lane = harness.Build(new ScriptedHandler(
+            ScriptedHandler.Redirect("https://www.pricecharting.com/search-products?q=charizard")));
+        await lane.CrawlOneAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var card = await db.Cards.SingleAsync(c => c.Id == CardId);
+        Assert.Equal(1, card.FailureStreak);
+        Assert.NotNull(card.RefreshRequestedAt);
+    }
+
     public void Dispose()
     {
         if (Directory.Exists(_fingerprintDirectory))

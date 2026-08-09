@@ -42,6 +42,8 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             card.HasOne(c => c.Set).WithMany().HasForeignKey(c => c.SetId).OnDelete(DeleteBehavior.Restrict);
             // The scheduler's oldest-first / priority scans.
             card.HasIndex(c => c.LastVisitedAt);
+            // The intake tier's pick scan; partial because pending asks are rare.
+            card.HasIndex(c => c.RefreshRequestedAt).HasFilter("refresh_requested_at IS NOT NULL");
         });
 
         modelBuilder.Entity<CardPriceMonth>(price =>

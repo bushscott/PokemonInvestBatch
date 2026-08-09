@@ -38,13 +38,17 @@ public static class VisitCandidatePool
         var dueByBurn = await DueByBurnWindow(eligible, now, options)
             .Select(ToCandidate)
             .ToListAsync(ct);
+        var requested = await RefreshRequested(eligible)
+            .Select(ToCandidate)
+            .ToListAsync(ct);
 
         // Stalest-first order is part of the contract: callers read the
         // queue-staleness gauge off the first element.
-        return stalest.Concat(capHits).Concat(dueByBurn).DistinctBy(c => c.Id).ToList();
+        return stalest.Concat(capHits).Concat(dueByBurn).Concat(requested)
+            .DistinctBy(c => c.Id).ToList();
     }
 
-    // Four columns cross the wire and nothing is change-tracked — ~600
+    // Five columns cross the wire and nothing is change-tracked — ~650
     // candidates are read per pick and exactly one card is ever written.
     private static readonly System.Linq.Expressions.Expression<Func<Card, VisitCandidate>> ToCandidate =
         c => new VisitCandidate
@@ -55,6 +59,7 @@ public static class VisitCandidatePool
                 LastVisitedAt = c.LastVisitedAt,
                 ObservedSalesPerDay = c.ObservedSalesPerDay,
                 AnyBucketAtCap = c.AnyBucketAtCap,
+                RefreshRequested = c.RefreshRequestedAt != null,
             },
         };
 
@@ -106,6 +111,17 @@ public static class VisitCandidatePool
             .ThenBy(c => c.DelistedProbedAt)
             .Take(1);
     }
+
+    /// <summary>
+    /// Cards another app asked to refresh, oldest ask first — the intake
+    /// tier's own window, since a merely-hours-stale card is invisible to
+    /// every staleness-ordered query.
+    /// </summary>
+    public static IQueryable<Card> RefreshRequested(IQueryable<Card> eligible) =>
+        eligible
+            .Where(c => c.RefreshRequestedAt != null)
+            .OrderBy(c => c.RefreshRequestedAt)
+            .Take(TierTake);
 
     /// <summary>
     /// VisitPriority's burn-window condition — staleness × sales rate has

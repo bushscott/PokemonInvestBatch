@@ -84,6 +84,20 @@ public class SchemaModelTests
     }
 
     [Fact]
+    public void Refresh_requests_are_served_from_a_partial_index()
+    {
+        // Pending asks are rare, so the pick scan pays for a sliver of index,
+        // not a column-wide one over ~90k cards.
+        var card = Model().FindEntityType(typeof(Card))!;
+
+        var index = card.GetIndexes().SingleOrDefault(i =>
+            i.Properties.Select(p => p.Name).SequenceEqual([nameof(Card.RefreshRequestedAt)]));
+
+        Assert.NotNull(index);
+        Assert.Equal("refresh_requested_at IS NOT NULL", index.GetFilter());
+    }
+
+    [Fact]
     public void Page_fingerprints_are_keyed_by_hash()
     {
         var fingerprint = Model().FindEntityType(typeof(KnownFingerprint))!;

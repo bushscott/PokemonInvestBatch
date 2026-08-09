@@ -101,6 +101,9 @@ public static class CardPageWriter
             card.ImageHash ??= page.ImageHash;
             card.FailureStreak = 0;
             card.QuarantinedUntil = null;
+            // Any successful visit satisfies a pending refresh ask, whichever
+            // path delivered it — the lane's turn or an express visit.
+            card.RefreshRequestedAt = null;
 
             await db.SaveChangesAsync(ct);
             await transaction.CommitAsync(ct);

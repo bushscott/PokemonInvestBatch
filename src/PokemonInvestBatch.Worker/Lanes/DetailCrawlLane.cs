@@ -341,9 +341,11 @@ public sealed class DetailCrawlLane(
 
         // Any streak and sentence are cleared on the way out. They described a
         // card that kept failing; this was never a card, and leaving them set
-        // would keep it counted among the benched forever.
+        // would keep it counted among the benched forever. A pending refresh
+        // ask goes with them — there is no card left to refresh.
         card.FailureStreak = 0;
         card.QuarantinedUntil = null;
+        card.RefreshRequestedAt = null;
         await db.SaveChangesAsync(ct);
 
         var slug = await db.Sets
