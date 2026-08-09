@@ -80,4 +80,49 @@ public class CardDetailParserNotACardTests
         Assert.True(GradeTierVocabulary.LooksLikeCard(["Ungraded\n   "]));
         Assert.Equal("Box Only", GradeTierVocabulary.Normalize("Box\n  Only\n "));
     }
+
+    [Fact]
+    public void Console_hardware_is_refused_too()
+    {
+        // A second real capture, a handheld console rather than a game — its
+        // condition selector still speaks the game vocabulary.
+        var e = Assert.Throws<NotACardPageException>(
+            () => CardDetailParser.Parse(Fixture.Load("pokemon-mini-pikachu-color")));
+
+        Assert.Contains("no card grade", e.Message);
+    }
+
+    [Fact]
+    public void A_game_page_with_no_sales_is_convicted_by_its_genre()
+    {
+        // The condition selector only renders once something has sold, so a
+        // game nobody has bought would slip a selector-only check and write
+        // its chart into the corpus in silence. The Genre row — "Systems" on
+        // this capture, "Pokemon Card" on a real card — is the witness that
+        // does not need a sale to exist.
+        var html = WithoutConditionSelector(Fixture.Load("pokemon-mini-pikachu-color"));
+
+        var e = Assert.Throws<NotACardPageException>(() => CardDetailParser.Parse(html));
+
+        Assert.Contains("Genre", e.Message);
+    }
+
+    [Fact]
+    public void Unknown_tiers_under_a_card_genre_read_as_drift_not_retirement()
+    {
+        // If every tier label is unrecognized but the page says it is a card,
+        // the site changed its words. That is an emergency for the drift
+        // alarm — never a quiet, permanent retirement of real cards one
+        // visit at a time.
+        var html = Fixture.Load("pokemon-mini-pinball").Replace("Arcade", "Pokemon Card");
+
+        Assert.Throws<SchemaDriftException>(() => CardDetailParser.Parse(html));
+    }
+
+    private static string WithoutConditionSelector(string html)
+    {
+        var start = html.IndexOf("<select id=\"completed-auctions-condition\"", StringComparison.Ordinal);
+        var end = html.IndexOf("</select>", start, StringComparison.Ordinal) + "</select>".Length;
+        return html[..start] + html[end..];
+    }
 }

@@ -34,6 +34,10 @@ public static partial class CardDetailParser
     // it corresponds to this option in the condition selector.
     private const string DefaultTierToken = "completed-auctions-used";
 
+    // One selector string, shared by the card check and the tier labeler —
+    // two copies would drift apart exactly the way this parser distrusts.
+    private const string ConditionOptions = "select#completed-auctions-condition option";
+
     public static CardDetailPage Parse(string html)
     {
         try
@@ -93,39 +97,68 @@ public static partial class CardDetailParser
     /// <summary>
     /// The one question the rest of the parser cannot ask: is this a card at
     /// all? Everything else about a console page is indistinguishable from a
-    /// card — same markup, same chart series names — so the condition labels
-    /// are the only witness, and they are read here rather than in ParseSales
-    /// because that method returns early when a page has no completed auctions,
-    /// which would let a game with no sales walk straight through.
+    /// card — same markup, same chart series names — so the page is tried on
+    /// the two witnesses it cannot help carrying. The condition selector
+    /// testifies whenever the product has sales: cards offer grades, games
+    /// offer Loose/CIB. The Genre row testifies even when nothing has ever
+    /// sold — "Pokemon Card" against "Arcade" or "Systems" — closing the one
+    /// shape the selector cannot see: a game nobody has bought, which would
+    /// otherwise write its chart into the corpus in silence.
     /// </summary>
     private static void AssertIsCard(IDocument document)
     {
         var labels = document
-            .QuerySelectorAll("select#completed-auctions-condition option")
+            .QuerySelectorAll(ConditionOptions)
             .Where(o => !string.IsNullOrWhiteSpace(o.GetAttribute("value")))
             .Select(o => StripCount(o.TextContent))
             .ToList();
+        var genre = document.QuerySelector("td[itemprop='genre']")?.TextContent.Trim();
+        var genreSaysCard = genre?.Contains("card", StringComparison.OrdinalIgnoreCase) ?? false;
 
-        // No selector is no evidence, not evidence of absence: a card nobody
-        // has ever sold renders none. Absence must never convict — ParseSales
-        // still demands the selector when sales tables actually exist.
-        if (labels.Count == 0 || GradeTierVocabulary.LooksLikeCard(labels))
+        if (labels.Count > 0)
+        {
+            if (GradeTierVocabulary.LooksLikeCard(labels))
+            {
+                return;
+            }
+
+            // Unknown tiers under a card genre is the site changing its words,
+            // not a console in the catalog. That is drift — it must reach the
+            // drift alarm, never quietly retire real cards one visit at a time.
+            if (genreSaysCard)
+            {
+                throw new SchemaDriftException(
+                    $"Condition options [{DescribeLabels(labels)}] contain no known card grade "
+                    + $"on a page whose genre is '{genre}' — the tier vocabulary has drifted.");
+            }
+
+            throw new NotACardPageException(
+                $"Condition options [{DescribeLabels(labels)}] contain no card grade — "
+                + "this is a video game, console, or accessory page, not a card.");
+        }
+
+        // No sales, no selector: the genre is the only witness left. Silence
+        // still acquits — a card nobody has ever sold may render neither — so
+        // only an explicit non-card genre convicts.
+        if (string.IsNullOrEmpty(genre) || genreSaysCard)
         {
             return;
         }
 
-        // Labels are truncated because the site's unclosed <span> tags let one
-        // option swallow the rest of the page; the reason lands in
-        // parse_failures and must stay readable.
-        var seen = labels
-            .Select(l => GradeTierVocabulary.Normalize(l))
-            .Select(l => l.Length > 24 ? l[..24] + "…" : l)
-            .Take(8);
-
         throw new NotACardPageException(
-            $"Condition options [{string.Join(", ", seen)}] contain no card grade — "
+            $"Genre '{(genre.Length > 40 ? genre[..40] + "…" : genre)}' is not a card genre, and "
+            + "with no completed auctions the page has nothing else to say for itself — "
             + "this is a video game, console, or accessory page, not a card.");
     }
+
+    /// <summary>Labels are squeezed and truncated because the site's unclosed
+    /// span tags let one option swallow the rest of the page; the reason goes
+    /// to the log and the alert and must stay readable.</summary>
+    private static string DescribeLabels(IReadOnlyList<string> labels) =>
+        string.Join(", ", labels
+            .Select(GradeTierVocabulary.Normalize)
+            .Select(l => l.Length > 24 ? l[..24] + "…" : l)
+            .Take(8));
 
     private static IReadOnlyList<SaleRecord> ParseSales(IDocument document)
     {
@@ -149,7 +182,7 @@ public static partial class CardDetailParser
     /// <summary>Tier names come from the page's own condition selector, never from code.</summary>
     private static Dictionary<string, string> ReadTierLabels(IDocument document)
     {
-        var options = document.QuerySelectorAll("select#completed-auctions-condition option");
+        var options = document.QuerySelectorAll(ConditionOptions);
         if (options.Length == 0)
         {
             throw new SchemaDriftException(
