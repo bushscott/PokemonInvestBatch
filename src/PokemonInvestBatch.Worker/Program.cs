@@ -90,6 +90,10 @@ builder.Services.AddSingleton(services =>
         scraper.FingerprintArchiveDirectory);
 });
 
+// One visit implementation for both paths: the detail lane's turn and the
+// intake API's express visits.
+builder.Services.AddSingleton<CardVisitor>();
+
 builder.Services.AddHostedService<EnumerationLane>();
 builder.Services.AddHostedService<DetailCrawlLane>();
 builder.Services.AddHostedService<CanaryLane>();

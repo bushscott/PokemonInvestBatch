@@ -67,29 +67,42 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
 
     public CrawlMetrics Metrics { get; private set; } = null!;
 
+    public CardVisitor Visitor { get; private set; } = null!;
+
     public DetailCrawlLane Build(ScriptedHandler handler)
     {
         Metrics = new CrawlMetrics(Delay);
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
         var client = new PriceChartingClient(http, "tests@example.com", TimeProvider.System);
         var throttle = new IncidentThrottle(TimeSpan.FromHours(6));
+        var scraperOptions = Options.Create(new ScraperOptions
+        {
+            ContactEmail = "tests@example.com",
+            FingerprintArchiveDirectory = fingerprintDirectory,
+            // A tripped pause must not park the test for half an hour.
+            PauseCooldownMinutes = 0,
+        });
 
-        return new DetailCrawlLane(
-            new Factory(options),
+        Visitor = new CardVisitor(
             client,
-            new PoliteGate(Delay, TimeProvider.System),
             Delay,
             throttle,
             Alerter,
             new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
             TimeProvider.System,
-            Options.Create(new ScraperOptions
-            {
-                ContactEmail = "tests@example.com",
-                FingerprintArchiveDirectory = fingerprintDirectory,
-                // A tripped pause must not park the test for half an hour.
-                PauseCooldownMinutes = 0,
-            }),
+            scraperOptions,
+            Metrics,
+            NullLogger<CardVisitor>.Instance);
+
+        return new DetailCrawlLane(
+            new Factory(options),
+            Visitor,
+            new PoliteGate(Delay, TimeProvider.System),
+            Delay,
+            throttle,
+            Alerter,
+            TimeProvider.System,
+            scraperOptions,
             Metrics,
             NullLogger<DetailCrawlLane>.Instance);
     }
