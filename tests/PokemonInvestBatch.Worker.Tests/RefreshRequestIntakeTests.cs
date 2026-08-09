@@ -68,9 +68,14 @@ public class RefreshRequestIntakeTests : DatabaseTest, IDisposable
         Assert.NotNull(receipt.RequestedAt);
         Assert.Null(receipt.QuarantinedUntil);
 
+        // Postgres keeps microseconds; the receipt's stamp is the value before
+        // the round-trip, so compare instants at the database's own precision.
         await using var db = NewContext();
         var card = await db.Cards.SingleAsync(c => c.Id == CardId);
-        Assert.Equal(receipt.RequestedAt, card.RefreshRequestedAt);
+        Assert.NotNull(card.RefreshRequestedAt);
+        Assert.True(
+            (receipt.RequestedAt!.Value - card.RefreshRequestedAt!.Value).Duration()
+            < TimeSpan.FromMilliseconds(1));
     }
 
     [SkippableFact]
@@ -80,18 +85,27 @@ public class RefreshRequestIntakeTests : DatabaseTest, IDisposable
 
         // The pool serves oldest ask first; re-stamping would send the card
         // to the back of the very line the caller is trying to move it up.
+        // Stored-value comparisons throughout: the in-memory stamp carries
+        // 100ns ticks that Postgres truncates to microseconds on the way in.
         await SeedCardAsync();
         var intake = NewIntake();
 
         var first = await intake.FileAsync(CardId, CancellationToken.None);
+        Assert.Equal(RefreshRequestOutcome.Accepted, first.Outcome);
+
+        DateTimeOffset? stampedAtFirst;
+        await using (var db = NewContext())
+        {
+            stampedAtFirst = (await db.Cards.SingleAsync(c => c.Id == CardId)).RefreshRequestedAt;
+        }
+
         var second = await intake.FileAsync(CardId, CancellationToken.None);
 
         Assert.Equal(RefreshRequestOutcome.AlreadyPending, second.Outcome);
-        Assert.Equal(first.RequestedAt, second.RequestedAt);
+        Assert.Equal(stampedAtFirst, second.RequestedAt);
 
-        await using var db = NewContext();
-        var card = await db.Cards.SingleAsync(c => c.Id == CardId);
-        Assert.Equal(first.RequestedAt, card.RefreshRequestedAt);
+        await using var check = NewContext();
+        Assert.Equal(stampedAtFirst, (await check.Cards.SingleAsync(c => c.Id == CardId)).RefreshRequestedAt);
     }
 
     [SkippableFact]
