@@ -55,6 +55,87 @@ public class BurnWindowGuaranteeTests
     }
 }
 
+public class RefreshRequestTierTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 9, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly VisitPriorityOptions Options = new();
+
+    private static double Score(CardVisitState state) => VisitPriority.Score(state, Now, Options);
+
+    [Fact]
+    public void A_requested_card_outranks_the_unvisited_backlog()
+    {
+        // The ask jumps the discovery queue: a card another app wants fresh
+        // goes before first-pass exploration, however large the backlog.
+        var requested = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-1), RefreshRequested = true });
+        var unvisited = Score(new CardVisitState { LastVisitedAt = null });
+
+        Assert.True(requested > unvisited);
+    }
+
+    [Fact]
+    public void A_requested_card_still_yields_to_a_burn_window_due_card()
+    {
+        // 3 sales/day burns a bucket in 10 days; at 5 the card is due, and
+        // prevention outranks the ask — the caller waits one slot, the sales
+        // are never lost.
+        var requested = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-20), RefreshRequested = true });
+        var due = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-5), ObservedSalesPerDay = 3 });
+
+        Assert.True(due > requested);
+    }
+
+    [Fact]
+    public void A_requested_burn_window_due_card_keeps_its_burn_window_rank()
+    {
+        // An ask must never demote the card it points at: requested-and-due
+        // scores exactly as due, in the tier the guarantee owns.
+        var requestedAndDue = Score(new CardVisitState
+        {
+            LastVisitedAt = Now.AddDays(-5),
+            ObservedSalesPerDay = 3,
+            RefreshRequested = true,
+        });
+        var dueAlone = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-5), ObservedSalesPerDay = 3 });
+
+        Assert.Equal(dueAlone, requestedAndDue);
+    }
+
+    [Fact]
+    public void A_requested_card_outranks_cap_hits_and_the_starved()
+    {
+        var requested = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-1), RefreshRequested = true });
+        var capHit = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-40), AnyBucketAtCap = true });
+        var starved = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-35) });
+
+        Assert.True(requested > capHit);
+        Assert.True(requested > starved);
+    }
+
+    [Fact]
+    public void A_requested_never_visited_card_scores_the_requested_tier_not_the_unvisited_one()
+    {
+        // Being new to the corpus must not bury the ask under the backlog —
+        // and the ask must still not outrank prevention.
+        var requestedNew = Score(new CardVisitState { LastVisitedAt = null, RefreshRequested = true });
+        var plainNew = Score(new CardVisitState { LastVisitedAt = null });
+        var due = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-5), ObservedSalesPerDay = 3 });
+
+        Assert.True(requestedNew > plainNew);
+        Assert.True(due > requestedNew);
+    }
+
+    [Fact]
+    public void Staler_requested_cards_go_first_among_equals()
+    {
+        var staler = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-9), RefreshRequested = true });
+        var fresher = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-2), RefreshRequested = true });
+
+        Assert.True(staler > fresher);
+    }
+}
+
 public class VisitPriorityTests
 {
     private static readonly DateTimeOffset Now = new(2026, 7, 27, 12, 0, 0, TimeSpan.Zero);

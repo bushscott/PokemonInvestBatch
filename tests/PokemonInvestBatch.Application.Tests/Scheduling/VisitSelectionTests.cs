@@ -106,6 +106,37 @@ public class VisitSelectionTests
     }
 
     [Fact]
+    public void A_requested_card_wins_the_pick_instead_of_deferring_to_the_unvisited()
+    {
+        // A refresh request outranks the unvisited backlog by tier, so the
+        // comparison against the unvisited score must yield Scored — the same
+        // comparison-not-short-circuit shape that guards the burn tier.
+        var choice = VisitSelection.Choose(
+            benchRetryId: null,
+            [Candidate(7, new CardVisitState { LastVisitedAt = Now.AddDays(-1), RefreshRequested = true })],
+            Now,
+            Options);
+
+        Assert.Equal(VisitChoiceKind.Scored, choice.Kind);
+        Assert.Equal(7, choice.CardId);
+    }
+
+    [Fact]
+    public void A_bench_retry_still_outranks_a_requested_card()
+    {
+        // The bench slot opens at most once per recheck interval; the ask
+        // waits exactly one visit behind it.
+        var choice = VisitSelection.Choose(
+            benchRetryId: 42,
+            [Candidate(7, new CardVisitState { LastVisitedAt = Now.AddDays(-1), RefreshRequested = true })],
+            Now,
+            Options);
+
+        Assert.Equal(VisitChoiceKind.RetryBenched, choice.Kind);
+        Assert.Equal(42, choice.CardId);
+    }
+
+    [Fact]
     public void The_most_overdue_burn_window_card_wins_among_several()
     {
         var choice = VisitSelection.Choose(
