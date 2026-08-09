@@ -3,11 +3,16 @@ namespace PokemonInvestBatch.Application.Crawling;
 /// <summary>
 /// The single shared gate in front of pricecharting.com: every lane waits its
 /// turn here, so the politeness budget is global no matter how many lanes run.
-/// Image CDN fetches do not pass through this gate (different host).
+/// Image CDN fetches do not pass through this gate (different host). Express
+/// visits deliberately bypass the wait — but they report in via
+/// <see cref="RecordFetchNow"/>, so the next scheduled turn re-spaces around
+/// them: express never waits, the lane absorbs the spacing.
 /// </summary>
 public sealed class PoliteGate(AdaptiveDelay delay, TimeProvider time)
 {
     private readonly SemaphoreSlim _turnstile = new(1, 1);
+
+    private readonly Lock _stamp = new();
 
     private long? _lastReleaseTimestamp;
 
@@ -16,9 +21,15 @@ public sealed class PoliteGate(AdaptiveDelay delay, TimeProvider time)
         await _turnstile.WaitAsync(cancellationToken);
         try
         {
-            if (_lastReleaseTimestamp is { } last)
+            long? last;
+            lock (_stamp)
             {
-                var elapsed = time.GetElapsedTime(last);
+                last = _lastReleaseTimestamp;
+            }
+
+            if (last is { } stamped)
+            {
+                var elapsed = time.GetElapsedTime(stamped);
                 var remaining = delay.Current - elapsed;
                 if (remaining > TimeSpan.Zero)
                 {
@@ -26,11 +37,21 @@ public sealed class PoliteGate(AdaptiveDelay delay, TimeProvider time)
                 }
             }
 
-            _lastReleaseTimestamp = time.GetTimestamp();
+            RecordFetchNow();
         }
         finally
         {
             _turnstile.Release();
+        }
+    }
+
+    /// <summary>An express visit reporting "the site just heard from us"
+    /// without taking a turn. Never blocks.</summary>
+    public void RecordFetchNow()
+    {
+        lock (_stamp)
+        {
+            _lastReleaseTimestamp = time.GetTimestamp();
         }
     }
 }
