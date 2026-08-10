@@ -199,6 +199,56 @@ public sealed class CardVisitor(
                 + $"https://www.pricecharting.com{card.Url}",
                 ct);
         }
+
+        if (written.NewlyAtCap)
+        {
+            await FastTrackSetSiblingsAsync(db, card, now, ct);
+        }
+    }
+
+    /// <summary>
+    /// Hype is set-shaped — the Aug 2026 losses were two cards in one set.
+    /// When a bucket caps, the set's hottest known sellers are stamped with a
+    /// refresh ask, so the crawl sees each of them within its next few polite
+    /// slots at the tier right behind burn-window prevention. Best-effort: the
+    /// capped card's own visit already committed, and a failed stamp costs
+    /// only the head start, never the visit.
+    /// </summary>
+    private async Task FastTrackSetSiblingsAsync(
+        PokemonDbContext db, Card card, DateTimeOffset now, CancellationToken ct)
+    {
+        try
+        {
+            var siblingIds = await VisitCandidatePool
+                .HottestSetSiblings(db, card.SetId, card.Id)
+                .ToListAsync(ct);
+            if (siblingIds.Count == 0)
+            {
+                return;
+            }
+
+            // The repeated null check makes the stamp idempotent against a
+            // racing express visit clearing an ask between select and update.
+            var stamped = await db.Cards
+                .Where(c => siblingIds.Contains(c.Id) && c.RefreshRequestedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(c => c.RefreshRequestedAt, now), ct);
+            if (stamped == 0)
+            {
+                return;
+            }
+
+            var slug = await db.Sets
+                .Where(s => s.Id == card.SetId)
+                .Select(s => s.Slug)
+                .FirstOrDefaultAsync(ct) ?? "unknown";
+            logger.LogWarning(
+                "Set contagion: card {CardId} ({Name}) capped in set {SetSlug} — fast-tracked its {Count} hottest sellers",
+                card.Id, card.Name, slug, stamped);
+        }
+        catch (Exception e) when (e is not OperationCanceledException)
+        {
+            logger.LogError(e, "Set-contagion fast-track failed for card {CardId}", card.Id);
+        }
     }
 
     /// <summary>

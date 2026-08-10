@@ -160,4 +160,26 @@ public static class VisitCandidatePool
             .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
                         > threshold);
     }
+
+    /// <summary>Most set siblings one cap event may fast-track: half the
+    /// refresh tier's serve window, so hype in one set can never crowd an
+    /// outside ask out of the queue for long.</summary>
+    public const int SetContagionTake = 25;
+
+    /// <summary>
+    /// Hype is set-shaped: when one card's bucket caps, its set's hottest
+    /// known sellers are next in the blast radius. This picks them — best
+    /// rate first, skipping cards already asked for and cards with no page
+    /// worth visiting. Quarantined siblings stay in deliberately: the ask
+    /// waits out the bench, exactly like any other refresh request.
+    /// </summary>
+    public static IQueryable<long> HottestSetSiblings(
+        PokemonDbContext db, long setId, long exceptCardId) =>
+        db.Cards
+            .Where(c => c.SetId == setId && c.Id != exceptCardId)
+            .Where(c => c.ObservedSalesPerDay > 0 && c.RefreshRequestedAt == null)
+            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
+            .OrderByDescending(c => c.ObservedSalesPerDay)
+            .Take(SetContagionTake)
+            .Select(c => c.Id);
 }

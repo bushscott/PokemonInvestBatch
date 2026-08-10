@@ -68,11 +68,13 @@ public class Card
     /// a poisoned page must not wedge the crawl. See QuarantinePolicy.</summary>
     public DateTimeOffset? QuarantinedUntil { get; set; }
 
-    /// <summary>Another app's ask (via the intake API) to refresh this card
-    /// ahead of its normal turn. Served at its own tier — right behind the
-    /// burn-window-due — and cleared by the next successful visit or by the
-    /// not-a-card verdict. Deliberately NOT cleared by failed visits: the
-    /// ask survives quarantine and is served when the sentence lapses.</summary>
+    /// <summary>An ask to refresh this card ahead of its normal turn — from
+    /// another app via the intake API, or from the crawl's own set-contagion
+    /// fast-track when a set sibling's bucket caps. Served at its own tier —
+    /// right behind the burn-window-due — and cleared by the next successful
+    /// visit or by the not-a-card verdict. Deliberately NOT cleared by failed
+    /// visits: the ask survives quarantine and is served when the sentence
+    /// lapses.</summary>
     public DateTimeOffset? RefreshRequestedAt { get; set; }
 
     /// <summary>Set by hand when the product is gone from the site outright —
