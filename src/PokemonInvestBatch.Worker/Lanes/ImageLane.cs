@@ -8,8 +8,9 @@ namespace PokemonInvestBatch.Worker.Lanes;
 
 /// <summary>
 /// Fetch-once product images from the Google CDN — a different host, so this
-/// lane sits outside the politeness gate. 1600.jpg (325x450) is the largest
-/// size that exists; files land at {ImageDirectory}/{hash}/1600.jpg.
+/// lane sits outside the politeness gate. 1600.jpg serves the site's original
+/// at whatever size it has — commonly 734x1024 or 600x825, observed from
+/// 200x278 up to 1600x1354; files land at {ImageDirectory}/{hash}/1600.jpg.
 /// </summary>
 public sealed class ImageLane(
     IDbContextFactory<PokemonDbContext> dbFactory,
@@ -23,7 +24,8 @@ public sealed class ImageLane(
 
     private const string CdnBase = "https://storage.googleapis.com/images.pricecharting.com";
 
-    /// <summary>~100x a real 1600.jpg (325x450, tens of KB). The CDN always
+    /// <summary>Comfortably above the largest real 1600.jpg (originals vary,
+    /// up to ~1600px / a few hundred KB). The CDN always
     /// declares Content-Length for static files; an undeclared or oversized
     /// body is not an image we want.</summary>
     private const long MaxImageBytes = 5 * 1024 * 1024;
