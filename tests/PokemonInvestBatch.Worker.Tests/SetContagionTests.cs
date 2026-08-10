@@ -21,6 +21,10 @@ public class SetContagionTests : DatabaseTest, IDisposable
 
     private const long OtherSetId = 2;
 
+    /// <summary>The bucket charizard-burst rewrites into a 30-row five-day
+    /// burst — see BurstFixtureTests, which pins the fixture's shape.</summary>
+    private const string BurstTier = "Grade 9";
+
     private static readonly DateTimeOffset EarlierAsk = new(2026, 8, 1, 0, 0, 0, TimeSpan.Zero);
 
     private readonly string _fingerprintDirectory =
@@ -66,14 +70,32 @@ public class SetContagionTests : DatabaseTest, IDisposable
             LastSeenAt = now,
         });
 
-        // The card about to cap: last seen before the fixture's June burst, so
-        // the full bucket's oldest row is provably newer than the last look.
+        // The card about to cap: last seen before the fixture's June burst.
         db.Cards.Add(NewCard(CapCardId, HotSetId, "Charizard #4", c =>
         {
             c.Url = CardUrl;
             c.LastVisitedAt = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero);
         }));
         db.Cards.AddRange(cards);
+
+        // What we already hold in the bucket the fixture bursts. The at-cap
+        // verdict is about overlap, so the scenario needs real rows to lose:
+        // these are May sales, and not one of them is on the June burst page.
+        // Without them the card has no history in that bucket and nothing
+        // could have scrolled off — which is the correct verdict, just not the
+        // one these tests exist to exercise.
+        db.Sales.AddRange(Enumerable.Range(0, 30).Select(i => new Sale
+        {
+            CardId = CapCardId,
+            Source = "ebay",
+            SourceId = $"before-the-burst-{i}",
+            SoldOn = new DateOnly(2026, 5, 1).AddDays(i % 30),
+            GradeTier = BurstTier,
+            PriceCents = 10_000,
+            Title = "Charizard sold before the burst",
+            CapturedAt = new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero),
+        }));
+
         await db.SaveChangesAsync();
     }
 

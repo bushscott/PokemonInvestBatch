@@ -188,14 +188,20 @@ public sealed class CardVisitor(
             await FlagPopulationAnomaliesAsync(card, page.Population, written.PreviousPopulations, ct);
         }
 
-        if (written.NewlyAtCap && throttle.ShouldAlert("sales-lost", now))
+        // Naming the bucket is the difference between an alert someone can act
+        // on and one they have to go query for — and buckets are not all the
+        // same size, so "which grade" is also the only honest way to say how
+        // much is gone.
+        if (written.NewlyAtCap
+            && written.Observation.CappedTier is { } cappedTier
+            && throttle.ShouldAlert("sales-lost", now))
         {
             await alerter.RaiseAsync(
                 "Sales lost to a hot card",
                 $"Card {card.Id} ({card.Name}) is missing sales data because it outsold our visit "
-                + $"pace: the sale page completely turned over between visits, and anything older "
-                + $"than the newest {SalesObservation.BucketCap} rows is gone for good. It is "
-                + $"fast-tracked until its buckets calm down.\n"
+                + $"pace: its {cappedTier} sale page turned over completely between visits — not "
+                + $"one row we already held is still on it, so everything in between is gone for "
+                + $"good. It is fast-tracked until its buckets calm down.\n"
                 + $"https://www.pricecharting.com{card.Url}",
                 ct);
         }

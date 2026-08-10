@@ -55,6 +55,7 @@ public static class CardPageWriter
         // own band in the where-time-goes stack to watch it grow.
         Dictionary<(PriceTier Tier, DateOnly Month), int> lastPrices;
         Dictionary<(string Grader, short Grade), int> lastPops;
+        Dictionary<string, int> salesHeldBefore;
         using (CrawlTracing.Source.StartActivity("card.load_history"))
         {
             var priceRows = await db.PriceMonths.AsNoTracking()
@@ -66,6 +67,11 @@ public static class CardPageWriter
                 .Where(p => p.CardId == card.Id).ToListAsync(ct);
             lastPops = LastObserved.ByKey(
                 popRows, p => (p.Grader, p.Grade), p => p.ObservedAt, p => p.Population);
+
+            // Counted, not loaded: the at-cap verdict only needs how many rows
+            // each bucket held, and a hot card's sale history is the largest
+            // thing attached to it.
+            salesHeldBefore = await SalesByTierAsync(db, card.Id, ct);
         }
 
         var newPrices = ChangeOnlyPlanner.NewPricePoints(card.Id, page.Chart, lastPrices, now);
@@ -73,16 +79,25 @@ public static class CardPageWriter
             ? []
             : ChangeOnlyPlanner.NewPopulationCells(card.Id, page.Population, lastPops, now);
 
-        var observation = SalesObservation.From(page.Sales, card.LastVisitedAt, now);
-        var newlyAtCap = observation.AnyBucketAtCap && !card.AnyBucketAtCap;
-
         int newSales;
+        SalesObservation observation;
+        bool newlyAtCap;
         using (CrawlTracing.Source.StartActivity("card.write"))
         {
             await using var transaction = await db.Database.BeginTransactionAsync(ct);
             db.PriceMonths.AddRange(newPrices);
             db.Populations.AddRange(newPops);
             newSales = await new SaleWriter(db).AppendNewAsync(card.Id, page.Sales, now, ct);
+
+            // The verdict has to come after the append, because what the append
+            // *collided* with is the evidence: a bucket whose page shared no row
+            // with our records rolled past us. Same transaction, so this reads
+            // the rows just written and nothing else's.
+            var overlap = SalesOverlap.Between(
+                salesHeldBefore, await SalesByTierAsync(db, card.Id, ct));
+            observation = SalesObservation.From(page.Sales, overlap, now);
+            newlyAtCap = observation.AnyBucketAtCap && !card.AnyBucketAtCap;
+
             db.Visits.Add(new PageVisit
             {
                 Kind = PageKind.CardDetail,
@@ -119,4 +134,13 @@ public static class CardPageWriter
             PreviousPopulations = lastPops,
         };
     }
+
+    /// <summary>How many sale rows this card holds in each grade bucket.</summary>
+    private static async Task<Dictionary<string, int>> SalesByTierAsync(
+        PokemonDbContext db, long cardId, CancellationToken ct) =>
+        await db.Sales.AsNoTracking()
+            .Where(s => s.CardId == cardId)
+            .GroupBy(s => s.GradeTier)
+            .Select(g => new { Tier = g.Key, Rows = g.Count() })
+            .ToDictionaryAsync(x => x.Tier, x => x.Rows, ct);
 }

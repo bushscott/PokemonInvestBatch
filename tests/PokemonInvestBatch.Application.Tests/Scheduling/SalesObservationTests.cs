@@ -9,6 +9,11 @@ public class SalesObservationTests
 
     private static readonly DateOnly Today = DateOnly.FromDateTime(Now.UtcDateTime);
 
+    /// <summary>A card with no sale history yet: nothing can have scrolled
+    /// off a page we are reading for the first time.</summary>
+    private static readonly SalesOverlap NoHistory =
+        new(new Dictionary<string, int>(), new Dictionary<string, int>());
+
     private static SaleRecord Sale(string tier, DateOnly soldOn, string id) => new()
     {
         Source = "ebay",
@@ -23,29 +28,72 @@ public class SalesObservationTests
     private static IEnumerable<SaleRecord> Daily(string tier, int daysAgo, int count) =>
         Enumerable.Range(0, count).Select(i => Sale(tier, Today.AddDays(-daysAgo), $"{tier}-{daysAgo}-{i}"));
 
+    /// <summary>A page of <paramref name="rows"/> rows in one tier, where we
+    /// held <paramref name="heldBefore"/> rows there and <paramref name="written"/>
+    /// of the page's rows turned out to be new.</summary>
+    private static SalesOverlap Overlap(string tier, int heldBefore, int written) =>
+        new(new Dictionary<string, int> { [tier] = heldBefore },
+            new Dictionary<string, int> { [tier] = written });
+
     [Fact]
-    public void A_full_bucket_with_sales_newer_than_our_last_visit_is_at_cap()
+    public void A_bucket_sharing_no_row_with_our_records_is_at_cap()
     {
-        // 30 rows, oldest 2026-07-09, last visited 2026-07-01: the bucket
-        // rolled past what we saw — sales were provably missed.
+        // 30 rows on the page, we held 40 in that bucket, and all 30 were new:
+        // the page no longer reaches back to anything we had, so whatever sold
+        // in between scrolled off unseen.
         var sales = Enumerable.Range(0, 30)
             .Select(i => Sale("Grade 8", new DateOnly(2026, 7, 9).AddDays(i % 19), $"s{i}"))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: new DateTimeOffset(2026, 7, 1, 0, 0, 0, TimeSpan.Zero), Now);
+        var observation = SalesObservation.From(sales, Overlap("Grade 8", heldBefore: 40, written: 30), Now);
 
         Assert.True(observation.AnyBucketAtCap);
+        Assert.Equal("Grade 8", observation.CappedTier);
     }
 
     [Fact]
-    public void A_full_bucket_whose_oldest_row_predates_our_visit_is_not_at_cap()
+    public void A_bucket_still_showing_a_row_we_already_had_is_not_at_cap()
     {
-        // 30 rows but the oldest is from before we last looked — nothing rolled off unseen.
+        // Same 30-row page, but one row was already ours. That single survivor
+        // proves the page reaches back past our last visit, so nothing fell off
+        // in between — no matter how full the bucket looks.
         var sales = Enumerable.Range(0, 30)
-            .Select(i => Sale("Grade 8", new DateOnly(2026, 6, 1).AddDays(i), $"s{i}"))
+            .Select(i => Sale("Grade 8", new DateOnly(2026, 7, 9).AddDays(i % 19), $"s{i}"))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: new DateTimeOffset(2026, 6, 1, 0, 0, 0, TimeSpan.Zero), Now);
+        var observation = SalesObservation.From(sales, Overlap("Grade 8", heldBefore: 40, written: 29), Now);
+
+        Assert.False(observation.AnyBucketAtCap);
+        Assert.Null(observation.CappedTier);
+    }
+
+    [Fact]
+    public void A_fifty_row_ungraded_page_is_judged_by_overlap_not_by_thirty()
+    {
+        // The false-alarm case that started this: Ungraded renders 50 or 60
+        // rows where a graded bucket renders 30. Counting rows against a
+        // 30-row cap called this "at cap" and mailed a sales-lost alert; the
+        // page still shares 15 rows with our records, so nothing was lost.
+        var sales = Enumerable.Range(0, 50)
+            .Select(i => Sale("Ungraded", new DateOnly(2026, 7, 9).AddDays(i % 19), $"u{i}"))
+            .ToList();
+
+        var observation = SalesObservation.From(sales, Overlap("Ungraded", heldBefore: 60, written: 35), Now);
+
+        Assert.False(observation.AnyBucketAtCap);
+    }
+
+    [Fact]
+    public void A_tier_we_have_never_held_a_row_in_is_not_at_cap()
+    {
+        // A card's first-ever PSA 10 sales: every row is new, but there was no
+        // history to scroll off. Zero overlap only means loss when we had
+        // something to lose.
+        var sales = Enumerable.Range(0, 30)
+            .Select(i => Sale("PSA 10", new DateOnly(2026, 7, 9), $"p{i}"))
+            .ToList();
+
+        var observation = SalesObservation.From(sales, Overlap("PSA 10", heldBefore: 0, written: 30), Now);
 
         Assert.False(observation.AnyBucketAtCap);
     }
@@ -57,7 +105,25 @@ public class SalesObservationTests
             .Select(i => Sale("Grade 8", new DateOnly(2026, 7, 9), $"s{i}"))
             .ToList();
 
-        Assert.False(SalesObservation.From(sales, lastVisitedAt: null, Now).AnyBucketAtCap);
+        Assert.False(SalesObservation.From(sales, NoHistory, Now).AnyBucketAtCap);
+    }
+
+    [Fact]
+    public void A_page_listing_the_same_sale_twice_still_reads_as_rolled()
+    {
+        // Pages do list a sale twice (14,083 same-visit twins across the
+        // corpus). The duplicate is dropped on conflict, so the writer reports
+        // fewer new rows than the page has rows — comparing against the raw
+        // count would read that shortfall as overlap and miss a real loss.
+        var sales = Enumerable.Range(0, 30)
+            .Select(i => Sale("Grade 8", new DateOnly(2026, 7, 9), $"s{i}"))
+            .Concat([Sale("Grade 8", new DateOnly(2026, 7, 9), "s0")])
+            .ToList();
+
+        var observation = SalesObservation.From(sales, Overlap("Grade 8", heldBefore: 40, written: 30), Now);
+
+        Assert.Equal(31, sales.Count);
+        Assert.True(observation.AnyBucketAtCap);
     }
 
     [Fact]
@@ -72,7 +138,7 @@ public class SalesObservationTests
             .Concat([Sale("Ungraded", new DateOnly(2024, 1, 1), "ancient")])
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: null, Now);
+        var observation = SalesObservation.From(sales, NoHistory, Now);
 
         Assert.Equal(1.5, observation.SalesPerDay);
     }
@@ -95,7 +161,7 @@ public class SalesObservationTests
             .Concat(Enumerable.Range(0, 10).SelectMany(i => Daily("Ungraded", i * 3, 1)))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: Now.AddDays(-3.46), Now);
+        var observation = SalesObservation.From(sales, NoHistory, Now);
 
         var options = new VisitPriorityOptions();
         var revisitDays = options.BurnWindowSafetyFraction * SalesObservation.BucketCap / observation.SalesPerDay;
@@ -109,7 +175,7 @@ public class SalesObservationTests
     {
         // One row is indistinguishable from one collector; it earns the steady
         // 1/30 rate (a 30-day-floor revisit), not a 1/day alarm.
-        var observation = SalesObservation.From([.. Daily("Grade 9", 1, 1)], lastVisitedAt: null, Now);
+        var observation = SalesObservation.From([.. Daily("Grade 9", 1, 1)], NoHistory, Now);
 
         Assert.Equal(1 / 30.0, observation.SalesPerDay);
     }
@@ -117,7 +183,7 @@ public class SalesObservationTests
     [Fact]
     public void Two_same_day_sales_are_still_not_a_burst()
     {
-        var observation = SalesObservation.From([.. Daily("Grade 9", 0, 2)], lastVisitedAt: null, Now);
+        var observation = SalesObservation.From([.. Daily("Grade 9", 0, 2)], NoHistory, Now);
 
         Assert.Equal(2 / 30.0, observation.SalesPerDay);
     }
@@ -132,7 +198,7 @@ public class SalesObservationTests
             .SelectMany(d => Daily("PSA 10", d, 3))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: null, Now);
+        var observation = SalesObservation.From(sales, NoHistory, Now);
 
         Assert.Equal(3.0, observation.SalesPerDay);
     }
@@ -148,7 +214,7 @@ public class SalesObservationTests
                 .SelectMany(tier => Enumerable.Range(0, 12).SelectMany(i => Daily(tier, 1 + i * 2, 1))))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: null, Now);
+        var observation = SalesObservation.From(sales, NoHistory, Now);
 
         Assert.Equal(6.0, observation.SalesPerDay);
     }
@@ -163,7 +229,7 @@ public class SalesObservationTests
             .Concat(Enumerable.Range(31, 20).SelectMany(d => Daily("Grade 8", d, 1)))
             .ToList();
 
-        var observation = SalesObservation.From(sales, lastVisitedAt: null, Now);
+        var observation = SalesObservation.From(sales, NoHistory, Now);
 
         Assert.Equal(10 / 29.0, observation.SalesPerDay);
     }
@@ -177,7 +243,7 @@ public class SalesObservationTests
         var burst = Daily("PSA 10", 0, 7).Concat(Daily("PSA 10", 1, 7)).ToList();
 
         var rates = new[] { 0, 2, 6, 10, 35 }
-            .Select(daysLater => SalesObservation.From(burst, lastVisitedAt: null, Now.AddDays(daysLater)).SalesPerDay)
+            .Select(daysLater => SalesObservation.From(burst, NoHistory, Now.AddDays(daysLater)).SalesPerDay)
             .ToList();
 
         for (var i = 1; i < rates.Count; i++)

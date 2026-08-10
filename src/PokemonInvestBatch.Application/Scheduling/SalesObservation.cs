@@ -5,16 +5,21 @@ namespace PokemonInvestBatch.Application.Scheduling;
 /// <summary>
 /// What one visit's sales tell the scheduler: the scheduling rate — the hottest
 /// grade bucket's observed fill rate in sales/day — and whether a grade bucket
-/// provably rolled sales off unseen. The site keeps only the newest ~30 sales
-/// per grade, so the bucket that fills fastest is the one that loses data
-/// first; the card is revisited on that bucket's clock, never the card-wide
-/// average's. A full bucket whose oldest row is newer than our previous visit
-/// means sales were missed — that card is "at cap" and jumps the scheduling
-/// order until its buckets calm down.
+/// provably rolled sales off unseen. The site keeps only the newest sales per
+/// grade, so the bucket that fills fastest is the one that loses data first;
+/// the card is revisited on that bucket's clock, never the card-wide average's.
+/// A bucket whose page no longer shows a single row we already held means sales
+/// were missed — that card is "at cap" and jumps the scheduling order until its
+/// buckets calm down.
 /// </summary>
 public sealed record SalesObservation
 {
-    /// <summary>Graded buckets cap at 30 rows on the live site.</summary>
+    /// <summary>Graded buckets cap at 30 rows on the live site — the bucket
+    /// size the scheduler paces against. Deliberately the smallest bucket the
+    /// site serves rather than the largest: pacing a 50- or 60-row Ungraded
+    /// bucket as if it held 30 buys extra visits, while the reverse loses
+    /// sales. <see cref="SalesOverlap"/> is what decides whether a bucket
+    /// actually rolled, and it needs no bucket size at all.</summary>
     public const int BucketCap = 30;
 
     /// <summary>Trailing window for the churn measure.</summary>
@@ -25,7 +30,12 @@ public sealed record SalesObservation
     /// duplicates, so smaller prefixes fall through to the steady rate.</summary>
     public const int MinBurstRows = 3;
 
-    public required bool AnyBucketAtCap { get; init; }
+    /// <summary>The grade bucket that provably rolled sales off unseen, named as
+    /// the page names it. Null when nothing was lost — which is what
+    /// <see cref="AnyBucketAtCap"/> asks.</summary>
+    public string? CappedTier { get; init; }
+
+    public bool AnyBucketAtCap => CappedTier is not null;
 
     /// <summary>The hottest grade bucket's fill rate, sales/day — the pace the
     /// scheduler must beat to see every row before it scrolls off.</summary>
@@ -33,17 +43,21 @@ public sealed record SalesObservation
 
     public static SalesObservation From(
         IReadOnlyList<SaleRecord> sales,
-        DateTimeOffset? lastVisitedAt,
+        SalesOverlap overlap,
         DateTimeOffset now)
     {
-        var anyAtCap = false;
-        if (lastVisitedAt is { } visited)
-        {
-            var lastVisitDate = DateOnly.FromDateTime(visited.UtcDateTime);
-            anyAtCap = sales
-                .GroupBy(s => s.GradeTier)
-                .Any(bucket => bucket.Count() >= BucketCap && bucket.Min(s => s.SoldOn) > lastVisitDate);
-        }
+        // A bucket rolled past us when its page and our records share nothing:
+        // every row on it was new, and we did hold rows there before. One
+        // surviving row proves the page still reaches back to something we had
+        // already seen, so nothing scrolled off in between. Asking about
+        // overlap rather than fullness is what makes this correct for a bucket
+        // whose size we do not know — see SalesOverlap.
+        var cappedTier = sales
+            .GroupBy(s => s.GradeTier)
+            .FirstOrDefault(bucket =>
+                overlap.HeldBefore(bucket.Key) > 0
+                && overlap.NewlyWritten(bucket.Key) >= DistinctRows(bucket))
+            ?.Key;
 
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var windowStart = today.AddDays(-ChurnWindowDays);
@@ -56,10 +70,17 @@ public sealed record SalesObservation
 
         return new SalesObservation
         {
-            AnyBucketAtCap = anyAtCap,
+            CappedTier = cappedTier,
             SalesPerDay = salesPerDay,
         };
     }
+
+    /// <summary>Rows the writer could possibly have inserted for this bucket.
+    /// A page can list the same (source, source_id) twice — 14,083 same-visit
+    /// twins across the corpus — and the second copy is dropped on conflict, so
+    /// comparing against the raw row count would hide a genuine loss.</summary>
+    private static int DistinctRows(IEnumerable<SaleRecord> bucket) =>
+        bucket.Select(s => (s.Source, s.SourceId)).Distinct().Count();
 
     /// <summary>
     /// A bucket's fill rate: its steady rate over the whole window, or its

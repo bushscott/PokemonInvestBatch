@@ -15,6 +15,11 @@ public class EstimatorSchedulingStressTests
 {
     private static readonly DateOnly Start = new(2026, 6, 1);
 
+    /// <summary>A card with no sale history yet: nothing can have scrolled
+    /// off a page we are reading for the first time.</summary>
+    private static readonly SalesOverlap NoHistory =
+        new(new Dictionary<string, int>(), new Dictionary<string, int>());
+
     private static readonly VisitPriorityOptions Options = new();
 
     /// <summary>Everything one simulated crawl leaves behind.</summary>
@@ -83,7 +88,7 @@ public class EstimatorSchedulingStressTests
             .ToList();
 
         var now = new DateTimeOffset(Start.AddDays(day), new TimeOnly(12, 0), TimeSpan.Zero);
-        return SalesObservation.From(page, lastVisitedAt: null, now).SalesPerDay;
+        return SalesObservation.From(page, NoHistory, now).SalesPerDay;
     }
 
     private static int[] Script(params (int count, int days)[] phases) =>
