@@ -463,7 +463,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'clear the unvisited backlog (0 = first pass done)', latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day) AS 'full lap at current pace' FROM Metric SINCE 1 day ago"
+                "query": "SELECT (latest(`crawl.corpus_size`) - latest(`crawl.corpus_visited`)) / rate(sum(`crawl.cards_visited`), 1 day) AS 'days', latest(`crawl.corpus_size`) / rate(sum(`crawl.cards_visited`), 1 day) AS 'full lap at current pace' FROM Metric SINCE 1 day ago"
               }
             ],
             "platformOptions": {
