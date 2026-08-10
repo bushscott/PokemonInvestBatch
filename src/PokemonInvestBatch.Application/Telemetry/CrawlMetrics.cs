@@ -91,10 +91,10 @@ public sealed class CrawlMetrics : IDisposable
             description: "Sets awaiting their card walk; zero is the only healthy steady state");
         Meter.CreateObservableGauge(
             "crawl.corpus_size", () => _corpusSize,
-            description: "Cards known to exist");
+            description: "Living cards known to exist — delisted and not-a-card tombstones excluded, so coverage can actually reach 100%");
         Meter.CreateObservableGauge(
             "crawl.corpus_visited", () => _corpusVisited,
-            description: "Cards visited at least once — coverage numerator");
+            description: "Living cards visited at least once — coverage numerator");
         Meter.CreateObservableGauge(
             "crawl.images_pending", () => _imagesPending,
             description: "Images discovered but not yet fetched");

@@ -48,14 +48,18 @@ public sealed class StatsLane(
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
-        var corpusSize = await db.Cards.LongCountAsync(ct);
-        var corpusVisited = await db.Cards.LongCountAsync(c => c.LastVisitedAt != null, ct);
+        // Coverage counts only the living: delisted cards and pages that were
+        // never cards will never be visited by design, so counting them as
+        // "known" leaves the tile permanently short of complete — a gap that
+        // reads as work remaining when the work is done.
+        var living = db.Cards.Where(c => c.DelistedAt == null && c.NotACardAt == null);
+        var corpusSize = await living.LongCountAsync(ct);
+        var corpusVisited = await living.LongCountAsync(c => c.LastVisitedAt != null, ct);
         metrics.SetCorpusStats(
             corpusSize,
             corpusVisited,
-            imagesPending: await db.Cards.LongCountAsync(
-                c => c.DelistedAt == null && c.NotACardAt == null
-                     && c.ImageHash != null && c.ImageFetchedAt == null, ct),
+            imagesPending: await living.LongCountAsync(
+                c => c.ImageHash != null && c.ImageFetchedAt == null, ct),
             setsTotal: await db.Sets.LongCountAsync(ct));
 
         // Longest wait for a visit: the single most-neglected card. A
@@ -65,7 +69,6 @@ public sealed class StatsLane(
         // dashboard reds when the promise breaks. Delisted cards are out of
         // the running — never visiting them again is the plan, not neglect.
         var now = time.GetUtcNow();
-        var living = db.Cards.Where(c => c.DelistedAt == null && c.NotACardAt == null);
         var oldestVisit = await living.MinAsync(c => c.LastVisitedAt, ct);
         var oldestUnseen = await living.Where(c => c.LastVisitedAt == null)
             .MinAsync(c => (DateTimeOffset?)c.FirstSeenAt, ct);
