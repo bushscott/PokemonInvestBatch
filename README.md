@@ -100,13 +100,17 @@ internet's traffic from collapsing. Gentle when things are fine, dramatic when t
 
 ### 2. Never missing a sale
 
-The website only shows the ~30 most recent sales per card. A card selling 6 times a day fills that
-window in 5 days; after that, sales fall off the end and are lost forever.
+The website only shows the ~30 most recent sales *per grade* of each card. A grade selling 6
+times a day fills its window in 5 days; after that, sales fall off the end and are lost forever.
 
-So the scheduler does not visit cards in a simple rotation. It calculates, per card, how much of
-its window has been consumed since the last visit, and fast-tracks any card at risk of losing
-data. A dashboard tile counts cards past 75% of their window — if it is ever above zero,
-scheduling is falling behind, and there is still a quarter-window of slack to fix it.
+So the scheduler does not visit cards in a simple rotation. It measures each card's *hottest
+grade* — weighting the most recent days, so a card that suddenly goes viral is believed at the
+very next visit, not a month later — and fast-tracks any card at risk of losing data. Because
+hype arrives set-shaped, a card caught losing sales also fast-tracks its set's best sellers
+before their windows turn over. A dashboard tile counts cards past 75% of their window — if it
+is ever above zero, scheduling is falling behind, and there is still a quarter-window of slack
+to fix it. The measuring stick itself was rebuilt after a real loss — see
+[ADR-0007](docs/adr/0007-schedule-on-the-hottest-buckets-pace.md).
 
 ### 3. Surviving pages that break
 

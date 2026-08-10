@@ -15,3 +15,4 @@ The format is Michael Nygard's, from *Documenting Architecture Decisions* (2011)
 | [0004](0004-card-faults-do-not-slow-the-crawl.md) | A broken page must not slow down the whole crawl | 2026-08-06 |
 | [0005](0005-pooled-grade-tiers.md) | Grading companies are pooled below grade 10 | 2026-08-04 |
 | [0006](0006-localhost-intake-api-and-express-visits.md) | A localhost intake API, with express visits outside the polite gate | 2026-08-09 |
+| [0007](0007-schedule-on-the-hottest-buckets-pace.md) | The schedule follows the hottest bucket, and a capped card warns its set | 2026-08-10 |
