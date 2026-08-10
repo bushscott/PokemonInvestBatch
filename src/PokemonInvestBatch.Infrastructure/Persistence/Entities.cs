@@ -51,7 +51,9 @@ public class Card
     // Scheduler state — queue lives in Postgres so restarts are free.
     public DateTimeOffset? LastVisitedAt { get; set; }
 
-    /// <summary>Sales/day observed across buckets at the last visit.</summary>
+    /// <summary>The hottest grade bucket's observed fill rate (sales/day) at
+    /// the last visit — the pace the scheduler must beat, since the fastest
+    /// bucket is the one that rolls sales off first.</summary>
     public double? ObservedSalesPerDay { get; set; }
 
     /// <summary>A grade bucket came back full with its oldest row newer than our
