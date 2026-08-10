@@ -88,7 +88,10 @@ public sealed class StatsLane(
                 .ToListAsync(ct));
 
         metrics.SetSchedulerStats(
-            cardsAtCap: await db.Cards.LongCountAsync(c => c.AnyBucketAtCap, ct),
+            // Retired cards keep their sticky at-cap flag but can never calm
+            // down via a revisit — counting them would pin the tile red forever.
+            cardsAtCap: await db.Cards.LongCountAsync(
+                c => c.AnyBucketAtCap && c.DelistedAt == null && c.NotACardAt == null, ct),
             quarantinedNow: await db.Cards.LongCountAsync(
                 c => c.DelistedAt == null && c.NotACardAt == null
                      && c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),

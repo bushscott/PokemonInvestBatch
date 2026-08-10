@@ -130,7 +130,7 @@
         {
           "title": "Longest wait for a visit (days, promise: 30)",
           "layout": {
-            "column": 7,
+            "column": 9,
             "row": 13,
             "width": 2,
             "height": 3
@@ -561,7 +561,7 @@
         {
           "title": "Cards added to retry queue, 24h",
           "layout": {
-            "column": 5,
+            "column": 7,
             "row": 13,
             "width": 2,
             "height": 3
@@ -780,9 +780,40 @@
           }
         },
         {
-          "title": "Cards queued for retry (repeated errors)",
+          "title": "Cards selling faster than we can track (sales being lost)",
           "layout": {
             "column": 3,
+            "row": 13,
+            "width": 2,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT latest(`crawl.cards_at_cap`) AS 'cards' FROM Metric"
+              }
+            ],
+            "thresholds": [
+              {
+                "alertSeverity": "CRITICAL",
+                "value": 0.5
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": false
+            }
+          }
+        },
+        {
+          "title": "Cards queued for retry (repeated errors)",
+          "layout": {
+            "column": 5,
             "row": 13,
             "width": 2,
             "height": 3
@@ -813,9 +844,9 @@
         {
           "title": "Longest wait, 7-day trend",
           "layout": {
-            "column": 9,
+            "column": 11,
             "row": 13,
-            "width": 4,
+            "width": 2,
             "height": 3
           },
           "visualization": {
