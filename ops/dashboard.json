@@ -796,7 +796,7 @@
                 "accountIds": [
                   6565679
                 ],
-                "query": "SELECT latest(`crawl.cards_at_cap`) AS 'cards' FROM Metric"
+                "query": "SELECT max(`crawl.cards_at_cap`) AS 'cards (peak, 24h)' FROM Metric SINCE 24 hours ago"
               }
             ],
             "thresholds": [
