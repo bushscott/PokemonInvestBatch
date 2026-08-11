@@ -44,13 +44,22 @@ public sealed record SalesObservation
     /// number is a near miss, the graduated warning that a cap-hit alone cannot
     /// give because it only fires once the rows are already gone.
     ///
-    /// Null when no bucket had prior holdings to overlap with. A first visit
-    /// cannot near-miss: everything on the page is new because we held nothing,
-    /// which says nothing about how fast the bucket fills.
+    /// Null when no bucket could have rolled in the first place — either we held
+    /// nothing there to overlap with (a first visit says nothing about how fast a
+    /// bucket fills), or the page did not return a full one.
     ///
-    /// Like <see cref="SalesOverlap"/> this needs no bucket size — it counts what
-    /// the page and our records shared — so it is honest for the Ungraded bucket
-    /// whose size varies.
+    /// That fullness condition is load-bearing, and leaving it out was a bug:
+    /// a bucket the site is not truncating cannot lose rows however thin the
+    /// overlap looks. Card 959249's Grade 5 bucket holds one lifetime sale, so
+    /// its page came back with one row and no new ones — margin 1, and utterly
+    /// safe. <see cref="SalesOverlap"/> needs no bucket size because zero overlap
+    /// *proves* rows vanished at any size; predicting a future roll is the
+    /// opposite problem and does need to know the page is full.
+    ///
+    /// <see cref="BucketCap"/> is the right floor for that and stays conservative
+    /// for the variable-size Ungraded table: it is the smallest bucket the site
+    /// serves, so no bucket showing fewer rows can be truncated, and a 50-row
+    /// Ungraded page clears it comfortably.
     /// </summary>
     public int? NarrowestMargin { get; init; }
 
@@ -79,17 +88,20 @@ public sealed record SalesObservation
                 && overlap.NewlyWritten(bucket.Key) >= DistinctRows(bucket))
             ?.Key;
 
-        // The same overlap arithmetic the cap test uses, kept as a number
-        // instead of collapsed to a yes/no: rows the page still shared with us.
-        // Only buckets we held something in can answer — see NarrowestMargin.
+        // The same overlap arithmetic the cap test uses, kept as a number instead
+        // of collapsed to a yes/no: rows the page still shared with us. Two
+        // conditions gate it, and both are needed — we must have held something
+        // there to overlap with, and the page must have come back full, because a
+        // bucket the site is not truncating has nothing to push off the end.
         var narrowest = sales
             .GroupBy(s => s.GradeTier)
-            .Where(bucket => overlap.HeldBefore(bucket.Key) > 0)
             .Select(bucket => new
             {
                 Tier = bucket.Key,
+                Rows = DistinctRows(bucket),
                 Margin = DistinctRows(bucket) - overlap.NewlyWritten(bucket.Key),
             })
+            .Where(b => overlap.HeldBefore(b.Tier) > 0 && b.Rows >= BucketCap)
             .OrderBy(b => b.Margin)
             .FirstOrDefault();
 

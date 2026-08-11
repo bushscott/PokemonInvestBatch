@@ -347,12 +347,64 @@ public class NearMissMarginTests
     }
 
     [Fact]
-    public void The_margin_needs_no_bucket_size_so_ungraded_is_measurable_too()
+    public void A_bucket_the_site_is_not_truncating_cannot_near_miss()
+    {
+        // The false positive this rule was added for, in its real numbers. Card
+        // 959249's Grade 5 bucket holds one lifetime sale, so the page returns
+        // that single row and nothing new: margin 1, which looks alarming and is
+        // completely safe. Nothing can be pushed off a page showing everything
+        // there is.
+        var observation = SalesObservation.From(
+            Page("Grade 5", 1),
+            new SalesOverlap(
+                new Dictionary<string, int> { ["Grade 5"] = 1 },
+                new Dictionary<string, int>()),
+            Now);
+
+        Assert.Null(observation.NarrowestMargin);
+        Assert.Null(observation.NarrowestTier);
+    }
+
+    [Fact]
+    public void A_thin_margin_on_a_short_page_is_still_not_a_near_miss()
+    {
+        // Same rule one row below the line: 29 rows cannot be a truncated graded
+        // bucket, so however little overlap it shows, nothing rolled past us.
+        var observation = SalesObservation.From(
+            Page("PSA 10", 29),
+            new SalesOverlap(
+                new Dictionary<string, int> { ["PSA 10"] = 40 },
+                new Dictionary<string, int> { ["PSA 10"] = 28 }),
+            Now);
+
+        Assert.Null(observation.NarrowestMargin);
+    }
+
+    [Fact]
+    public void A_full_bucket_is_still_reported_when_a_short_one_is_tighter()
+    {
+        // The short bucket has the smaller margin but cannot roll; picking it
+        // would hide the full bucket that genuinely nearly did.
+        List<SaleRecord> page = [.. Page("Grade 5", 2), .. Page("PSA 10", 30)];
+        var observation = SalesObservation.From(
+            page,
+            new SalesOverlap(
+                new Dictionary<string, int> { ["Grade 5"] = 2, ["PSA 10"] = 40 },
+                new Dictionary<string, int> { ["Grade 5"] = 0, ["PSA 10"] = 26 }),
+            Now);
+
+        Assert.Equal(4, observation.NarrowestMargin);
+        Assert.Equal("PSA 10", observation.NarrowestTier);
+    }
+
+    [Fact]
+    public void Ungraded_never_needs_its_true_page_size_to_be_known()
     {
         // The reverted UngradedBucketCap idea failed because the Ungraded table
-        // renders 30, 50 or 60 rows depending on the page. Counting shared rows
-        // sidesteps the question entirely: a 50-row Ungraded page with 3 rows of
-        // overlap is a near miss whatever the table's true size.
+        // renders 30, 50 or 60 rows depending on the page. Nothing here needs to
+        // know which: the fullness gate is BucketCap, the smallest bucket the
+        // site serves, so a 50-row page clears it without anyone deciding what
+        // 50 means, and the margin itself is just rows we already held.
         var observation = SalesObservation.From(
             Page("Ungraded", 50),
             new SalesOverlap(
