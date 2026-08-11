@@ -73,15 +73,17 @@ public sealed record ScraperOptions
     ///
     /// It buys exactly one thing: revisiting at fraction f survives a card
     /// getting up to 1/f times hotter between visits. So 0.5 absorbs a
-    /// doubling, 0.4 absorbs 2.5x, 0.33 absorbs 3x, 0.25 absorbs 4x. Mega
+    /// doubling, 0.4 absorbs 2.5x, 0.3 absorbs 3.3x, 0.25 absorbs 4x. Mega
     /// Gardevior EX #32 accelerated 2.05x on 2026-08-10 and beat 0.5 by about
     /// an hour; 0.4 would have arrived nine hours early.
     ///
-    /// Lower costs visits. Measured against live rates: 0.4 → ~1,597/day,
-    /// 0.33 → ~1,749, 0.25 → ~2,026, against a ~8,470/day polite-crawl ceiling
-    /// of which the 30-day floor already claims ~3,051.
+    /// Lower costs visits. Re-measured 2026-08-11 on repriced rates, as TOTAL
+    /// crawl demand with the 30-day floor included: 0.4 → ~4,437/day,
+    /// 0.3 → ~4,952, against a ~8,400/day polite-crawl ceiling. (The older
+    /// figures here were measured against rates the 2026-08-10 reprice had
+    /// deflated ~1.8x, so they understated every option.)
     /// </summary>
-    public double HotBurnWindowSafetyFraction { get; init; } = 0.4;
+    public double HotBurnWindowSafetyFraction { get; init; } = 0.3;
 
     /// <summary>Sales/day at which a card earns the tighter margin above.</summary>
     public double HotRateThreshold { get; init; } = 1.0;

@@ -28,7 +28,8 @@ public sealed record VisitPriorityOptions
     ///
     /// The safety fraction is a standing bet on how much a card's rate may rise
     /// between two visits: revisiting at fraction f absorbs an acceleration of
-    /// up to 1/f, so 0.5 absorbs a doubling and 0.4 absorbs two and a half.
+    /// up to 1/f, so 0.5 absorbs a doubling, 0.4 two and a half, 0.3 three and
+    /// a third.
     ///
     /// The 0.5 bet was lost on 2026-08-10 by Mega Gardevior EX #32, which read
     /// 7.33/day off a page whose two most recent days were its slowest, then ran
@@ -37,11 +38,20 @@ public sealed record VisitPriorityOptions
     /// predicted the acceleration, so the answer is margin rather than a better
     /// estimator.
     ///
+    /// Tightened again to 0.3 on 2026-08-11, and deliberately NOT because of
+    /// that day's loss: Pikachu #1 was a deflated estimate (see
+    /// <see cref="SalesObservation"/>'s reprice test), and margin is the wrong
+    /// tool for a wrong number. It moved because the corpus-wide reading is that
+    /// rates move further than any single page predicts, and 2.5x is not enough
+    /// headroom for that. Measured cost: burn-tier demand 4,437 -> 4,952
+    /// visits/day against a ~8,400/day polite ceiling, the 30-day floor counted
+    /// in both.
+    ///
     /// It is spent only on cards above <see cref="HotRateThreshold"/> because a
     /// cold card cannot roll a bucket however long it waits — tightening
     /// everywhere costs five times as much and buys nothing extra.
     /// </summary>
-    public double HotBurnWindowSafetyFraction { get; init; } = 0.4;
+    public double HotBurnWindowSafetyFraction { get; init; } = 0.3;
 
     /// <summary>Sales/day at which a card earns the tighter margin. At one a
     /// day a 30-row bucket takes a month to roll, so this is comfortably below

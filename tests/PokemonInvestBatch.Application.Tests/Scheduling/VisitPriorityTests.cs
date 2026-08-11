@@ -182,12 +182,21 @@ public class VisitPriorityTests
     public void Starved_cards_beat_busy_recent_cards()
     {
         // The floor: no card waits past MaxDaysBetweenVisits, however dull.
-        // The busy card is fresh enough to be inside its burn-window safety
-        // margin (10/day burns in 3 days; half is 1.5) — not yet due.
-        var starved = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-31), ObservedSalesPerDay = 0 });
-        var busyRecent = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-1), ObservedSalesPerDay = 10 });
+        // The busy card must be fresh enough to still be inside its burn-window
+        // margin, or it belongs in the burn tier and outranks the floor by
+        // design — 5/day burns a 30-row bucket in 6 days, so at 0.3 it is not
+        // due until 1.8.
+        var busy = new CardVisitState { LastVisitedAt = Now.AddDays(-1), ObservedSalesPerDay = 5 };
 
-        Assert.True(starved > busyRecent);
+        // Stated as a precondition so that tightening the dial again fails here
+        // with a reason rather than looking like the tier order broke.
+        Assert.True(
+            Score(busy) < 3_000_000,
+            "fixture is stale: the busy card is now burn-due, so pick a fresher one");
+
+        var starved = Score(new CardVisitState { LastVisitedAt = Now.AddDays(-31), ObservedSalesPerDay = 0 });
+
+        Assert.True(starved > Score(busy));
     }
 
     [Fact]
@@ -309,11 +318,11 @@ public class TieredBurnMarginTests
     private const double BurnDueTier = 3_000_000;
 
     [Fact]
-    public void A_hot_card_is_due_at_four_tenths_of_its_burn_window()
+    public void A_hot_card_is_due_at_three_tenths_of_its_burn_window()
     {
-        // 3/day burns a 30-row bucket in 10 days. Due at 4, not at 3.9.
-        Assert.True(Score(3, 4.0) >= BurnDueTier);
-        Assert.True(Score(3, 3.9) < BurnDueTier);
+        // 3/day burns a 30-row bucket in 10 days. Due at 3, not at 2.9.
+        Assert.True(Score(3, 3.0) >= BurnDueTier);
+        Assert.True(Score(3, 2.9) < BurnDueTier);
     }
 
     [Fact]
@@ -330,11 +339,11 @@ public class TieredBurnMarginTests
     public void The_threshold_itself_earns_the_tighter_margin()
     {
         // Exactly at the threshold counts as hot: 1/day burns a bucket in 30
-        // days, so the tighter margin puts it due at 12 rather than 15.
-        Assert.True(Score(1.0, 12.0) >= BurnDueTier);
+        // days, so the tighter margin puts it due at 9 rather than 15.
+        Assert.True(Score(1.0, 9.0) >= BurnDueTier);
 
-        // A shade under keeps the old margin and is not yet due at 12.
-        Assert.True(Score(0.99, 12.0) < BurnDueTier);
+        // A shade under keeps the old margin and is not yet due at 9.
+        Assert.True(Score(0.99, 9.0) < BurnDueTier);
     }
 
     /// <summary>
@@ -354,7 +363,8 @@ public class TieredBurnMarginTests
         // actually has: revisiting at f of the burn window survives a card
         // getting up to 1/f times hotter between visits. Everything about
         // choosing a fraction follows from this one relation.
-        foreach (var (fraction, survives) in new[] { (0.5, 2.0), (0.4, 2.5), (0.33, 1 / 0.33), (0.25, 4.0) })
+        foreach (var (fraction, survives) in new[]
+                     { (0.5, 2.0), (0.4, 2.5), (0.33, 1 / 0.33), (0.3, 1 / 0.3), (0.25, 4.0) })
         {
             var options = new VisitPriorityOptions { HotBurnWindowSafetyFraction = fraction };
             const double observed = 7.33;
@@ -382,12 +392,41 @@ public class TieredBurnMarginTests
         var half = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.5 };
         Assert.True(RevisitDue(observed, half) > rolls);
 
-        Assert.True(RevisitDue(observed, Options) < rolls);
+        // Pinned at 0.4 explicitly rather than at whatever the default is today:
+        // this test is the record of why 0.4 was chosen over 0.5, and that record
+        // must stay true after the dial moves on.
+        var fourTenths = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.4 };
+        Assert.True(RevisitDue(observed, fourTenths) < rolls);
 
         // Nine hours is thin but real. Naming it here means a future change to
         // the fraction has to confront how much margin it is spending.
-        var spareHours = (rolls - RevisitDue(observed, Options)) * 24;
+        var spareHours = (rolls - RevisitDue(observed, fourTenths)) * 24;
         Assert.InRange(spareHours, 8.0, 10.0);
+
+        // Whatever the dial is set to now, it may not regress this incident.
+        Assert.True(RevisitDue(observed, Options) <= RevisitDue(observed, fourTenths));
+    }
+
+    [Fact]
+    public void A_threefold_acceleration_is_caught_at_three_tenths_and_missed_at_four()
+    {
+        // Why the dial moved to 0.3 on 2026-08-11. Pikachu #1 is not the case
+        // for it — that loss was a deflated estimate, not an acceleration past
+        // 2.5x, and the reprice is what fixes it. The case is the one the
+        // corpus keeps making: a card's rate can move further than any reading
+        // of its page predicts, and 0.4 stops covering that at 2.5x.
+        //
+        // Measured cost of the move: burn-tier demand 4,437 -> 4,952 visits/day
+        // against a ~8,400/day polite ceiling, with the 30-day floor already
+        // counted in both. The crawl has the room.
+        const double observed = 6.0;
+        const double actual = 18.0;   // 3x — inside what 0.3 absorbs, past 0.4
+        var rolls = RollsAfter(actual);
+
+        var looser = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.4 };
+        Assert.True(RevisitDue(observed, looser) > rolls, "0.4 must miss a 3x acceleration");
+
+        Assert.True(RevisitDue(observed, Options) < rolls, "the shipped default must catch it");
     }
 
     [Fact]
@@ -398,7 +437,7 @@ public class TieredBurnMarginTests
         var tighter = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.25 };
 
         Assert.Equal(0.25, tighter.SafetyFractionFor(3));
-        Assert.Equal(0.4, Options.SafetyFractionFor(3));
+        Assert.Equal(0.3, Options.SafetyFractionFor(3));
 
         // Unchanged for cards below the threshold, whichever way the knob goes.
         Assert.Equal(0.5, tighter.SafetyFractionFor(0.5));
