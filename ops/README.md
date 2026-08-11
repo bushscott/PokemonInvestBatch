@@ -20,7 +20,9 @@ git config core.hooksPath ops/git-hooks   # blocks committing appsettings.Produc
 - Integrity metrics: `crawl.monotonicity_violations` (single hits are market
   noise — alert on a step change in the rate, the signature of a silent tier
   remap) and `crawl.pop_anomalies` by grader/kind (spike = census restatement
-  like PSA's June 2026 one, decrease = census shrank). A real restatement hits
+  like PSA's June 2026 one, decrease = a cell lost ≥20% and ≥2 cards at once;
+  shedding a slab or two to cracking and regrading is normal and stays silent,
+  which is why this tile is not chronically yellow). A real restatement hits
   hundreds of cards in one sweep; suggested condition:
   `SELECT sum(`crawl.pop_anomalies`) FROM Metric` above ~20 for 30 min sliding.
 

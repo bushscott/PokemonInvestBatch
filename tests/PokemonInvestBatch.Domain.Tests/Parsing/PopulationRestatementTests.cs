@@ -75,6 +75,53 @@ public class PopulationRestatementTests
     }
 
     [Fact]
+    public void One_slab_leaving_a_census_is_routine()
+    {
+        // Charizard #146 psa 10 went 250 -> 249 on 2026-08-10. A slab was
+        // cracked, crossed over, or regraded. The card left the cell; the
+        // grader did not change how it counts.
+        var report = Report(Grades(grade: 10, count: 249));
+        var lastKnown = new Dictionary<(string, short), int> { [("psa", 10)] = 250 };
+
+        Assert.Empty(PopulationRestatement.Anomalies(report, lastKnown));
+    }
+
+    [Fact]
+    public void A_couple_of_slabs_leaving_a_large_census_is_routine()
+    {
+        // cgc 10 went 32 -> 30 on 2026-08-05: attrition, not a recount.
+        var report = Report(new int[10], Grades(grade: 10, count: 30));
+        var lastKnown = new Dictionary<(string, short), int> { [("cgc", 10)] = 32 };
+
+        Assert.Empty(PopulationRestatement.Anomalies(report, lastKnown));
+    }
+
+    [Fact]
+    public void A_small_cell_losing_one_of_its_few_is_routine()
+    {
+        // Dark Pupitar #41 psa 8 went 6 -> 5. A sixth of the cell, but still
+        // one slab: percentages are meaningless this small.
+        var report = Report(Grades(grade: 8, count: 5));
+        var lastKnown = new Dictionary<(string, short), int> { [("psa", 8)] = 6 };
+
+        Assert.Empty(PopulationRestatement.Anomalies(report, lastKnown));
+    }
+
+    [Fact]
+    public void A_cell_losing_a_fifth_of_itself_is_a_restatement()
+    {
+        // Card 959116 psa 7 went 10 -> 7 on 2026-08-05, alongside three of its
+        // sibling grades dropping the same day. That is PSA recounting a card.
+        var report = Report(Grades(grade: 7, count: 7));
+        var lastKnown = new Dictionary<(string, short), int> { [("psa", 7)] = 10 };
+
+        var anomaly = Assert.Single(PopulationRestatement.Anomalies(report, lastKnown));
+        Assert.Equal(PopulationAnomalyKind.Decrease, anomaly.Kind);
+        Assert.Equal(10, anomaly.Previous);
+        Assert.Equal(7, anomaly.Current);
+    }
+
+    [Fact]
     public void Cgc_cells_are_checked_too()
     {
         var report = Report(new int[10], Grades(grade: 8, count: 5_000));
