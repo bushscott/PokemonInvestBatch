@@ -97,7 +97,18 @@ public static class VisitPriority
             {
                 // Checked before the ask so a burn-due card keeps its burn
                 // rank: an ask must never demote the card it points at.
-                return BurnWindowDueTier + stalenessDays;
+                //
+                // Rank inside the tier by rows burned, not days waited. Days
+                // alone is not urgency here — it says a card selling 1.57/day
+                // twelve days back (19 of its 30 rows gone) is more urgent than
+                // one selling 7/day four days back (27 gone, hours from
+                // rolling), which is backwards for the only thing this tier
+                // protects. Kecleon #88 lost rows on 2026-08-11 sitting behind
+                // 172 such cards for seventeen hours. It is also the order
+                // VisitCandidatePool.DueByBurnWindow admits candidates in, and
+                // a pick order that disagrees with the admission order starves
+                // whatever the two rank differently.
+                return BurnWindowDueTier + (stalenessDays * salesPerDay);
             }
         }
 

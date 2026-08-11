@@ -219,6 +219,71 @@ public class VisitPriorityTests
 }
 
 /// <summary>
+/// Which burn-due card goes first. The tier is entered by an inequality but
+/// served through a bounded window, so under any backlog the order inside it
+/// decides who actually gets visited — and the guarantee is about rows rolling
+/// off a bucket, not about days on a clock.
+/// </summary>
+public class BurnDueOrderingTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 11, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly VisitPriorityOptions Options = new();
+
+    private static double Score(double salesPerDay, double daysSinceVisit) =>
+        VisitPriority.Score(
+            new CardVisitState
+            {
+                LastVisitedAt = Now.AddDays(-daysSinceVisit),
+                ObservedSalesPerDay = salesPerDay,
+            },
+            Now,
+            Options);
+
+    [Fact]
+    public void The_card_closest_to_rolling_goes_first_however_recently_it_was_visited()
+    {
+        // Kecleon #88 on 2026-08-11, in its real numbers. It sold 7/day and was
+        // last seen 3.9 days back — 27 of its 30 rows burned, hours from losing
+        // sales. Ahead of it sat 172 cards selling ~1.57/day last seen 12.2 days
+        // back: three times the wait, but only 19 rows burned and a week of
+        // slack. Ranking by days served all 172 first and Kecleon's page rolled
+        // while it waited.
+        var kecleon = Score(salesPerDay: 7.0, daysSinceVisit: 3.9);
+        var slowButAncient = Score(salesPerDay: 1.57, daysSinceVisit: 12.2);
+
+        Assert.True(kecleon > slowButAncient);
+    }
+
+    [Fact]
+    public void Both_are_still_in_the_tier_that_outranks_everything_else()
+    {
+        // The reordering must not demote anyone out of the guarantee: a card
+        // that waits its turn still beats every unvisited and starved card.
+        var unvisited = VisitPriority.Score(new CardVisitState { LastVisitedAt = null }, Now, Options);
+
+        Assert.True(Score(7.0, 3.9) > unvisited);
+        Assert.True(Score(1.57, 12.2) > unvisited);
+    }
+
+    [Fact]
+    public void Equally_burned_cards_tie_however_differently_they_got_there()
+    {
+        // Naming what this ranking cannot see, so a future change knows what it
+        // is buying. Both cards have burned 20 of 30 rows, so both score the
+        // same — but the faster one has ten rows left at 2/day and rolls in
+        // five days, while the slower one has ten at 1/day and rolls in ten.
+        // Days-to-roll would separate them; rows-burned is what the pool's
+        // bounded window admits on, and the two must agree. The tie is
+        // deliberate, and it is not what cost Kecleon its rows.
+        var slowAndAncient = Score(salesPerDay: 1.0, daysSinceVisit: 20.0);
+        var fastAndRecent = Score(salesPerDay: 2.0, daysSinceVisit: 10.0);
+
+        Assert.Equal(slowAndAncient, fastAndRecent, precision: 9);
+    }
+}
+
+/// <summary>
 /// The revisit margin is not one number any more. A card fast enough to roll a
 /// bucket is due earlier in its burn window than a cold one, because the margin
 /// exists to absorb a card getting hotter between visits and only a card that

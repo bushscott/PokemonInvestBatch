@@ -126,7 +126,10 @@ public static class VisitCandidatePool
     /// <summary>
     /// VisitPriority's burn-window condition — staleness × sales rate has
     /// consumed the safety fraction of the bucket — translated to SQL, most
-    /// overdue first. Must stay the same inequality as VisitPriority.Score.
+    /// overdue first. Must stay the same inequality as VisitPriority.Score,
+    /// and the same ORDER: this window is bounded, so a scorer that ranked the
+    /// admitted candidates differently would keep re-picking whichever end it
+    /// prefers and leave the other end of a backlog to burn.
     ///
     /// The fraction is per-card now (cards fast enough to roll a bucket get a
     /// tighter one), and it depends on a column, so the ternary is spelled out

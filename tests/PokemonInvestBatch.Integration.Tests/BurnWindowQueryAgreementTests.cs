@@ -36,13 +36,19 @@ public class BurnWindowQueryAgreementTests
 
     /// <summary>Rates and stalenesses that straddle every edge that matters:
     /// either side of the hot-rate threshold, and either side of both the
-    /// tightened and the original fraction.</summary>
+    /// tightened and the original fraction. The 7.33/3.9 pair is Kecleon #88's
+    /// 2026-08-11 loss and the 1.57/12.2 pair is the cohort that outranked it.</summary>
+    private static readonly double[] Rates = [0.05, 0.5, 0.99, 1.0, 1.01, 1.57, 3.0, 7.33, 15.0, 30.0];
+
+    private static readonly double[] Stalenesses =
+        [0.1, 0.5, 1.0, 1.637, 2.0, 2.046, 3.9, 4.0, 12.0, 12.2, 15.0, 29.0, 31.0];
+
     public static TheoryData<double, double> Grid()
     {
         var data = new TheoryData<double, double>();
-        foreach (var rate in new[] { 0.05, 0.5, 0.99, 1.0, 1.01, 3.0, 7.33, 15.0, 30.0 })
+        foreach (var rate in Rates)
         {
-            foreach (var days in new[] { 0.1, 0.5, 1.0, 1.637, 2.0, 2.046, 4.0, 12.0, 15.0, 29.0, 31.0 })
+            foreach (var days in Stalenesses)
             {
                 data.Add(rate, days);
             }
@@ -73,6 +79,46 @@ public class BurnWindowQueryAgreementTests
         Assert.True(
             pool == scored,
             $"rate {rate}/day at {days}d: pool says {pool}, scorer says {scored}");
+    }
+
+    /// <summary>
+    /// Membership agreement is not enough. The pool's window is bounded at
+    /// TierTake, so under a backlog the tier is served in the order the query
+    /// returns — and re-ranked by the scorer once it arrives. If the two orders
+    /// disagree, the scorer keeps picking whichever end it prefers while the
+    /// query keeps handing back the same unserved cards at the other end, and
+    /// they burn. That is exactly how Kecleon #88 lost rows on 2026-08-11: the
+    /// query ranked it 8th by rows burned, the scorer ranked it below 172 cards
+    /// that had waited longer but burned less, and it sat for seventeen hours.
+    /// </summary>
+    [Fact]
+    public void The_pool_query_hands_back_burn_due_cards_in_the_order_the_scorer_picks_them()
+    {
+        var cards = Rates
+            .SelectMany(_ => Stalenesses, (rate, days) => (rate, days))
+            .Select((pair, i) => Card(i + 1, pair.rate, pair.days))
+            .ToList();
+
+        var poolOrder = VisitCandidatePool
+            .DueByBurnWindow(cards.AsQueryable(), Now, Options)
+            .Select(c => c.Id)
+            .ToList();
+
+        var scorerOrder = poolOrder
+            .Select(id => cards.Single(c => c.Id == id))
+            .OrderByDescending(c => VisitPriority.Score(
+                new CardVisitState
+                {
+                    LastVisitedAt = c.LastVisitedAt,
+                    ObservedSalesPerDay = c.ObservedSalesPerDay,
+                },
+                Now,
+                Options))
+            .Select(c => c.Id)
+            .ToList();
+
+        Assert.NotEmpty(poolOrder);
+        Assert.Equal(poolOrder, scorerOrder);
     }
 
     [Fact]
