@@ -7,15 +7,15 @@ namespace PokemonInvestBatch.Infrastructure.Persistence;
 /// <summary>
 /// The site's changelog, kept by us because the site does not publish one.
 ///
-/// Every card page is fingerprinted down to its structure, and a fingerprint
-/// never seen before is archived — HTML and all — because by the time anyone
-/// investigates, the live page has usually moved on, so the sample is the only
-/// evidence of what the parser actually saw.
+/// Every card page is fingerprinted, and a fingerprint never seen before is
+/// archived — HTML and all — because by the time anyone investigates, the live
+/// page has usually moved on, so the sample is the only evidence of what the
+/// parser actually saw.
 ///
 /// Archiving is not alerting. A fingerprint counts how much data a card carries as
 /// well as how the page is built, so an obscure promo with one price tier and
-/// no census is structurally novel and perfectly healthy; alerting on every
-/// such card buried the channel under ten Criticals in half an hour on
+/// no census is a combination never seen and a card in perfect health; alerting
+/// on every such card buried the channel under ten Criticals in half an hour on
 /// 2026-08-07. Only an unfamiliar <em>name</em> is the site moving, and only
 /// that raises an alert — once, no matter how many pages carry it, because a
 /// markup change lands on every card at once and a thousand identical emails
@@ -31,30 +31,30 @@ public sealed class PageFingerprintArchive(
     public async Task<string> RecordAsync(
         PokemonDbContext db, string cardUrl, string html, DateTimeOffset now, CancellationToken ct)
     {
-        var print = PageFingerprint.OfCardDetailPage(html);
-        var known = await db.Fingerprints.FindAsync([print.Hash], ct);
+        var fingerprint = PageFingerprint.OfCardDetailPage(html);
+        var known = await db.Fingerprints.FindAsync([fingerprint.Hash], ct);
         if (known is not null)
         {
             known.LastSeenAt = now;
-            return print.Hash;
+            return fingerprint.Hash;
         }
 
         // Read the vocabulary before this fingerprint joins it, or every name it
         // brings is its own precedent and nothing is ever unfamiliar.
-        var vocabulary = await db.Fingerprints.Select(s => s.Names).ToListAsync(ct);
-        var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(print.Names, vocabulary);
+        var vocabulary = await db.Fingerprints.Select(f => f.Names).ToListAsync(ct);
+        var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(fingerprint.Names, vocabulary);
 
         db.Fingerprints.Add(new KnownFingerprint
         {
-            Hash = print.Hash,
-            Names = print.Names,
+            Hash = fingerprint.Hash,
+            Names = fingerprint.Names,
             SampleUrl = cardUrl,
             FirstSeenAt = now,
             LastSeenAt = now,
         });
 
         Directory.CreateDirectory(archiveDirectory);
-        var archivePath = Path.Combine(archiveDirectory, $"{print.Hash}.html");
+        var archivePath = Path.Combine(archiveDirectory, $"{fingerprint.Hash}.html");
         await File.WriteAllTextAsync(archivePath, html, ct);
 
         // An empty archive has nothing to be unfamiliar against: on a first
@@ -62,7 +62,7 @@ public sealed class PageFingerprintArchive(
         // rather than news.
         if (vocabulary.Count == 0 || unfamiliar.Count == 0)
         {
-            return print.Hash;
+            return fingerprint.Hash;
         }
 
         // Keyed on the names, not the hash: one new tier reaches us through
@@ -73,10 +73,10 @@ public sealed class PageFingerprintArchive(
                 "New page element observed",
                 $"Card detail pages carry a name we have never seen.\nSample: {cardUrl}\n"
                 + $"New: {string.Join(", ", unfamiliar)}\n"
-                + $"Names: {print.Names}\nArchived: {archivePath}",
+                + $"Names: {fingerprint.Names}\nArchived: {archivePath}",
                 ct);
         }
 
-        return print.Hash;
+        return fingerprint.Hash;
     }
 }

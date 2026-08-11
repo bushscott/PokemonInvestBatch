@@ -82,10 +82,10 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
 
         modelBuilder.Entity<KnownFingerprint>(fingerprint =>
         {
-            fingerprint.HasKey(s => s.Hash);
-            fingerprint.Property(s => s.Hash).HasMaxLength(64);
-            fingerprint.Property(s => s.SampleUrl).HasMaxLength(500);
-            fingerprint.Property(s => s.Names).HasColumnType("jsonb");
+            fingerprint.HasKey(f => f.Hash);
+            fingerprint.Property(f => f.Hash).HasMaxLength(64);
+            fingerprint.Property(f => f.SampleUrl).HasMaxLength(500);
+            fingerprint.Property(f => f.Names).HasColumnType("jsonb");
         });
 
         modelBuilder.Entity<ParseFailure>(failure =>
