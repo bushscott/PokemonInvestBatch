@@ -5,3 +5,11 @@ if git diff --cached --name-only | grep -q 'appsettings\.Production\.json$'; the
     echo "It belongs on the Pi only. See appsettings.Production.example.json." >&2
     exit 1
 fi
+
+# DATA_MODEL.md is gitignored, so no diff, no review and no CI will ever show it
+# drifting from the tracked vocabulary. A hook is the only thing that can see it.
+if git diff --cached --name-only | grep -q '^GLOSSARY\.md$'; then
+    echo "NOTE: GLOSSARY.md is changing. DATA_MODEL.md is untracked — check it agrees." >&2
+fi
+
+exit 0
