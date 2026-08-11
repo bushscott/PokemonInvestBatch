@@ -75,9 +75,44 @@ public abstract class DatabaseTest : IAsyncLifetime
         NpgsqlConnection.ClearAllPools();
         await using var admin = new NpgsqlConnection(Maintenance());
         await admin.OpenAsync();
-        await using var drop = new NpgsqlCommand(
-            $"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", admin);
-        await drop.ExecuteNonQueryAsync();
+
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            // Plain DROP asks only that our own connections be gone, which
+            // ClearAllPools just arranged. WITH (FORCE) terminates a straggler
+            // instead, and is the one PostgreSQL can refuse — 42501 when a
+            // backend belongs to a role we are not a member of, which two
+            // suites running side by side can produce. So it is the fallback,
+            // not what we lead with: teardown of a scratch database must never
+            // be the reason a passing test reports failure.
+            if (await TryDropAsync(admin, force: false) || await TryDropAsync(admin, force: true))
+            {
+                return;
+            }
+
+            NpgsqlConnection.ClearAllPools();
+            await Task.Delay(TimeSpan.FromMilliseconds(200 * attempt));
+        }
+
+        // Out of tries. Leave it: the name is a GUID, so the orphan is inert
+        // and `DROP DATABASE` over `pokemon_test_%` sweeps it up later — the
+        // same bargain this class already makes for a crashed run.
+    }
+
+    private async Task<bool> TryDropAsync(NpgsqlConnection admin, bool force)
+    {
+        try
+        {
+            await using var drop = new NpgsqlCommand(
+                $"DROP DATABASE IF EXISTS \"{_databaseName}\"{(force ? " WITH (FORCE)" : "")}", admin);
+            await drop.ExecuteNonQueryAsync();
+            return true;
+        }
+        catch (PostgresException e) when (
+            e.SqlState is PostgresErrorCodes.InsufficientPrivilege or PostgresErrorCodes.ObjectInUse)
+        {
+            return false;
+        }
     }
 
     protected PokemonDbContext NewContext() => new(ContextOptions());
