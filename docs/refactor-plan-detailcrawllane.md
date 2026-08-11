@@ -1,11 +1,16 @@
 # Refactor plan: splitting `DetailCrawlLane` (534 lines)
 
-**Status: PROPOSAL — nothing implemented yet.**
+**Status: DONE — implemented 2026-08-06. The cost is recorded under "Outcome" below.**
 
-> **Written 2026-08-06, kept as written.** On 2026-08-07 this concept was renamed: what
-> these pages call a page's *shape* is a **fingerprint**, and `PageShapeArchive` shipped as
-> `PageFingerprintArchive`. A dated record that gets retrofitted is no longer a record, so
-> the words below stand; `GLOSSARY.md` has the current ones.
+> **Written 2026-08-06, kept as written.** Two things have moved since, and the pages below
+> do not know about either. On 2026-08-07 this concept was renamed: what these pages call a
+> page's *shape* is a **fingerprint**, and `PageShapeArchive` shipped as
+> `PageFingerprintArchive` — `GLOSSARY.md` has the current words. On 2026-08-09 the lane was
+> split again, moving the visit itself into `CardVisitor`, so the 445 lines reported below
+> are now 240 in `DetailCrawlLane` beside a 398-line `CardVisitor`.
+>
+> A dated record that gets retrofitted is no longer a record, so the numbers and names below
+> stand as written and this note carries the corrections.
 
 This is the most load-bearing file in the system, so the plan is staged, and every stage leaves the
 build green and the behaviour identical.
