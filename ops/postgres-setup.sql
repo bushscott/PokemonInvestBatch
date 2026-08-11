@@ -7,7 +7,7 @@
 -- Owner role: runs migrations, holds DDL. The app NEVER connects as this.
 CREATE ROLE pokemon_owner LOGIN PASSWORD 'CHANGE_ME_OWNER';
 
--- App role: least privilege. SELECT/INSERT only, plus UPDATE on the two
+-- App role: least privilege. SELECT/INSERT only, plus UPDATE on the three
 -- tables that carry mutable state. No DELETE anywhere — the store is
 -- append-only by design, and the role enforces it.
 CREATE ROLE pokemon_app LOGIN PASSWORD 'CHANGE_ME_APP';
@@ -37,8 +37,9 @@ ALTER DEFAULT PRIVILEGES FOR ROLE pokemon_owner IN SCHEMA public
     GRANT USAGE ON SEQUENCES TO pokemon_app;
 
 -- Mutable exceptions, applied after the first migration has created them:
---   cards  — scheduler state (last_visited_at, churn, cap flag), image hash
---   shapes — last_seen_at on re-observed fingerprints
---   sets   — last_seen_at on re-discovery
--- Run AFTER `dotnet ef database update`:
---   GRANT UPDATE ON cards, shapes, sets TO pokemon_app;
+--   cards        — scheduler state (last_visited_at, churn, cap flag), image hash
+--   fingerprints — last_seen_at on re-observation
+--   sets         — last_seen_at on re-discovery
+-- The tables do not exist yet, so the GRANT cannot run from here. It lives in
+-- exactly one place — ops/README.md §4 — because the copy that used to live
+-- here went stale through a table rename and nothing could tell you.

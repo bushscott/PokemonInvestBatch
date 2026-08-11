@@ -68,7 +68,7 @@ POKEMON_DB="Host=<pi-ip>;Database=pokemon;Username=pokemon_owner;Password=..." \
   dotnet ef database update -p src/PokemonInvestBatch.Infrastructure -s src/PokemonInvestBatch.Infrastructure
 ```
 
-Then apply the post-migration grants noted at the bottom of `postgres-setup.sql`:
+Then apply the post-migration grants (the bottom of `postgres-setup.sql` says which tables and why):
 
 ```bash
 sudo -u postgres psql -d pokemon -c "GRANT UPDATE ON cards, fingerprints, sets TO pokemon_app;"
