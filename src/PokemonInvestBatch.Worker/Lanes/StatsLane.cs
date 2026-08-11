@@ -81,10 +81,15 @@ public sealed class StatsLane(
         // Leading indicator of missed sales: selling cards past three
         // quarters of their burn window (the days their sales rate takes to
         // fill a ~30-row bucket and start rolling rows off). The scheduler
-        // fast-tracks every selling card at half its window, so while it
+        // fast-tracks every selling card well before that — at 0.4 of its
+        // window once it sells at least once a day, 0.5 below — so while it
         // keeps up nothing ages this far — any count means scheduling is
         // falling behind, caught with a quarter of the window still left
         // before rows actually roll off unseen.
+        //
+        // This line stays at 0.75 deliberately. It is a warning about the
+        // scheduler falling behind, not a second revisit trigger, so it must
+        // sit after every fraction the scheduler actually acts on.
         metrics.SetCardsAtRisk(
             await VisitCandidatePool.PastBurnFraction(db.Cards, now, AtRiskBurnFraction)
                 .Select(c => c.Name + " " + c.Url)
