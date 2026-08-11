@@ -217,3 +217,125 @@ public class VisitPriorityTests
         Assert.True(older > newer);
     }
 }
+
+/// <summary>
+/// The revisit margin is not one number any more. A card fast enough to roll a
+/// bucket is due earlier in its burn window than a cold one, because the margin
+/// exists to absorb a card getting hotter between visits and only a card that
+/// sells can do that. Spending the same margin on a card selling 0.02/day buys
+/// nothing and costs five times as many visits corpus-wide.
+/// </summary>
+public class TieredBurnMarginTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 10, 12, 0, 0, TimeSpan.Zero);
+
+    private static readonly VisitPriorityOptions Options = new();
+
+    private static double Score(double salesPerDay, double daysSinceVisit) =>
+        VisitPriority.Score(
+            new CardVisitState
+            {
+                LastVisitedAt = Now.AddDays(-daysSinceVisit),
+                ObservedSalesPerDay = salesPerDay,
+            },
+            Now,
+            Options);
+
+    private const double BurnDueTier = 3_000_000;
+
+    [Fact]
+    public void A_hot_card_is_due_at_four_tenths_of_its_burn_window()
+    {
+        // 3/day burns a 30-row bucket in 10 days. Due at 4, not at 3.9.
+        Assert.True(Score(3, 4.0) >= BurnDueTier);
+        Assert.True(Score(3, 3.9) < BurnDueTier);
+    }
+
+    [Fact]
+    public void A_cold_card_keeps_the_original_half_window()
+    {
+        // 0.5/day burns a bucket in 60 days. Still due at 30, not at 29 — the
+        // tighter margin must not leak onto cards that cannot lose rows, or the
+        // corpus-wide visit cost lands without buying any protection.
+        Assert.True(Score(0.5, 30.0) >= BurnDueTier);
+        Assert.True(Score(0.5, 29.0) < BurnDueTier);
+    }
+
+    [Fact]
+    public void The_threshold_itself_earns_the_tighter_margin()
+    {
+        // Exactly at the threshold counts as hot: 1/day burns a bucket in 30
+        // days, so the tighter margin puts it due at 12 rather than 15.
+        Assert.True(Score(1.0, 12.0) >= BurnDueTier);
+
+        // A shade under keeps the old margin and is not yet due at 12.
+        Assert.True(Score(0.99, 12.0) < BurnDueTier);
+    }
+
+    /// <summary>
+    /// Days until the scheduler is due back, given the rate it read off the page.
+    /// </summary>
+    private static double RevisitDue(double observedRate, VisitPriorityOptions options) =>
+        SalesObservation.BucketCap / observedRate * options.SafetyFractionFor(observedRate);
+
+    /// <summary>Days until a bucket actually rolls, at the rate the card really
+    /// went on to sell at — which the page had no way of showing us.</summary>
+    private static double RollsAfter(double trueRate) => SalesObservation.BucketCap / trueRate;
+
+    [Fact]
+    public void The_margin_is_exactly_the_acceleration_it_can_absorb()
+    {
+        // The whole point of the safety fraction, stated as the property it
+        // actually has: revisiting at f of the burn window survives a card
+        // getting up to 1/f times hotter between visits. Everything about
+        // choosing a fraction follows from this one relation.
+        foreach (var (fraction, survives) in new[] { (0.5, 2.0), (0.4, 2.5), (0.33, 1 / 0.33), (0.25, 4.0) })
+        {
+            var options = new VisitPriorityOptions { HotBurnWindowSafetyFraction = fraction };
+            const double observed = 7.33;
+
+            // Just inside the ratio it can absorb: the visit lands first.
+            Assert.True(RevisitDue(observed, options) < RollsAfter(observed * survives * 0.99));
+
+            // Just outside it: the bucket rolls first.
+            Assert.True(RevisitDue(observed, options) > RollsAfter(observed * survives * 1.01));
+        }
+    }
+
+    [Fact]
+    public void The_gardevior_acceleration_is_caught_at_four_tenths_and_missed_at_half()
+    {
+        // The 2026-08-10 loss in its real numbers. Mega Gardevior EX #32 read
+        // 7.33/day off a page whose two most recent days were its quietest, then
+        // ran at ~15/day — a 2.05x acceleration nothing on that page predicted.
+        // Half a burn window absorbs 2.0x, so it missed by about an hour; four
+        // tenths absorbs 2.5x and arrives with roughly nine hours to spare.
+        const double observed = 7.33;
+        const double actual = 15.0;
+        var rolls = RollsAfter(actual);
+
+        var half = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.5 };
+        Assert.True(RevisitDue(observed, half) > rolls);
+
+        Assert.True(RevisitDue(observed, Options) < rolls);
+
+        // Nine hours is thin but real. Naming it here means a future change to
+        // the fraction has to confront how much margin it is spending.
+        var spareHours = (rolls - RevisitDue(observed, Options)) * 24;
+        Assert.InRange(spareHours, 8.0, 10.0);
+    }
+
+    [Fact]
+    public void The_fraction_is_a_knob_and_turning_it_down_pulls_the_visit_in()
+    {
+        // Turning HotBurnWindowSafetyFraction down is the agreed response to
+        // another acceleration-shaped loss, so it has to actually move the line.
+        var tighter = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.25 };
+
+        Assert.Equal(0.25, tighter.SafetyFractionFor(3));
+        Assert.Equal(0.4, Options.SafetyFractionFor(3));
+
+        // Unchanged for cards below the threshold, whichever way the knob goes.
+        Assert.Equal(0.5, tighter.SafetyFractionFor(0.5));
+    }
+}

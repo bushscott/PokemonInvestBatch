@@ -24,6 +24,7 @@ public sealed class CrawlMetrics : IDisposable
     private readonly Counter<long> _notACard;
     private readonly Counter<long> _refreshRequests;
     private readonly Counter<long> _expressVisits;
+    private readonly Counter<long> _bucketNearMiss;
     private readonly Histogram<double> _visitDuration;
     private readonly Histogram<double> _refreshWait;
     private readonly Histogram<double> _expressVisitDuration;
@@ -67,6 +68,7 @@ public sealed class CrawlMetrics : IDisposable
         _notACard = Meter.CreateCounter<long>("crawl.not_a_card", description: "Pages retired because they are not cards — consoles, games, accessories — by set");
         _refreshRequests = Meter.CreateCounter<long>("crawl.refresh_requests", description: "Refresh requests accepted from the intake API");
         _expressVisits = Meter.CreateCounter<long>("crawl.express_visits", description: "Express visits run for the intake API, by outcome — a facet of cards_visited/requests, not a disjoint series");
+        _bucketNearMiss = Meter.CreateCounter<long>("crawl.bucket_near_miss", description: "Visits that found a sale bucket almost entirely turned over, by grade — the warning cards_at_cap cannot give, because that one only fires once the rows are already gone");
         _visitDuration = Meter.CreateHistogram<double>("crawl.visit_duration_seconds", unit: "s", description: "Card visit wall time, fetch through commit");
         _refreshWait = Meter.CreateHistogram<double>("crawl.refresh_wait_seconds", unit: "s", description: "Refresh request filed → served by a successful visit");
         _expressVisitDuration = Meter.CreateHistogram<double>("crawl.express_visit_duration_seconds", unit: "s", description: "Express visit wall time, fetch through commit — same boundary as visit_duration");
@@ -175,6 +177,12 @@ public sealed class CrawlMetrics : IDisposable
     /// whole set is miscatalogued, and the set is what you act on.</summary>
     public void RecordNotACard(string set) =>
         _notACard.Add(1, new KeyValuePair<string, object?>("set", set));
+
+    /// <summary>Tagged by grade rather than by card: which bucket runs hot is
+    /// the actionable pattern — every loss found so far has been PSA 10 — and a
+    /// per-card tag would be unbounded cardinality.</summary>
+    public void RecordBucketNearMiss(string gradeTier) =>
+        _bucketNearMiss.Add(1, new KeyValuePair<string, object?>("grade", gradeTier));
 
     public void RecordRefreshRequested() => _refreshRequests.Add(1);
 

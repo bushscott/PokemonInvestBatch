@@ -37,6 +37,26 @@ public sealed record SalesObservation
 
     public bool AnyBucketAtCap => CappedTier is not null;
 
+    /// <summary>
+    /// Rows the tightest bucket still had in common with our records — how much
+    /// slack there was between keeping up and losing data. Zero means it rolled,
+    /// which is the same event <see cref="CappedTier"/> reports; a small positive
+    /// number is a near miss, the graduated warning that a cap-hit alone cannot
+    /// give because it only fires once the rows are already gone.
+    ///
+    /// Null when no bucket had prior holdings to overlap with. A first visit
+    /// cannot near-miss: everything on the page is new because we held nothing,
+    /// which says nothing about how fast the bucket fills.
+    ///
+    /// Like <see cref="SalesOverlap"/> this needs no bucket size — it counts what
+    /// the page and our records shared — so it is honest for the Ungraded bucket
+    /// whose size varies.
+    /// </summary>
+    public int? NarrowestMargin { get; init; }
+
+    /// <summary>The bucket <see cref="NarrowestMargin"/> describes.</summary>
+    public string? NarrowestTier { get; init; }
+
     /// <summary>The hottest grade bucket's fill rate, sales/day — the pace the
     /// scheduler must beat to see every row before it scrolls off.</summary>
     public required double SalesPerDay { get; init; }
@@ -59,6 +79,20 @@ public sealed record SalesObservation
                 && overlap.NewlyWritten(bucket.Key) >= DistinctRows(bucket))
             ?.Key;
 
+        // The same overlap arithmetic the cap test uses, kept as a number
+        // instead of collapsed to a yes/no: rows the page still shared with us.
+        // Only buckets we held something in can answer — see NarrowestMargin.
+        var narrowest = sales
+            .GroupBy(s => s.GradeTier)
+            .Where(bucket => overlap.HeldBefore(bucket.Key) > 0)
+            .Select(bucket => new
+            {
+                Tier = bucket.Key,
+                Margin = DistinctRows(bucket) - overlap.NewlyWritten(bucket.Key),
+            })
+            .OrderBy(b => b.Margin)
+            .FirstOrDefault();
+
         var today = DateOnly.FromDateTime(now.UtcDateTime);
         var windowStart = today.AddDays(-ChurnWindowDays);
         var salesPerDay = sales
@@ -71,6 +105,8 @@ public sealed record SalesObservation
         return new SalesObservation
         {
             CappedTier = cappedTier,
+            NarrowestMargin = narrowest?.Margin,
+            NarrowestTier = narrowest?.Tier,
             SalesPerDay = salesPerDay,
         };
     }

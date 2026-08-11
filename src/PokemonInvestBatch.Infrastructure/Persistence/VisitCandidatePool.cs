@@ -127,15 +127,25 @@ public static class VisitCandidatePool
     /// VisitPriority's burn-window condition — staleness × sales rate has
     /// consumed the safety fraction of the bucket — translated to SQL, most
     /// overdue first. Must stay the same inequality as VisitPriority.Score.
+    ///
+    /// The fraction is per-card now (cards fast enough to roll a bucket get a
+    /// tighter one), and it depends on a column, so the ternary is spelled out
+    /// here as a CASE rather than calling VisitPriority.SafetyFractionFor —
+    /// EF cannot translate a method over entity data. That duplication is
+    /// exactly what BurnWindowQueryAgreementTests exists to catch — if this
+    /// drifts looser than the scorer, hot cards stop reaching the candidate
+    /// pool at all and the guarantee fails with Score's own tests still green.
     /// </summary>
     public static IQueryable<Card> DueByBurnWindow(
         IQueryable<Card> eligible, DateTimeOffset now, VisitPriorityOptions options)
     {
-        var dueThreshold = SalesObservation.BucketCap * options.BurnWindowSafetyFraction;
+        var cap = SalesObservation.BucketCap;
         return eligible
             .Where(c => c.LastVisitedAt != null && c.ObservedSalesPerDay > 0)
             .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
-                        >= dueThreshold)
+                        >= cap * (c.ObservedSalesPerDay!.Value >= options.HotRateThreshold
+                            ? options.HotBurnWindowSafetyFraction
+                            : options.BurnWindowSafetyFraction))
             .OrderByDescending(c => (now - c.LastVisitedAt!.Value).TotalDays
                                     * c.ObservedSalesPerDay!.Value)
             .Take(TierTake);

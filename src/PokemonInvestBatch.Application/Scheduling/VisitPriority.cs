@@ -22,6 +22,38 @@ public sealed record VisitPriorityOptions
     /// burn window (the days its sales rate takes to fill a bucket and
     /// start rolling rows off). Half leaves margin for throttled days.</summary>
     public double BurnWindowSafetyFraction { get; init; } = 0.5;
+
+    /// <summary>
+    /// The tighter margin for cards fast enough to actually roll a bucket.
+    ///
+    /// The safety fraction is a standing bet on how much a card's rate may rise
+    /// between two visits: revisiting at fraction f absorbs an acceleration of
+    /// up to 1/f, so 0.5 absorbs a doubling and 0.4 absorbs two and a half.
+    ///
+    /// The 0.5 bet was lost on 2026-08-10 by Mega Gardevior EX #32, which read
+    /// 7.33/day off a page whose two most recent days were its slowest, then ran
+    /// at ~15/day — 2.05x, a hair past what 0.5 covers — and rolled its PSA 10
+    /// bucket about an hour before the scheduled revisit. Nothing on that page
+    /// predicted the acceleration, so the answer is margin rather than a better
+    /// estimator.
+    ///
+    /// It is spent only on cards above <see cref="HotRateThreshold"/> because a
+    /// cold card cannot roll a bucket however long it waits — tightening
+    /// everywhere costs five times as much and buys nothing extra.
+    /// </summary>
+    public double HotBurnWindowSafetyFraction { get; init; } = 0.4;
+
+    /// <summary>Sales/day at which a card earns the tighter margin. At one a
+    /// day a 30-row bucket takes a month to roll, so this is comfortably below
+    /// the rate where loss becomes possible.</summary>
+    public double HotRateThreshold { get; init; } = 1.0;
+
+    /// <summary>The revisit margin this card has earned: tighter once it sells
+    /// fast enough to lose rows. Must stay the single definition — the SQL in
+    /// <c>VisitCandidatePool.DueByBurnWindow</c> mirrors this inequality and
+    /// the two silently diverge if it is spelled out twice.</summary>
+    public double SafetyFractionFor(double salesPerDay) =>
+        salesPerDay >= HotRateThreshold ? HotBurnWindowSafetyFraction : BurnWindowSafetyFraction;
 }
 
 /// <summary>
@@ -61,7 +93,7 @@ public static class VisitPriority
         if (state.ObservedSalesPerDay is { } salesPerDay && salesPerDay > 0)
         {
             var burnWindowDays = SalesObservation.BucketCap / salesPerDay;
-            if (stalenessDays >= burnWindowDays * options.BurnWindowSafetyFraction)
+            if (stalenessDays >= burnWindowDays * options.SafetyFractionFor(salesPerDay))
             {
                 // Checked before the ask so a burn-due card keeps its burn
                 // rank: an ask must never demote the card it points at.

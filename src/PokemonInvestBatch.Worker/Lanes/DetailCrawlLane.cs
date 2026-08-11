@@ -31,7 +31,14 @@ public sealed class DetailCrawlLane(
     CrawlMetrics metrics,
     ILogger<DetailCrawlLane> logger) : BackgroundService
 {
-    private static readonly VisitPriorityOptions PriorityOptions = new();
+    // Built from configuration, not defaults: the burn-window margin is the
+    // knob we turn down when a card outruns the crawl, and it should not take
+    // a rebuild to turn it.
+    private readonly VisitPriorityOptions priorityOptions = new()
+    {
+        HotBurnWindowSafetyFraction = options.Value.HotBurnWindowSafetyFraction,
+        HotRateThreshold = options.Value.HotRateThreshold,
+    };
 
     private readonly SameCardFailureBreaker breaker = new();
 
@@ -200,14 +207,14 @@ public sealed class DetailCrawlLane(
         IReadOnlyList<VisitCandidate> candidates = [];
         if (benchRetryId is null)
         {
-            candidates = await VisitCandidatePool.LoadAsync(db, now, PriorityOptions, ct);
+            candidates = await VisitCandidatePool.LoadAsync(db, now, priorityOptions, ct);
             if (candidates.Count > 0 && candidates[0].State.LastVisitedAt is { } oldest)
             {
                 metrics.SetQueueStaleness(now - oldest);
             }
         }
 
-        var choice = VisitSelection.Choose(benchRetryId, candidates, now, PriorityOptions);
+        var choice = VisitSelection.Choose(benchRetryId, candidates, now, priorityOptions);
         switch (choice.Kind)
         {
             case VisitChoiceKind.RetryBenched:

@@ -206,6 +206,27 @@ public sealed class CardVisitor(
                 ct);
         }
 
+        // The graduated warning. A cap hit only speaks once the rows are gone,
+        // so a bucket that came back with a handful of rows still in common is
+        // the last chance to hear about it in advance. Margin zero is the loss
+        // itself and is reported above, not here.
+        //
+        // Observed-only for now: it names the card and feeds a counter, but does
+        // not enqueue anything. The volume estimate behind NearMissMargin was
+        // measured on graded buckets alone — Ungraded page size is not knowable
+        // from stored history — so the real rate gets watched before it is
+        // allowed to spend visits.
+        if (written.Observation is { NarrowestMargin: { } margin, NarrowestTier: { } narrowTier }
+            && margin > 0
+            && margin <= options.Value.NearMissMargin)
+        {
+            metrics.RecordBucketNearMiss(narrowTier);
+            logger.LogWarning(
+                "Near miss on card {CardId} ({Name}): its {Tier} page came back with only "
+                + "{Margin} row(s) we already held — one quieter day and it would have rolled",
+                card.Id, card.Name, narrowTier, margin);
+        }
+
         if (written.NewlyAtCap)
         {
             await FastTrackSetSiblingsAsync(db, card, now, ct);

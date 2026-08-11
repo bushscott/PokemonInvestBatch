@@ -254,3 +254,113 @@ public class SalesObservationTests
         Assert.Equal(0, rates[^1]);
     }
 }
+
+/// <summary>
+/// The near-miss margin: how many rows the page still had in common with us,
+/// kept as a number instead of collapsed to the at-cap yes/no. A cap hit can
+/// only speak once rows are gone; this is the same arithmetic read early enough
+/// to be a warning. Like SalesOverlap it never needs a bucket size, so it stays
+/// honest for the Ungraded bucket whose size varies.
+/// </summary>
+public class NearMissMarginTests
+{
+    private static readonly DateTimeOffset Now = new(2026, 8, 10, 12, 0, 0, TimeSpan.Zero);
+
+    private static SaleRecord Sale(string tier, int daysAgo, string id) => new()
+    {
+        Source = "ebay",
+        SourceId = id,
+        SoldOn = DateOnly.FromDateTime(Now.UtcDateTime).AddDays(-daysAgo),
+        GradeTier = tier,
+        PriceCents = 100,
+        Title = "x",
+    };
+
+    private static List<SaleRecord> Page(string tier, int rows) =>
+        [.. Enumerable.Range(0, rows).Select(i => Sale(tier, i % 5, $"{tier}-{i}"))];
+
+    [Fact]
+    public void A_page_that_barely_reached_back_reports_its_slack()
+    {
+        // 30 rows came back, 28 of them new: two rows of overlap were all that
+        // stood between keeping up and losing data.
+        var observation = SalesObservation.From(
+            Page("PSA 10", 30),
+            new SalesOverlap(
+                new Dictionary<string, int> { ["PSA 10"] = 40 },
+                new Dictionary<string, int> { ["PSA 10"] = 28 }),
+            Now);
+
+        Assert.Equal(2, observation.NarrowestMargin);
+        Assert.Equal("PSA 10", observation.NarrowestTier);
+        Assert.Null(observation.CappedTier);
+    }
+
+    [Fact]
+    public void A_first_visit_cannot_near_miss()
+    {
+        // Everything on the page is new because we held nothing, which says
+        // nothing about how fast the bucket fills. Reporting zero slack here
+        // would make every card's first visit look like an emergency — and the
+        // first visit is most cards' only visit.
+        var observation = SalesObservation.From(
+            Page("PSA 10", 30),
+            new SalesOverlap(new Dictionary<string, int>(), new Dictionary<string, int> { ["PSA 10"] = 30 }),
+            Now);
+
+        Assert.Null(observation.NarrowestMargin);
+        Assert.Null(observation.NarrowestTier);
+        Assert.Null(observation.CappedTier);
+    }
+
+    [Fact]
+    public void Zero_slack_is_the_cap_hit_itself()
+    {
+        // The two signals must agree at the boundary: no overlap left is not a
+        // near miss but the loss, and CardVisitor reports it as such.
+        var observation = SalesObservation.From(
+            Page("PSA 10", 30),
+            new SalesOverlap(
+                new Dictionary<string, int> { ["PSA 10"] = 40 },
+                new Dictionary<string, int> { ["PSA 10"] = 30 }),
+            Now);
+
+        Assert.Equal(0, observation.NarrowestMargin);
+        Assert.Equal("PSA 10", observation.CappedTier);
+    }
+
+    [Fact]
+    public void The_tightest_bucket_is_the_one_reported()
+    {
+        // A card is only as safe as its fastest-filling grade, so the margin
+        // names the bucket with the least slack, not the card-wide average.
+        List<SaleRecord> page = [.. Page("PSA 10", 30), .. Page("Ungraded", 50)];
+        var observation = SalesObservation.From(
+            page,
+            new SalesOverlap(
+                new Dictionary<string, int> { ["PSA 10"] = 40, ["Ungraded"] = 90 },
+                new Dictionary<string, int> { ["PSA 10"] = 29, ["Ungraded"] = 20 }),
+            Now);
+
+        Assert.Equal(1, observation.NarrowestMargin);
+        Assert.Equal("PSA 10", observation.NarrowestTier);
+    }
+
+    [Fact]
+    public void The_margin_needs_no_bucket_size_so_ungraded_is_measurable_too()
+    {
+        // The reverted UngradedBucketCap idea failed because the Ungraded table
+        // renders 30, 50 or 60 rows depending on the page. Counting shared rows
+        // sidesteps the question entirely: a 50-row Ungraded page with 3 rows of
+        // overlap is a near miss whatever the table's true size.
+        var observation = SalesObservation.From(
+            Page("Ungraded", 50),
+            new SalesOverlap(
+                new Dictionary<string, int> { ["Ungraded"] = 120 },
+                new Dictionary<string, int> { ["Ungraded"] = 47 }),
+            Now);
+
+        Assert.Equal(3, observation.NarrowestMargin);
+        Assert.Equal("Ungraded", observation.NarrowestTier);
+    }
+}

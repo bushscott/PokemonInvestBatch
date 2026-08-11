@@ -31,8 +31,10 @@ public class EstimatorSchedulingStressTests
     /// the burn inequality trips (or at the 30-day floor), and assert at every
     /// visit that no grade out-sold a bucket since the visit before.
     /// </summary>
-    private static Replay Crawl(Dictionary<string, int[]> dailySalesByGrade, int firstVisitDay)
+    private static Replay Crawl(
+        Dictionary<string, int[]> dailySalesByGrade, int firstVisitDay, VisitPriorityOptions? options = null)
     {
+        var opts = options ?? Options;
         var horizon = dailySalesByGrade.Values.Max(days => days.Length);
         var visitDays = new List<int> { firstVisitDay };
         var intervals = new List<int>();
@@ -42,8 +44,8 @@ public class EstimatorSchedulingStressTests
         for (var day = firstVisitDay + 1; day < horizon; day++)
         {
             var staleness = day - lastVisit;
-            var due = rate > 0 && staleness * rate >= Options.BurnWindowSafetyFraction * SalesObservation.BucketCap;
-            if (!due && staleness < Options.MaxDaysBetweenVisits)
+            var due = rate > 0 && staleness * rate >= opts.SafetyFractionFor(rate) * SalesObservation.BucketCap;
+            if (!due && staleness < opts.MaxDaysBetweenVisits)
             {
                 continue;
             }
@@ -117,6 +119,12 @@ public class EstimatorSchedulingStressTests
 
         Assert.True(replay.VisitDays.Count > 5);
     }
+
+    // The acceleration case deliberately lives in TieredBurnMarginTests instead
+    // of here: this replay steps a whole day at a time, and the margin the
+    // safety fraction buys is a fraction of one day. Rounding a 1.64-day revisit
+    // up to 2 decides the outcome by itself, so a replay would report the
+    // model's resolution rather than the scheduler's behaviour.
 
     [Fact]
     public void After_the_peak_the_visit_intervals_only_lengthen()

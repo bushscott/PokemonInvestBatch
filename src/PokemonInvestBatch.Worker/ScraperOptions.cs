@@ -67,13 +67,29 @@ public sealed record ScraperOptions
     /// <summary>Port the intake API (refresh requests + express visits) listens on.</summary>
     public int IntakePort { get; init; } = 5155;
 
-    /// <summary>Floor between consecutive express fetches — the express path's
-    /// own spacing, since it deliberately skips the polite gate. Matches the
-    /// AIMD floor.</summary>
-    public int ExpressSpacingSeconds { get; init; } = 10;
+    /// <summary>
+    /// How much of its burn window a card may spend before a revisit is due —
+    /// the knob to turn down if a card loses sales to acceleration again.
+    ///
+    /// It buys exactly one thing: revisiting at fraction f survives a card
+    /// getting up to 1/f times hotter between visits. So 0.5 absorbs a
+    /// doubling, 0.4 absorbs 2.5x, 0.33 absorbs 3x, 0.25 absorbs 4x. Mega
+    /// Gardevior EX #32 accelerated 2.05x on 2026-08-10 and beat 0.5 by about
+    /// an hour; 0.4 would have arrived nine hours early.
+    ///
+    /// Lower costs visits. Measured against live rates: 0.4 → ~1,597/day,
+    /// 0.33 → ~1,749, 0.25 → ~2,026, against a ~8,470/day polite-crawl ceiling
+    /// of which the 30-day floor already claims ~3,051.
+    /// </summary>
+    public double HotBurnWindowSafetyFraction { get; init; } = 0.4;
 
-    /// <summary>How long an express visit may run — waits included — before
-    /// the caller gets a 504. The ask is not lost on timeout; the visit
-    /// finishes on its own and the card's history lands regardless.</summary>
-    public int ExpressTimeoutSeconds { get; init; } = 120;
+    /// <summary>Sales/day at which a card earns the tighter margin above.</summary>
+    public double HotRateThreshold { get; init; } = 1.0;
+
+    /// <summary>Rows of overlap at or below which a bucket counts as a near
+    /// miss — the page came back almost entirely new, so one more day of
+    /// silence would have rolled it. Zero overlap is not a near miss but an
+    /// actual loss, which <see cref="PokemonInvestBatch.Application.Scheduling.SalesObservation"/>
+    /// reports separately as a capped tier.</summary>
+    public int NearMissMargin { get; init; } = 8;
 }

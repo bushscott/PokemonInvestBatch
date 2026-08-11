@@ -1149,6 +1149,37 @@
               }
             ]
           }
+        },
+        {
+          "title": "Buckets that nearly rolled (early warning)",
+          "layout": {
+            "column": 11,
+            "row": 13,
+            "width": 2,
+            "height": 3
+          },
+          "visualization": {
+            "id": "viz.billboard"
+          },
+          "rawConfiguration": {
+            "nrqlQueries": [
+              {
+                "accountIds": [
+                  6565679
+                ],
+                "query": "SELECT sum(`crawl.bucket_near_miss`) AS 'near misses (24h)' FROM Metric SINCE 24 hours ago"
+              }
+            ],
+            "thresholds": [
+              {
+                "alertSeverity": "WARNING",
+                "value": 0.5
+              }
+            ],
+            "platformOptions": {
+              "ignoreTimeRange": true
+            }
+          }
         }
       ]
     }
