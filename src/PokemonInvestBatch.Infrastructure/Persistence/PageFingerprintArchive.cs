@@ -26,32 +26,34 @@ public sealed class PageFingerprintArchive(
     IAlerter alerter,
     string archiveDirectory)
 {
-    /// <summary>Records the page's fingerprint and returns its hash. The caller
-    /// saves — the row rides the same transaction as the visit it describes.</summary>
+    /// <summary>Records the page's fingerprint and returns its hash. The row
+    /// commits on its own, immediately, outside whatever transaction the caller
+    /// is building: it records that we <em>saw</em> this page shape, which is
+    /// true whether or not the visit that saw it goes on to commit — the same
+    /// footing the archived HTML has always stood on.</summary>
     public async Task<string> RecordAsync(
         PokemonDbContext db, string cardUrl, string html, DateTimeOffset now, CancellationToken ct)
     {
         var fingerprint = PageFingerprint.OfCardDetailPage(html);
+
+        // Read the vocabulary before this fingerprint joins it, or every name it
+        // brings is its own precedent and nothing is ever unfamiliar. Only worth
+        // reading when the hash looks new; the upsert below has the final say.
         var known = await db.Fingerprints.FindAsync([fingerprint.Hash], ct);
-        if (known is not null)
+        var vocabulary = known is null
+            ? await db.Fingerprints.Select(f => f.Names).ToListAsync(ct)
+            : [];
+
+        if (!await ClaimAsync(db, fingerprint, cardUrl, now, ct))
         {
-            known.LastSeenAt = now;
+            // Someone else recorded this shape between our read and our write —
+            // the lane and an express visit, or two express visits. Theirs is
+            // the archive copy and theirs is the alert; ours would be a
+            // duplicate of both.
             return fingerprint.Hash;
         }
 
-        // Read the vocabulary before this fingerprint joins it, or every name it
-        // brings is its own precedent and nothing is ever unfamiliar.
-        var vocabulary = await db.Fingerprints.Select(f => f.Names).ToListAsync(ct);
         var unfamiliar = FingerprintVocabulary.NamesAbsentFrom(fingerprint.Names, vocabulary);
-
-        db.Fingerprints.Add(new KnownFingerprint
-        {
-            Hash = fingerprint.Hash,
-            Names = fingerprint.Names,
-            SampleUrl = cardUrl,
-            FirstSeenAt = now,
-            LastSeenAt = now,
-        });
 
         Directory.CreateDirectory(archiveDirectory);
         var archivePath = Path.Combine(archiveDirectory, $"{fingerprint.Hash}.html");
@@ -78,5 +80,33 @@ public sealed class PageFingerprintArchive(
         }
 
         return fingerprint.Hash;
+    }
+
+    /// <summary>
+    /// Writes the row and answers "was it mine to write?" in one statement, so
+    /// two visits meeting the same new shape at the same moment both succeed and
+    /// exactly one of them archives it. The second raw-SQL path in the codebase,
+    /// alongside <see cref="SaleWriter"/>, and for the same reason: dedup only
+    /// the database can do without a race.
+    ///
+    /// <c>xmax = 0</c> is Postgres for "this row came from my INSERT rather than
+    /// the conflicting UPDATE". The CTE keeps a plain SELECT at the top level,
+    /// which is what EF can execute; <c>AS "Value"</c> is the column name it
+    /// requires of a scalar query.
+    /// </summary>
+    private static async Task<bool> ClaimAsync(
+        PokemonDbContext db, PageFingerprint fingerprint, string cardUrl, DateTimeOffset now, CancellationToken ct)
+    {
+        var claimed = await db.Database.SqlQuery<bool>($"""
+            WITH upsert AS (
+                INSERT INTO fingerprints (hash, names, sample_url, first_seen_at, last_seen_at)
+                VALUES ({fingerprint.Hash}, {fingerprint.Names}::jsonb, {cardUrl}, {now}, {now})
+                ON CONFLICT (hash) DO UPDATE SET last_seen_at = {now}
+                RETURNING xmax = 0 AS inserted
+            )
+            SELECT inserted AS "Value" FROM upsert
+            """).ToListAsync(ct);
+
+        return claimed.Single();
     }
 }

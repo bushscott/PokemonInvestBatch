@@ -4,11 +4,13 @@ using PokemonInvestBatch.Domain.Parsing;
 namespace PokemonInvestBatch.Infrastructure.Persistence;
 
 /// <summary>
-/// The one deliberate raw-SQL path in the codebase (everything else is LINQ):
-/// a single constant statement inserting a page's sales with dedup at the
-/// database. Every value arrives as a typed array parameter via interpolation
-/// — the SQL text itself never contains data, so hostile listing titles are
-/// inert. ExecuteSqlRaw stays banned.
+/// One of the two deliberate raw-SQL paths in the codebase (everything else is
+/// LINQ; the other is <see cref="PageFingerprintArchive"/>, and both exist for
+/// the same reason — dedup only the database can do without a race): a single
+/// constant statement inserting a page's sales with dedup at the database.
+/// Every value arrives as a typed array parameter via interpolation — the SQL
+/// text itself never contains data, so hostile listing titles are inert.
+/// ExecuteSqlRaw stays banned.
 /// </summary>
 public sealed class SaleWriter(PokemonDbContext db)
 {
