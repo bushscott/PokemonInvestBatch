@@ -53,7 +53,6 @@ public static class IntakeApi
     {
         ExpressUnknownCard => (StatusCodes.Status404NotFound, Error(cardId, "unknown card")),
         ExpressNotACard => (StatusCodes.Status409Conflict, Error(cardId, "not a card")),
-        ExpressTimedOut => (StatusCodes.Status504GatewayTimeout, Error(cardId, "express visit timed out")),
         ExpressErrored errored => (StatusCodes.Status500InternalServerError, Error(cardId, errored.Reason)),
         ExpressCompleted completed => (completed.Visit.Outcome switch
         {

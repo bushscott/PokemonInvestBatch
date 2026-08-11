@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Crawling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -14,8 +13,6 @@ public sealed record ExpressUnknownCard : ExpressResult;
 
 public sealed record ExpressNotACard : ExpressResult;
 
-public sealed record ExpressTimedOut : ExpressResult;
-
 public sealed record ExpressErrored(string Reason) : ExpressResult;
 
 public sealed record ExpressCompleted(CardVisitor.VisitResult Visit, TimeSpan Duration, bool Coalesced) : ExpressResult;
@@ -23,62 +20,62 @@ public sealed record ExpressCompleted(CardVisitor.VisitResult Visit, TimeSpan Du
 /// <summary>
 /// The instantaneous path: update this card now, separately from the schedule,
 /// while the caller waits. It runs the same errand as the lane (CardVisitor),
-/// with the same failure attribution — but skips the pick and the polite gate
-/// by explicit decision. Its own guardrails: one express visit in flight at a
-/// time, a spacing floor between consecutive express fetches, failures feeding
-/// the shared backoff signals through the shared pipeline, and RecordFetchNow
-/// so the scheduled lane re-spaces around every express fetch.
+/// with the same failure attribution — but skips the pick, the polite gate,
+/// and every wait of its own by explicit decision (ADR-0008): a person is
+/// waiting on each call, so it fetches the moment it is asked, in parallel
+/// with any other express visit, with no floor, no queue, and no timeout.
+/// One fetch, once — a failure is reported to the caller, never retried here.
+/// What remains: same-card coalescing (which shares a fetch rather than
+/// delaying one), failures feeding the shared backoff signals through the
+/// shared pipeline, and RecordFetchNow so the scheduled lane re-spaces around
+/// every express fetch. Express volume is the calling app's to bound.
 /// </summary>
 public sealed class ExpressVisitRunner(
     IDbContextFactory<PokemonDbContext> dbFactory,
     CardVisitor visitor,
     PoliteGate gate,
     TimeProvider time,
-    IOptions<ScraperOptions> options,
     CrawlMetrics metrics,
     CancellationToken applicationStopping,
     ILogger<ExpressVisitRunner> logger)
 {
-    private readonly SemaphoreSlim _singleFlight = new(1, 1);
-
     private readonly Lock _sync = new();
 
-    /// <summary>Timestamp of the last express fetch; 0 = never.</summary>
-    private long _lastExpressFetch;
-
-    private (long CardId, Task<ExpressResult> Result)? _inFlight;
+    /// <summary>The visit in flight for each card, so concurrent asks for one
+    /// card share a fetch. Keyed by card because visits for different cards no
+    /// longer wait on each other.</summary>
+    private readonly Dictionary<long, Task<ExpressResult>> _inFlight = [];
 
     /// <summary>The caller's disconnect abandons the await, never the work: a
     /// coalesced waiter may still be listening, and a half-done visit helps
-    /// nobody. The visit itself runs on the worker's own lifetime plus the
-    /// express timeout.</summary>
+    /// nobody. The visit itself runs on the worker's own lifetime.</summary>
     public Task<ExpressResult> RunAsync(long cardId, CancellationToken callerDisconnected)
     {
         Task<ExpressResult> visit;
         bool coalesced;
         lock (_sync)
         {
-            if (_inFlight is { } inFlight && inFlight.CardId == cardId)
+            if (_inFlight.TryGetValue(cardId, out var running))
             {
                 // A double-clicked refresh button is the expected caller:
                 // both requests ride one fetch and both hear the answer.
-                visit = inFlight.Result;
+                visit = running;
                 coalesced = true;
             }
             else
             {
-                visit = RunExclusiveAsync(cardId);
-                var registered = (cardId, visit);
-                _inFlight = registered;
+                visit = RunVisitAsync(cardId);
+                _inFlight[cardId] = visit;
+                var registered = visit;
                 _ = visit.ContinueWith(
                     completed =>
                     {
                         _ = completed.Exception;
                         lock (_sync)
                         {
-                            if (_inFlight == registered)
+                            if (_inFlight.TryGetValue(cardId, out var current) && current == registered)
                             {
-                                _inFlight = null;
+                                _inFlight.Remove(cardId);
                             }
                         }
                     },
@@ -99,20 +96,12 @@ public sealed class ExpressVisitRunner(
             : result;
     }
 
-    private async Task<ExpressResult> RunExclusiveAsync(long cardId)
+    /// <summary>One fetch, started now. The only cancellation is the worker
+    /// shutting down; a slow site is bounded by the HttpClient's own timeout
+    /// and comes back as an HTTP failure, not as a wait imposed here.</summary>
+    private async Task<ExpressResult> RunVisitAsync(long cardId)
     {
-        using var limit = CancellationTokenSource.CreateLinkedTokenSource(applicationStopping);
-        limit.CancelAfter(TimeSpan.FromSeconds(options.Value.ExpressTimeoutSeconds));
-        var ct = limit.Token;
-
-        try
-        {
-            await _singleFlight.WaitAsync(ct);
-        }
-        catch (OperationCanceledException)
-        {
-            return Interrupted();
-        }
+        var ct = applicationStopping;
 
         try
         {
@@ -132,25 +121,6 @@ public sealed class ExpressVisitRunner(
                 return new ExpressNotACard();
             }
 
-            // The express path's own floor. The polite gate is deliberately
-            // not consulted — but back-to-back express fetches still keep a
-            // courteous distance from each other.
-            long last;
-            lock (_sync)
-            {
-                last = _lastExpressFetch;
-            }
-
-            if (last != 0)
-            {
-                var remaining = TimeSpan.FromSeconds(options.Value.ExpressSpacingSeconds)
-                                - time.GetElapsedTime(last);
-                if (remaining > TimeSpan.Zero)
-                {
-                    await Task.Delay(remaining, time, ct);
-                }
-            }
-
             using var visit = CrawlTracing.Source.StartActivity("card.express_visit");
             visit?.SetTag("card.id", card.Id);
             visit?.SetTag("card.name", card.Name);
@@ -158,10 +128,6 @@ public sealed class ExpressVisitRunner(
             using var scope = logger.BeginScope("Express visit {CardUrl}", card.Url);
 
             var started = time.GetTimestamp();
-            lock (_sync)
-            {
-                _lastExpressFetch = started;
-            }
 
             // The site just heard from us outside the gate; the lane's next
             // turn re-spaces from this instant.
@@ -172,32 +138,36 @@ public sealed class ExpressVisitRunner(
             metrics.RecordExpressVisit(OutcomeTag(result.Outcome), duration);
             return new ExpressCompleted(result, duration, Coalesced: false);
         }
-        catch (OperationCanceledException)
+        catch (OperationCanceledException) when (applicationStopping.IsCancellationRequested)
         {
-            return Interrupted();
+            metrics.RecordExpressVisit("error", TimeSpan.Zero);
+            return new ExpressErrored("worker shutting down");
         }
         catch (Exception e)
         {
-            logger.LogError(e, "Express visit of card {CardId} failed unexpectedly", cardId);
+            // The caller gets the exception, not a shrug: it is a sibling app
+            // on this box, and "see the worker log" is not an answer a page
+            // can act on. The visit is not retried — one ask, one fetch.
+            logger.LogError(e, "Express visit of card {CardId} failed", cardId);
             metrics.RecordExpressVisit("error", TimeSpan.Zero);
-            return new ExpressErrored("unexpected failure; see the worker log");
+            return new ExpressErrored(Describe(e));
         }
-        finally
+    }
+
+    /// <summary>The exception, in the form a caller can act on. EF wraps the
+    /// interesting part — "duplicate key", "connection refused" — inside a
+    /// provider exception, so the innermost message rides along.</summary>
+    internal static string Describe(Exception e)
+    {
+        var root = e;
+        while (root.InnerException is { } inner)
         {
-            _singleFlight.Release();
+            root = inner;
         }
 
-        ExpressResult Interrupted()
-        {
-            if (applicationStopping.IsCancellationRequested)
-            {
-                metrics.RecordExpressVisit("error", TimeSpan.Zero);
-                return new ExpressErrored("worker shutting down");
-            }
-
-            metrics.RecordExpressVisit("timeout", TimeSpan.Zero);
-            return new ExpressTimedOut();
-        }
+        return ReferenceEquals(root, e)
+            ? $"{e.GetType().Name}: {e.Message}"
+            : $"{e.GetType().Name}: {e.Message} ({root.GetType().Name}: {root.Message})";
     }
 
     internal static string OutcomeTag(VisitOutcome outcome) => outcome switch

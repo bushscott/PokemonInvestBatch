@@ -12,8 +12,8 @@ namespace PokemonInvestBatch.Worker.Tests;
 /// The instantaneous path, end to end: the same errand as the lane, minus the
 /// pick and the gate, while a caller waits on the answer. These pin the two
 /// promises express makes — one visit implementation (history, strikes, and
-/// the shared backoff behave identically) and one visit at a time (coalescing,
-/// spacing floor).
+/// the shared backoff behave identically) and no waiting: different cards fetch
+/// at the same time, while concurrent asks for one card share a single fetch.
 /// </summary>
 public class ExpressVisitTests : DatabaseTest, IDisposable
 {
@@ -174,13 +174,13 @@ public class ExpressVisitTests : DatabaseTest, IDisposable
     }
 
     [SkippableFact]
-    public async Task Consecutive_express_visits_keep_the_spacing_floor()
+    public async Task Express_visits_for_different_cards_run_at_the_same_time()
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
 
-        // The express path skips the polite gate, so this floor is the only
-        // spacing between back-to-back express fetches. Second card, same
-        // runner: it must park until the floor has passed.
+        // No floor and no queue: every express call is a person waiting on a
+        // page, so a second card fetches immediately instead of waiting out
+        // the first (ADR-0008). Second card, same runner.
         await SeedCardAsync();
         await using (var db = NewContext())
         {
@@ -196,23 +196,28 @@ public class ExpressVisitTests : DatabaseTest, IDisposable
             await db.SaveChangesAsync();
         }
 
-        var clock = new FakeTimeProvider();
+        // The handler holds every response open, so both fetches can only be
+        // at the site together if neither is waiting on the other. The clock
+        // is never advanced either: a wait keyed to time would park the second
+        // visit forever rather than merely slow it.
+        //
+        // Holding both fetches also puts both visits past their fingerprint
+        // read before either writes, so this doubles as the reproduction for
+        // the archive race: before PageFingerprintArchive claimed the row with
+        // an upsert, the loser died on pk_fingerprints and its whole visit
+        // rolled back — a 500 the caller had done nothing to earn.
         using var harness = NewHarness();
-        var runner = harness.BuildExpressRunner(
-            new ScriptedHandler(ScriptedHandler.Page(Fixture.Load("charizard-live-a"))),
-            clock);
+        var gated = new GatedHandler(Fixture.Load("charizard-live-a"));
+        var runner = harness.BuildExpressRunner(gated, new FakeTimeProvider());
 
-        Assert.IsType<ExpressCompleted>(await runner.RunAsync(CardId, CancellationToken.None));
-
+        var first = runner.RunAsync(CardId, CancellationToken.None);
         var second = runner.RunAsync(111, CancellationToken.None);
+        await WaitUntilAsync(() => gated.Calls == 2);
 
-        // Real time passes; fake time does not: if the second visit were not
-        // parked on the spacing floor it would finish in milliseconds.
-        var winner = await Task.WhenAny(second, Task.Delay(TimeSpan.FromSeconds(1)));
-        Assert.NotSame(second, winner);
-
-        clock.Advance(TimeSpan.FromSeconds(10));
-        Assert.IsType<ExpressCompleted>(await second.WaitAsync(TimeSpan.FromSeconds(30)));
+        gated.Release();
+        Assert.IsType<ExpressCompleted>(await first.WaitAsync(TimeSpan.FromSeconds(30)));
+        var secondResult = Assert.IsType<ExpressCompleted>(await second.WaitAsync(TimeSpan.FromSeconds(30)));
+        Assert.False(secondResult.Coalesced);
     }
 
     private static async Task WaitUntilAsync(Func<bool> condition)

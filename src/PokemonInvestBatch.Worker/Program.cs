@@ -30,8 +30,6 @@ builder.Services.AddOptions<ScraperOptions>()
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")
     .Validate(o => o.IntakePort is >= 1 and <= 65535, "Scraper:IntakePort must be 1-65535.")
     .Validate(o => IPAddress.TryParse(o.IntakeAddress, out _), "Scraper:IntakeAddress must be an IP literal.")
-    .Validate(o => o.ExpressSpacingSeconds >= 0, "Scraper:ExpressSpacingSeconds must be >= 0.")
-    .Validate(o => o.ExpressTimeoutSeconds >= 1, "Scraper:ExpressTimeoutSeconds must be >= 1.")
     .ValidateOnStart();
 
 // Alert decisions live in New Relic; the app emits Critical logs and metrics.
@@ -110,7 +108,6 @@ builder.Services.AddSingleton(services => new ExpressVisitRunner(
     services.GetRequiredService<CardVisitor>(),
     services.GetRequiredService<PoliteGate>(),
     services.GetRequiredService<TimeProvider>(),
-    services.GetRequiredService<IOptions<ScraperOptions>>(),
     services.GetRequiredService<CrawlMetrics>(),
     // The worker's own lifetime, not any request's: a caller hanging up must
     // never abort a visit a coalesced waiter still shares.

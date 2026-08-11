@@ -60,7 +60,21 @@ public class IntakeApiTests
     {
         Assert.Equal(404, IntakeApi.Respond(1, new ExpressUnknownCard()).Status);
         Assert.Equal(409, IntakeApi.Respond(1, new ExpressNotACard()).Status);
-        Assert.Equal(504, IntakeApi.Respond(1, new ExpressTimedOut()).Status);
         Assert.Equal(500, IntakeApi.Respond(1, new ExpressErrored("boom")).Status);
+    }
+
+    [Fact]
+    public void A_failed_express_visit_hands_the_caller_the_exception()
+    {
+        // The caller is a page that has to say something to a person; a
+        // generic 500 with the detail buried in the worker log is not an
+        // answer it can act on.
+        var thrown = new InvalidOperationException("the connection is closed");
+
+        var (status, body) = IntakeApi.Respond(
+            630417, new ExpressErrored($"{thrown.GetType().Name}: {thrown.Message}"));
+
+        Assert.Equal(500, status);
+        Assert.Contains("InvalidOperationException: the connection is closed", JsonSerializer.Serialize(body));
     }
 }

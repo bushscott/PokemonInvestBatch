@@ -144,7 +144,6 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             Visitor,
             new PoliteGate(Delay, clock),
             clock,
-            scraperOptions,
             Metrics,
             applicationStopping: CancellationToken.None,
             NullLogger<ExpressVisitRunner>.Instance);
