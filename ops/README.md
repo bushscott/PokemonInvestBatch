@@ -101,8 +101,11 @@ ss -ltn | grep 5155                                         # confirm the bind (
 ```
 
 Express responses: 200 parsed (fresh rows committed), 502 the site failed us, 422 we
-fetched a page and refused it, 504 the visit outran `Scraper:ExpressTimeoutSeconds`
-(it still finishes on its own), 404 unknown card, 409 not-a-card.
+fetched a page and refused it, 404 unknown card, 409 not-a-card, 500 the visit threw —
+the body carries the exception, and there is no retry behind it (ADR-0008). An express
+visit waits for nothing and fetches as soon as it is asked, in parallel with any other
+express visit, so the volume the site sees is whatever the calling app sends. A slow
+site is capped by the HTTP client's own 60 s timeout and comes back as a 502.
 
 Deployment deltas: **none**. Same binary, same systemd unit; no firewall or
 `pg_hba.conf` change (loopback never leaves the box); no new grants — the worker's
@@ -110,3 +113,33 @@ Deployment deltas: **none**. Same binary, same systemd unit; no firewall or
 `refresh_requested_at` column, and sibling apps speak HTTP to the worker, never SQL
 to its tables. The one migration (`AddCardRefreshRequestedAt`) applies with the usual
 owner-role `dotnet ef database update`.
+
+## 7. Sale-history continuity
+
+A **gap** is a grade bucket whose page rolled past us between visits: sales happened,
+the bucket filled, and the oldest rows scrolled off before we looked again. They are
+unrecoverable — the site shows only the newest rows per bucket, and the paid API sells
+prices, never sale history. Run the audit after any bug that could have starved the
+crawl.
+
+```bash
+# Read-only. Safe against live prod, writes nothing.
+ssh scott@<pi-ip> "cd /tmp && sudo -u postgres psql -d pokemon -f -" < ops/sales-gap-audit.sql
+
+# Destructive. Trims each gapped card back to its latest gap so what survives is
+# continuous. Writes /tmp/sales-cut.csv first as the only undo.
+ssh scott@<pi-ip> "cd /tmp && sudo -u postgres psql -d pokemon -v ON_ERROR_STOP=1 -f -" < ops/sales-gap-cut.sql
+```
+
+Read the audit before running the cut, and dry-run the cut by substituting `ROLLBACK`
+for its final `COMMIT` — it prints the full cut list and row counts either way.
+
+The cut runs as the **owner** role: `pokemon_app` has no `DELETE` grant anywhere and
+that restriction stays (§3). Only `sales` is ever touched — `price_months` and
+`populations` are change-only writes whose absence means "checked, unchanged", and the
+site's chart restates full monthly history on every visit, so they self-heal across any
+outage and were never discontinuous.
+
+First run, 2026-08-10: 5 gaps on 4 cards (Snorlax #76 twice, Mega Charizard X EX #23,
+Psyduck #226, Mega Gengar ex #269 — every one the PSA 10 bucket), 1,290 rows cut,
+rollback CSV at `/home/scott/sales-cut-20260810.csv` on the Pi.
