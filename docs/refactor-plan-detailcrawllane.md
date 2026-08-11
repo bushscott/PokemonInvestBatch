@@ -2,6 +2,11 @@
 
 **Status: PROPOSAL — nothing implemented yet.**
 
+> **Written 2026-08-06, kept as written.** On 2026-08-07 this concept was renamed: what
+> these pages call a page's *shape* is a **fingerprint**, and `PageShapeArchive` shipped as
+> `PageFingerprintArchive`. A dated record that gets retrofitted is no longer a record, so
+> the words below stand; `GLOSSARY.md` has the current ones.
+
 This is the most load-bearing file in the system, so the plan is staged, and every stage leaves the
 build green and the behaviour identical.
 
