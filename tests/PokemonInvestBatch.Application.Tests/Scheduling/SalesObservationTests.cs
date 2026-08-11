@@ -170,6 +170,55 @@ public class SalesObservationTests
         Assert.True(revisitDays <= 2.0, $"revisit in {revisitDays:F2}d — must be within 2");
     }
 
+    /// <summary>Sales in one tier on an exact date, for replaying a real page.</summary>
+    private static IEnumerable<SaleRecord> On(string tier, string soldOn, int count) =>
+        Enumerable.Range(0, count)
+            .Select(i => Sale(tier, DateOnly.Parse(soldOn), $"{tier}-{soldOn}-{i}"));
+
+    [Fact]
+    public void A_page_rated_three_days_after_it_was_fetched_reads_half_speed()
+    {
+        // The 2026-08-11 loss (card 3449670, Pikachu #1), replayed from the
+        // ledger. This is the page as it stood at its 2026-08-07 21:16 visit:
+        // 50 PSA 10 rows back to Jul 25, and an Ungraded bucket whose six Aug 6
+        // sales are the hottest thing on the card.
+        var page = On("PSA 10", "2026-08-07", 3)
+            .Concat(On("PSA 10", "2026-08-06", 2)).Concat(On("PSA 10", "2026-08-05", 2))
+            .Concat(On("PSA 10", "2026-08-04", 7)).Concat(On("PSA 10", "2026-08-03", 3))
+            .Concat(On("PSA 10", "2026-08-02", 3)).Concat(On("PSA 10", "2026-07-30", 10))
+            .Concat(On("PSA 10", "2026-07-29", 2)).Concat(On("PSA 10", "2026-07-28", 2))
+            .Concat(On("PSA 10", "2026-07-27", 5)).Concat(On("PSA 10", "2026-07-26", 6))
+            .Concat(On("PSA 10", "2026-07-25", 5))
+            .Concat(On("Ungraded", "2026-08-06", 6)).Concat(On("Ungraded", "2026-08-03", 3))
+            .Concat(On("Ungraded", "2026-08-01", 1)).Concat(On("Ungraded", "2026-07-30", 1))
+            .ToList();
+
+        var fetchedOn = new DateTimeOffset(2026, 8, 7, 21, 16, 0, TimeSpan.Zero);
+
+        // Read on the day it was fetched, the page says 6/day.
+        Assert.Equal(6.0, SalesObservation.From(page, NoHistory, fetchedOn).SalesPerDay);
+
+        // Read three days later off stored history — which is what the
+        // 2026-08-10 reprice did to 45,833 cards — the SAME rows say 3.125/day.
+        // Nothing sold slower; the three days nobody looked are divided in as
+        // days nothing sold. A rate computed off stored rows must be anchored to
+        // the date they were captured, never to the date the job happens to run.
+        var repricedLate = SalesObservation.From(page, NoHistory, fetchedOn.AddDays(3)).SalesPerDay;
+        Assert.Equal(3.125, repricedLate);
+
+        // Half the rate is double the burn window, and the bucket rolled inside
+        // the difference. The card went on to sell ~12/day, which empties a
+        // 30-row bucket 2.5 days after the visit.
+        const double rollsAfterDays = SalesObservation.BucketCap / 12.0;
+        var options = new VisitPriorityOptions();
+
+        var onTime = SalesObservation.BucketCap / 6.0 * options.SafetyFractionFor(6.0);
+        Assert.True(onTime < rollsAfterDays, $"honest rate must beat the roll: {onTime:F2}d");
+
+        var deflated = SalesObservation.BucketCap / repricedLate * options.SafetyFractionFor(repricedLate);
+        Assert.True(deflated > rollsAfterDays, $"deflated rate must miss it: {deflated:F2}d");
+    }
+
     [Fact]
     public void A_single_sale_yesterday_is_not_a_panic()
     {
