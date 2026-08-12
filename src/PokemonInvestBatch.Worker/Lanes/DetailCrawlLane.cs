@@ -28,17 +28,14 @@ public sealed class DetailCrawlLane(
     IAlerter alerter,
     TimeProvider time,
     IOptions<ScraperOptions> options,
+    IOptions<VisitPriorityOptions> priority,
     CrawlMetrics metrics,
     ILogger<DetailCrawlLane> logger) : BackgroundService
 {
-    // Built from configuration, not defaults: the burn-window margin is the
-    // knob we turn down when a card outruns the crawl, and it should not take
-    // a rebuild to turn it.
-    private readonly VisitPriorityOptions priorityOptions = new()
-    {
-        HotBurnWindowSafetyFraction = options.Value.HotBurnWindowSafetyFraction,
-        HotRateThreshold = options.Value.HotRateThreshold,
-    };
+    // Bound from configuration in Program.cs — every scheduling knob is
+    // turnable without a rebuild, not just the two an earlier hand-written
+    // initializer happened to copy.
+    private readonly VisitPriorityOptions priorityOptions = priority.Value;
 
     private readonly SameCardFailureBreaker breaker = new();
 

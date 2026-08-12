@@ -18,9 +18,10 @@ public sealed class StatsLane(
     IOptions<ScraperOptions> options,
     ILogger<StatsLane> logger) : BackgroundService
 {
-    /// <summary>The at-risk line: the scheduler fast-tracks a selling card at
-    /// half its burn window and rows roll off at the full window, so a card
-    /// past three quarters means scheduling is falling behind.</summary>
+    /// <summary>The at-risk line: the scheduler fast-tracks a selling card
+    /// well inside its burn window (VisitPriorityOptions owns the exact
+    /// fractions) and rows roll off at the full window, so a card past three
+    /// quarters means scheduling is falling behind.</summary>
     private const double AtRiskBurnFraction = 0.75;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -81,8 +82,9 @@ public sealed class StatsLane(
         // Leading indicator of missed sales: selling cards past three
         // quarters of their burn window (the days their sales rate takes to
         // fill a ~30-row bucket and start rolling rows off). The scheduler
-        // fast-tracks every selling card well before that — at 0.4 of its
-        // window once it sells at least once a day, 0.5 below — so while it
+        // fast-tracks every selling card well before that — the exact
+        // fractions live in VisitPriorityOptions and are not restated here,
+        // having gone stale twice in two days when they were — so while it
         // keeps up nothing ages this far — any count means scheduling is
         // falling behind, caught with a quarter of the window still left
         // before rows actually roll off unseen.

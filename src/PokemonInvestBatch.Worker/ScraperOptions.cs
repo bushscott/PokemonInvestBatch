@@ -67,26 +67,12 @@ public sealed record ScraperOptions
     /// <summary>Port the intake API (refresh requests + express visits) listens on.</summary>
     public int IntakePort { get; init; } = 5155;
 
-    /// <summary>
-    /// How much of its burn window a card may spend before a revisit is due —
-    /// the knob to turn down if a card loses sales to acceleration again.
-    ///
-    /// It buys exactly one thing: revisiting at fraction f survives a card
-    /// getting up to 1/f times hotter between visits. So 0.5 absorbs a
-    /// doubling, 0.4 absorbs 2.5x, 0.3 absorbs 3.3x, 0.25 absorbs 4x. Mega
-    /// Gardevior EX #32 accelerated 2.05x on 2026-08-10 and beat 0.5 by about
-    /// an hour; 0.4 would have arrived nine hours early.
-    ///
-    /// Lower costs visits. Re-measured 2026-08-11 on repriced rates, as TOTAL
-    /// crawl demand with the 30-day floor included: 0.4 → ~4,437/day,
-    /// 0.3 → ~4,952, against a ~8,400/day polite-crawl ceiling. (The older
-    /// figures here were measured against rates the 2026-08-10 reprice had
-    /// deflated ~1.8x, so they understated every option.)
-    /// </summary>
-    public double HotBurnWindowSafetyFraction { get; init; } = 0.3;
-
-    /// <summary>Sales/day at which a card earns the tighter margin above.</summary>
-    public double HotRateThreshold { get; init; } = 1.0;
+    // Scheduling knobs (safety fractions, rate thresholds, the 30-day floor)
+    // do NOT live here. VisitPriorityOptions is bound from this same "Scraper"
+    // configuration section in Program.cs, so the keys sit beside these in
+    // appsettings but the defaults, the rationale, and the code all have one
+    // owner in Application.Scheduling. This record once carried a hand-synced
+    // copy of two of its four knobs; the other two silently took defaults.
 
     /// <summary>Rows of overlap at or below which a bucket counts as a near
     /// miss — the page came back almost entirely new, so one more day of

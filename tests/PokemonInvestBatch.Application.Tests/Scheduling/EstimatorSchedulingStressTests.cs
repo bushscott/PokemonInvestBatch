@@ -6,10 +6,12 @@ namespace PokemonInvestBatch.Application.Tests.Scheduling;
 /// <summary>
 /// Closed-loop replay of the hot-card incident class: scripted daily sales per
 /// grade, a page that shows only the newest 30 rows per grade, and a scheduler
-/// that revisits once staleness × estimated rate crosses half a bucket — the
-/// same inequality VisitPriority.Score and the pool queries share. The
-/// invariant under test: between any two visits, no grade may sell a full
-/// bucket, because those rows would have scrolled off unseen.
+/// that revisits when VisitPriorityOptions.DueAfterDays says to — the actual
+/// due rule, not a re-derivation of it. This replay once spelled the
+/// inequality out by hand, which meant a change to Score's shape would have
+/// left it proving an old rule while reporting green. The invariant under
+/// test: between any two visits, no grade may sell a full bucket, because
+/// those rows would have scrolled off unseen.
 /// </summary>
 public class EstimatorSchedulingStressTests
 {
@@ -44,7 +46,7 @@ public class EstimatorSchedulingStressTests
         for (var day = firstVisitDay + 1; day < horizon; day++)
         {
             var staleness = day - lastVisit;
-            var due = rate > 0 && staleness * rate >= opts.SafetyFractionFor(rate) * SalesObservation.BucketCap;
+            var due = rate > 0 && staleness >= opts.DueAfterDays(rate);
             if (!due && staleness < opts.MaxDaysBetweenVisits)
             {
                 continue;

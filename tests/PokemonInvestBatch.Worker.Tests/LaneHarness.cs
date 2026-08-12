@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -104,6 +105,7 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             Alerter,
             TimeProvider.System,
             scraperOptions,
+            Options.Create(new VisitPriorityOptions()),
             Metrics,
             NullLogger<DetailCrawlLane>.Instance);
     }

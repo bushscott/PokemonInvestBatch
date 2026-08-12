@@ -9,6 +9,7 @@ using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
 using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Application.Crawling;
+using PokemonInvestBatch.Application.Scheduling;
 using PokemonInvestBatch.Application.Telemetry;
 using PokemonInvestBatch.Infrastructure.Http;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -30,6 +31,18 @@ builder.Services.AddOptions<ScraperOptions>()
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")
     .Validate(o => o.IntakePort is >= 1 and <= 65535, "Scraper:IntakePort must be 1-65535.")
     .Validate(o => IPAddress.TryParse(o.IntakeAddress, out _), "Scraper:IntakeAddress must be an IP literal.")
+    .ValidateOnStart();
+
+// Scheduling knobs share the "Scraper" section (same config file, same keys as
+// always) but bind to their owner in Application.Scheduling — one default, one
+// rationale, and all four knobs turnable, not the two a hand-written copy in
+// DetailCrawlLane used to carry.
+builder.Services.AddOptions<VisitPriorityOptions>()
+    .Bind(builder.Configuration.GetSection("Scraper"))
+    .Validate(o => o.HotBurnWindowSafetyFraction is > 0 and <= 1, "Scraper:HotBurnWindowSafetyFraction must be in (0, 1].")
+    .Validate(o => o.BurnWindowSafetyFraction is > 0 and <= 1, "Scraper:BurnWindowSafetyFraction must be in (0, 1].")
+    .Validate(o => o.HotRateThreshold > 0, "Scraper:HotRateThreshold must be positive.")
+    .Validate(o => o.MaxDaysBetweenVisits >= 1, "Scraper:MaxDaysBetweenVisits must be at least 1.")
     .ValidateOnStart();
 
 // Alert decisions live in New Relic; the app emits Critical logs and metrics.

@@ -102,7 +102,7 @@ public sealed class CrawlMetrics : IDisposable
             description: "Images discovered but not yet fetched");
         Meter.CreateObservableGauge(
             "crawl.cards_at_risk", () => _cardsAtRisk,
-            description: "Selling cards past three quarters of their burn window — the scheduler fast-tracks well before that (at 0.4 of it for cards selling at least once a day, 0.5 for the rest), so any count means scheduling is falling behind, caught with a quarter window left before sales are lost");
+            description: "Selling cards past three quarters of their burn window — the scheduler fast-tracks well before that (per the configured safety fractions, which are deliberately not restated here after going stale twice), so any count means scheduling is falling behind, caught with a quarter window left before sales are lost");
         Meter.CreateObservableGauge(
             "crawl.card_at_risk", ObserveCardsAtRisk,
             description: "1 per named at-risk card, so the alert incident carries the card's identity; a recovered card reports one 0 so its incident closes on data, not on a timeout");

@@ -13,6 +13,13 @@ public sealed record CardVisitState
     public bool RefreshRequested { get; init; }
 }
 
+/// <summary>
+/// The one owner of "when is a selling card due?". Bound from the Scraper
+/// configuration section in Program.cs, so every knob here is turnable in
+/// appsettings.Production.json without a rebuild — the Worker's ScraperOptions
+/// deliberately holds no copy of any of these (it did once, synced by hand,
+/// and only two of four fields were actually wired).
+/// </summary>
 public sealed record VisitPriorityOptions
 {
     /// <summary>The starvation floor: no card waits longer than this.</summary>
@@ -59,11 +66,22 @@ public sealed record VisitPriorityOptions
     public double HotRateThreshold { get; init; } = 1.0;
 
     /// <summary>The revisit margin this card has earned: tighter once it sells
-    /// fast enough to lose rows. Must stay the single definition — the SQL in
-    /// <c>VisitCandidatePool.DueByBurnWindow</c> mirrors this inequality and
-    /// the two silently diverge if it is spelled out twice.</summary>
+    /// fast enough to lose rows.</summary>
     public double SafetyFractionFor(double salesPerDay) =>
         salesPerDay >= HotRateThreshold ? HotBurnWindowSafetyFraction : BurnWindowSafetyFraction;
+
+    /// <summary>
+    /// Days after a visit until this card is due again, given the rate read at
+    /// that visit. THE single C# definition of the due rule: VisitPriority.Score
+    /// asks it, and so does the closed-loop estimator replay — which used to
+    /// re-derive the inequality by hand and would have kept validating an old
+    /// rule if Score ever changed shape. The only other spelling allowed to
+    /// exist is the EF-translatable mirror in
+    /// <c>VisitCandidatePool.DueByBurnWindow</c>, which cannot call a method
+    /// over entity data; BurnWindowQueryAgreementTests holds the two together.
+    /// </summary>
+    public double DueAfterDays(double salesPerDay) =>
+        SalesObservation.BucketCap / salesPerDay * SafetyFractionFor(salesPerDay);
 }
 
 /// <summary>
@@ -102,8 +120,7 @@ public static class VisitPriority
         // worse than re-checking a card whose bucket already rolled.
         if (state.ObservedSalesPerDay is { } salesPerDay && salesPerDay > 0)
         {
-            var burnWindowDays = SalesObservation.BucketCap / salesPerDay;
-            if (stalenessDays >= burnWindowDays * options.SafetyFractionFor(salesPerDay))
+            if (stalenessDays >= options.DueAfterDays(salesPerDay))
             {
                 // Checked before the ask so a burn-due card keeps its burn
                 // rank: an ask must never demote the card it points at.
