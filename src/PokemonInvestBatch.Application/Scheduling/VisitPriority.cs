@@ -11,6 +11,11 @@ public sealed record CardVisitState
 
     /// <summary>Another app asked for this card via the intake API.</summary>
     public bool RefreshRequested { get; init; }
+
+    /// <summary>The last visit's page came back almost entirely new — the
+    /// graduated warning one step before an at-cap loss. Halves the next
+    /// interval; see <see cref="VisitPriorityOptions.DueAfterDays(double, bool)"/>.</summary>
+    public bool NearMiss { get; init; }
 }
 
 /// <summary>
@@ -65,6 +70,33 @@ public sealed record VisitPriorityOptions
     /// the rate where loss becomes possible.</summary>
     public double HotRateThreshold { get; init; } = 1.0;
 
+    /// <summary>
+    /// The absolute backstop the fractions cannot provide. A safety fraction
+    /// multiplies the estimate, so its protection scales with a number that can
+    /// simply be wrong — which is the shape of every Aug 2026 loss: estimates
+    /// deflated by a repricing bug, or rates that jumped past what any margin
+    /// multiplier covers (the corpus produces jumps up to ~7×; no affordable
+    /// fraction absorbs that). A ceiling never consults the estimate: a card at
+    /// or above <see cref="HotRateThreshold"/> waits at most
+    /// <see cref="HotCeilingDays"/>, and one at or above
+    /// <see cref="FastCeilingRate"/> at most <see cref="FastCeilingDays"/> —
+    /// making loss impossible below BucketCap/ceiling (10/day and 15/day
+    /// respectively) no matter how stale the stored rate is.
+    ///
+    /// Cold cards get no ceiling on purpose: sub-1/day buckets need a month to
+    /// roll, and a ceiling there costs thousands of visits a day for cards that
+    /// cannot lose rows. The warm band (0.5–1/day) is a recorded deferral, not
+    /// an oversight — its only real-world loss was below the threshold only
+    /// because the estimate had been deflated.
+    /// </summary>
+    public double FastCeilingRate { get; init; } = 2.0;
+
+    /// <summary>See <see cref="FastCeilingRate"/>.</summary>
+    public double FastCeilingDays { get; init; } = 2.0;
+
+    /// <summary>See <see cref="FastCeilingRate"/>.</summary>
+    public double HotCeilingDays { get; init; } = 3.0;
+
     /// <summary>The revisit margin this card has earned: tighter once it sells
     /// fast enough to lose rows.</summary>
     public double SafetyFractionFor(double salesPerDay) =>
@@ -80,8 +112,23 @@ public sealed record VisitPriorityOptions
     /// <c>VisitCandidatePool.DueByBurnWindow</c>, which cannot call a method
     /// over entity data; BurnWindowQueryAgreementTests holds the two together.
     /// </summary>
-    public double DueAfterDays(double salesPerDay) =>
-        SalesObservation.BucketCap / salesPerDay * SafetyFractionFor(salesPerDay);
+    public double DueAfterDays(double salesPerDay)
+    {
+        var due = SalesObservation.BucketCap / salesPerDay * SafetyFractionFor(salesPerDay);
+        if (salesPerDay >= FastCeilingRate)
+        {
+            return Math.Min(due, FastCeilingDays);
+        }
+
+        return salesPerDay >= HotRateThreshold ? Math.Min(due, HotCeilingDays) : due;
+    }
+
+    /// <summary>The near-miss leash: a card whose last page came back almost
+    /// entirely new gets half its planned interval, because the estimate at
+    /// the visit before was demonstrably too low. Self-clearing — the flag is
+    /// rewritten from the page at every visit.</summary>
+    public double DueAfterDays(double salesPerDay, bool nearMiss) =>
+        DueAfterDays(salesPerDay) / (nearMiss ? 2 : 1);
 }
 
 /// <summary>
@@ -120,7 +167,7 @@ public static class VisitPriority
         // worse than re-checking a card whose bucket already rolled.
         if (state.ObservedSalesPerDay is { } salesPerDay && salesPerDay > 0)
         {
-            if (stalenessDays >= options.DueAfterDays(salesPerDay))
+            if (stalenessDays >= options.DueAfterDays(salesPerDay, state.NearMiss))
             {
                 // Checked before the ask so a burn-due card keeps its burn
                 // rank: an ask must never demote the card it points at.

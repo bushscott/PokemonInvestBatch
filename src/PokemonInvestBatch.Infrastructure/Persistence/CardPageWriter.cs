@@ -22,6 +22,11 @@ public sealed record CardPageWriteResult
     /// must not re-raise.</summary>
     public required bool NewlyAtCap { get; init; }
 
+    /// <summary>This visit's page was a near miss — the same verdict written
+    /// to <c>cards.near_miss_at</c>, surfaced so the caller's metric and log
+    /// never re-derive the predicate and drift from what was persisted.</summary>
+    public required bool NearMiss { get; init; }
+
     /// <summary>The census as it stood before this visit, so a restatement can
     /// be recognised after the fact. Handing it back rather than checking here
     /// keeps the alarm out of the write path: nothing is announced about
@@ -49,6 +54,7 @@ public static class CardPageWriter
         CardDetailPage page,
         string fingerprintHash,
         DateTimeOffset now,
+        int nearMissMargin,
         CancellationToken ct)
     {
         // Phase span: the visit's only O(card history) section, so it gets its
@@ -113,6 +119,12 @@ public static class CardPageWriter
             card.LastSeenAt = now;
             card.ObservedSalesPerDay = observation.SalesPerDay;
             card.AnyBucketAtCap = observation.AnyBucketAtCap;
+            // Assigned, not conditionally set: the flag is this page's verdict
+            // and nothing older, so a calm revisit clears it without anyone
+            // having to remember to. Margin zero is the loss itself (at-cap,
+            // above), never a near miss.
+            card.NearMissAt = observation is { NarrowestMargin: > 0 and var margin }
+                && margin <= nearMissMargin ? now : null;
             card.ImageHash ??= page.ImageHash;
             card.FailureStreak = 0;
             card.QuarantinedUntil = null;
@@ -131,6 +143,7 @@ public static class CardPageWriter
             NewSales = newSales,
             Observation = observation,
             NewlyAtCap = newlyAtCap,
+            NearMiss = card.NearMissAt == now,
             PreviousPopulations = lastPops,
         };
     }

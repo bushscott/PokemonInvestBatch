@@ -60,6 +60,13 @@ public class Card
     /// previous visit — proof sales were missed; hard override for the queue.</summary>
     public bool AnyBucketAtCap { get; set; }
 
+    /// <summary>The last visit's fullest bucket shared only a handful of rows
+    /// with our records — one quieter day and it would have rolled. The
+    /// graduated warning before AnyBucketAtCap: while set, the scheduler
+    /// halves the card's next interval. Rewritten from the page at every
+    /// successful visit, so a calm revisit clears it by itself.</summary>
+    public DateTimeOffset? NearMissAt { get; set; }
+
     /// <summary>Consecutive card-attributable failures (parse drift, 4xx).
     /// Site trouble never counts. Reset by any successful visit.</summary>
     public int FailureStreak { get; set; }

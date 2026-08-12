@@ -48,7 +48,7 @@ public static class VisitCandidatePool
             .DistinctBy(c => c.Id).ToList();
     }
 
-    // Five columns cross the wire and nothing is change-tracked — ~650
+    // Six columns cross the wire and nothing is change-tracked — ~650
     // candidates are read per pick and exactly one card is ever written.
     private static readonly System.Linq.Expressions.Expression<Func<Card, VisitCandidate>> ToCandidate =
         c => new VisitCandidate
@@ -60,6 +60,7 @@ public static class VisitCandidatePool
                 ObservedSalesPerDay = c.ObservedSalesPerDay,
                 AnyBucketAtCap = c.AnyBucketAtCap,
                 RefreshRequested = c.RefreshRequestedAt != null,
+                NearMiss = c.NearMissAt != null,
             },
         };
 
@@ -145,10 +146,21 @@ public static class VisitCandidatePool
         var cap = SalesObservation.BucketCap;
         return eligible
             .Where(c => c.LastVisitedAt != null && c.ObservedSalesPerDay > 0)
-            .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
-                        >= cap * (c.ObservedSalesPerDay!.Value >= options.HotRateThreshold
-                            ? options.HotBurnWindowSafetyFraction
-                            : options.BurnWindowSafetyFraction))
+            // DueAfterDays spelled for EF: the fraction plan capped by the
+            // band's interval ceiling (LEAST), halved while the near-miss
+            // flag stands. Cold cards get no ceiling — the double.MaxValue
+            // arm keeps LEAST from ever binding them.
+            .Where(c => (now - c.LastVisitedAt!.Value).TotalDays
+                        >= Math.Min(
+                                cap * (c.ObservedSalesPerDay!.Value >= options.HotRateThreshold
+                                    ? options.HotBurnWindowSafetyFraction
+                                    : options.BurnWindowSafetyFraction) / c.ObservedSalesPerDay!.Value,
+                                c.ObservedSalesPerDay!.Value >= options.FastCeilingRate
+                                    ? options.FastCeilingDays
+                                    : c.ObservedSalesPerDay!.Value >= options.HotRateThreshold
+                                        ? options.HotCeilingDays
+                                        : double.MaxValue)
+                            / (c.NearMissAt != null ? 2.0 : 1.0))
             .OrderByDescending(c => (now - c.LastVisitedAt!.Value).TotalDays
                                     * c.ObservedSalesPerDay!.Value)
             .Take(TierTake);

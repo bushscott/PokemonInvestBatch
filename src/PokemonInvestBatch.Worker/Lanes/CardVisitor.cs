@@ -174,7 +174,8 @@ public sealed class CardVisitor(
                 card.Id, violation.Lower, violation.LowerCents, violation.Higher, violation.HigherCents);
         }
 
-        var written = await CardPageWriter.WriteAsync(db, card, page, fingerprintHash, now, ct);
+        var written = await CardPageWriter.WriteAsync(
+            db, card, page, fingerprintHash, now, options.Value.NearMissMargin, ct);
         metrics.RecordRowsAppended(written.NewPriceRows, written.NewPopulationCells, written.NewSales);
 
         logger.Log(
@@ -211,14 +212,12 @@ public sealed class CardVisitor(
         // the last chance to hear about it in advance. Margin zero is the loss
         // itself and is reported above, not here.
         //
-        // Observed-only for now: it names the card and feeds a counter, but does
-        // not enqueue anything. The volume estimate behind NearMissMargin was
-        // measured on graded buckets alone — Ungraded page size is not knowable
-        // from stored history — so the real rate gets watched before it is
-        // allowed to spend visits.
-        if (written.Observation is { NarrowestMargin: { } margin, NarrowestTier: { } narrowTier }
-            && margin > 0
-            && margin <= options.Value.NearMissMargin)
+        // No longer observed-only: the write above stamped near_miss_at, which
+        // halves the card's next interval (the AIMD trick the politeness
+        // controller uses, pointed at loss instead of courtesy). The verdict
+        // comes back on the result so this block and the stamp cannot drift.
+        if (written.NearMiss
+            && written.Observation is { NarrowestMargin: { } margin, NarrowestTier: { } narrowTier })
         {
             metrics.RecordBucketNearMiss(narrowTier);
             logger.LogWarning(

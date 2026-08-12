@@ -43,6 +43,13 @@ builder.Services.AddOptions<VisitPriorityOptions>()
     .Validate(o => o.BurnWindowSafetyFraction is > 0 and <= 1, "Scraper:BurnWindowSafetyFraction must be in (0, 1].")
     .Validate(o => o.HotRateThreshold > 0, "Scraper:HotRateThreshold must be positive.")
     .Validate(o => o.MaxDaysBetweenVisits >= 1, "Scraper:MaxDaysBetweenVisits must be at least 1.")
+    .Validate(o => o.FastCeilingDays > 0 && o.HotCeilingDays > 0, "Scraper: ceiling days must be positive.")
+    .Validate(
+        o => o.FastCeilingRate >= o.HotRateThreshold,
+        "Scraper:FastCeilingRate must not undercut HotRateThreshold — the bands must nest.")
+    .Validate(
+        o => o.FastCeilingDays <= o.HotCeilingDays,
+        "Scraper:FastCeilingDays must not exceed HotCeilingDays — a faster band waiting longer is a hole, not a band.")
     .ValidateOnStart();
 
 // Alert decisions live in New Relic; the app emits Critical logs and metrics.

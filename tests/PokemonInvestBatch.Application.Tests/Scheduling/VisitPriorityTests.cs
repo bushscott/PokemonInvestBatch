@@ -37,11 +37,16 @@ public class BurnWindowGuaranteeTests
     [Fact]
     public void A_hot_card_recently_visited_scores_like_anyone_else()
     {
-        // Two days into a ten-day burn window is not yet due: normal
-        // staleness-times-churn scoring applies.
-        var hot = VisitPriority.Score(Card(salesPerDay: 3, daysSinceVisit: 2), Now, Options);
+        // One day into its window is not yet due — not by the fraction plan
+        // and not by its band's interval ceiling either (3/day sits in the
+        // 2-day band, so the old fixture of "two days in" is due now). The
+        // precondition keeps this failing with a reason if a ceiling
+        // tightens past it, instead of reading as the tier order breaking.
+        Assert.True(1.0 < Options.DueAfterDays(3), "fixture is stale: one day now reaches the due line");
 
-        Assert.Equal(2 * (1 + 3), hot, precision: 5);
+        var hot = VisitPriority.Score(Card(salesPerDay: 3, daysSinceVisit: 1), Now, Options);
+
+        Assert.Equal(1 * (1 + 3), hot, precision: 5);
     }
 
     [Fact]
@@ -320,9 +325,14 @@ public class TieredBurnMarginTests
     [Fact]
     public void A_hot_card_is_due_at_three_tenths_of_its_burn_window()
     {
-        // 3/day burns a 30-row bucket in 10 days. Due at 3, not at 2.9.
-        Assert.True(Score(3, 3.0) >= BurnDueTier);
-        Assert.True(Score(3, 2.9) < BurnDueTier);
+        // 6/day burns a 30-row bucket in 5 days. Due at 1.5, not at 1.4. The
+        // rate is chosen fast enough that the fraction, not the band's
+        // interval ceiling, is the binding line — below 4.5/day the 2-day
+        // ceiling arrives first and this test would be measuring that instead.
+        Assert.True(30.0 / 6 * 0.3 < Options.FastCeilingDays, "fixture must let the fraction bind");
+
+        Assert.True(Score(6, 1.5) >= BurnDueTier);
+        Assert.True(Score(6, 1.4) < BurnDueTier);
     }
 
     [Fact]
@@ -350,7 +360,18 @@ public class TieredBurnMarginTests
     /// Days until the scheduler is due back, given the rate it read off the page.
     /// </summary>
     private static double RevisitDue(double observedRate, VisitPriorityOptions options) =>
-        SalesObservation.BucketCap / observedRate * options.SafetyFractionFor(observedRate);
+        options.DueAfterDays(observedRate);
+
+    /// <summary>Options with the interval ceilings switched off, for the tests
+    /// that are the historical record of choosing a fraction: they compare
+    /// dial values against each other, and a ceiling that catches what the
+    /// dial under test missed would silently rewrite that record.</summary>
+    private static VisitPriorityOptions DialOnly(double hotFraction) => new()
+    {
+        HotBurnWindowSafetyFraction = hotFraction,
+        FastCeilingDays = double.PositiveInfinity,
+        HotCeilingDays = double.PositiveInfinity,
+    };
 
     /// <summary>Days until a bucket actually rolls, at the rate the card really
     /// went on to sell at — which the page had no way of showing us.</summary>
@@ -366,7 +387,8 @@ public class TieredBurnMarginTests
         foreach (var (fraction, survives) in new[]
                      { (0.5, 2.0), (0.4, 2.5), (0.33, 1 / 0.33), (0.3, 1 / 0.3), (0.25, 4.0) })
         {
-            var options = new VisitPriorityOptions { HotBurnWindowSafetyFraction = fraction };
+            // Ceilings off: this states the dial's own property in isolation.
+            var options = DialOnly(fraction);
             const double observed = 7.33;
 
             // Just inside the ratio it can absorb: the visit lands first.
@@ -389,13 +411,16 @@ public class TieredBurnMarginTests
         const double actual = 15.0;
         var rolls = RollsAfter(actual);
 
-        var half = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.5 };
+        // Dial-only on both sides: this is the record of choosing 0.4 over
+        // 0.5, made before interval ceilings existed — a ceiling would catch
+        // what the 0.5 dial missed and silently rewrite the history.
+        var half = DialOnly(0.5);
         Assert.True(RevisitDue(observed, half) > rolls);
 
         // Pinned at 0.4 explicitly rather than at whatever the default is today:
         // this test is the record of why 0.4 was chosen over 0.5, and that record
         // must stay true after the dial moves on.
-        var fourTenths = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.4 };
+        var fourTenths = DialOnly(0.4);
         Assert.True(RevisitDue(observed, fourTenths) < rolls);
 
         // Nine hours is thin but real. Naming it here means a future change to
@@ -423,10 +448,12 @@ public class TieredBurnMarginTests
         const double actual = 18.0;   // 3x — inside what 0.3 absorbs, past 0.4
         var rolls = RollsAfter(actual);
 
-        var looser = new VisitPriorityOptions { HotBurnWindowSafetyFraction = 0.4 };
+        var looser = DialOnly(0.4);
         Assert.True(RevisitDue(observed, looser) > rolls, "0.4 must miss a 3x acceleration");
 
-        Assert.True(RevisitDue(observed, Options) < rolls, "the shipped default must catch it");
+        Assert.True(
+            RevisitDue(observed, DialOnly(0.3)) < rolls,
+            "three tenths must catch it on its own — this is the dial's record, ceilings excluded");
     }
 
     [Fact]
@@ -442,4 +469,85 @@ public class TieredBurnMarginTests
         // Unchanged for cards below the threshold, whichever way the knob goes.
         Assert.Equal(0.5, tighter.SafetyFractionFor(0.5));
     }
+
+    [Fact]
+    public void The_hot_ceiling_survives_a_jump_the_dial_cannot()
+    {
+        // The dial multiplies the estimate, so its protection scales with a
+        // number that can simply be wrong — the shape of all five Aug 2026
+        // losses. A ceiling never consults the estimate: a card selling at
+        // least HotRateThreshold waits at most HotCeilingDays, whatever its
+        // stored rate says, so loss is impossible below BucketCap/ceiling
+        // (10/day at 3 days) however stale the estimate is.
+        //
+        // Raichu-class numbers: read 1.43/day, ran at 6 (a 4.2x jump — the
+        // measured tail reaches 6.9x). The bucket rolls in 5 days; the dial
+        // alone would come back in 6.3.
+        const double observed = 1.43;
+        const double actual = 6.0;
+        var rolls = RollsAfter(actual);
+
+        Assert.True(
+            observed < Options.FastCeilingRate,
+            "fixture must sit in the 3-day band, not the 2-day one");
+        Assert.True(RevisitDue(observed, Options) < rolls, "the ceiling must beat the roll");
+        Assert.True(
+            SalesObservation.BucketCap / observed * Options.SafetyFractionFor(observed) > rolls,
+            "the dial alone must miss — otherwise this test isn't about the ceiling");
+    }
+
+    [Fact]
+    public void The_fast_ceiling_covers_the_band_the_hot_ceiling_cannot()
+    {
+        // Above 10/day a 3-day wait already loses rows, so cards selling at
+        // least FastCeilingRate get FastCeilingDays instead: loss impossible
+        // below 15/day. Gengar-class numbers: read 3/day, ran at 12.
+        const double observed = 3.0;
+        const double actual = 12.0;
+        var rolls = RollsAfter(actual);
+
+        Assert.True(RevisitDue(observed, Options) < rolls, "the 2-day band must beat the roll");
+        Assert.True(
+            SalesObservation.BucketCap / observed * Options.SafetyFractionFor(observed) > rolls,
+            "the dial alone must miss — otherwise this test isn't about the ceiling");
+    }
+
+    [Fact]
+    public void A_cold_card_gets_no_ceiling()
+    {
+        // Below the hot threshold a bucket needs a month-plus to roll, and
+        // ceilings there would cost thousands of visits a day for cards that
+        // cannot lose rows. The warm band (0.5-1/day) is a deliberate
+        // deferral, recorded 2026-08-12: its only real-world loss (Raichu)
+        // was below the threshold only because a repricing bug deflated it.
+        Assert.Equal(30.0 / 0.9 * 0.5, Options.DueAfterDays(0.9), 5);
+    }
+
+    [Fact]
+    public void A_near_miss_halves_the_next_interval_once()
+    {
+        // A page that came back almost entirely new is the last warning
+        // before a roll — the estimate at the PREVIOUS visit was too low, so
+        // the next interval gets half the plan. Self-clearing: the flag is
+        // rewritten from the page at every visit.
+        const double rate = 3.0;
+        var planned = Options.DueAfterDays(rate);
+
+        Assert.Equal(planned / 2, Options.DueAfterDays(rate, nearMiss: true), 5);
+        Assert.Equal(planned, Options.DueAfterDays(rate, nearMiss: false), 5);
+
+        // And Score must actually read it: same card, same staleness — due
+        // with the near-miss flag, not due without it.
+        var justPastHalf = planned / 2 * 1.01;
+        var state = new CardVisitState
+        {
+            LastVisitedAt = Now.AddDays(-justPastHalf),
+            ObservedSalesPerDay = rate,
+        };
+
+        Assert.True(Score(state with { NearMiss = true }) >= BurnDueTier);
+        Assert.True(Score(state) < BurnDueTier);
+    }
+
+    private static double Score(CardVisitState state) => VisitPriority.Score(state, Now, Options);
 }

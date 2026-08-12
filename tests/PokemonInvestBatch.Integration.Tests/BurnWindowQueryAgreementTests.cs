@@ -25,32 +25,37 @@ public class BurnWindowQueryAgreementTests
 
     private const double BurnDueTier = 3_000_000;
 
-    private static Card Card(long id, double salesPerDay, double daysSinceVisit) => new()
+    private static Card Card(long id, double salesPerDay, double daysSinceVisit, bool nearMiss = false) => new()
     {
         Id = id,
         Url = $"/game/set/card-{id}",
         Name = $"card {id}",
         ObservedSalesPerDay = salesPerDay,
         LastVisitedAt = Now.AddDays(-daysSinceVisit),
+        NearMissAt = nearMiss ? Now.AddDays(-daysSinceVisit) : null,
     };
 
     /// <summary>Rates and stalenesses that straddle every edge that matters:
-    /// either side of the hot-rate threshold, and either side of both the
-    /// tightened and the original fraction. The 7.33/3.9 pair is Kecleon #88's
-    /// 2026-08-11 loss and the 1.57/12.2 pair is the cohort that outranked it.</summary>
-    private static readonly double[] Rates = [0.05, 0.5, 0.99, 1.0, 1.01, 1.57, 3.0, 7.33, 15.0, 30.0];
+    /// either side of the hot-rate threshold, of the two ceiling bands, and of
+    /// both fractions. The 7.33/3.9 pair is Kecleon #88's 2026-08-11 loss and
+    /// the 1.57/12.2 pair is the cohort that outranked it; 1.99/2.01 straddle
+    /// FastCeilingRate and the 1.5/2.0/3.0 stalenesses sit on the ceiling and
+    /// half-ceiling lines the near-miss leash creates.</summary>
+    private static readonly double[] Rates =
+        [0.05, 0.5, 0.99, 1.0, 1.01, 1.57, 1.99, 2.0, 2.01, 3.0, 4.5, 7.33, 15.0, 30.0];
 
     private static readonly double[] Stalenesses =
-        [0.1, 0.5, 1.0, 1.637, 2.0, 2.046, 3.9, 4.0, 12.0, 12.2, 15.0, 29.0, 31.0];
+        [0.1, 0.5, 1.0, 1.5, 1.637, 2.0, 2.046, 3.0, 3.9, 4.0, 12.0, 12.2, 15.0, 29.0, 31.0];
 
-    public static TheoryData<double, double> Grid()
+    public static TheoryData<double, double, bool> Grid()
     {
-        var data = new TheoryData<double, double>();
+        var data = new TheoryData<double, double, bool>();
         foreach (var rate in Rates)
         {
             foreach (var days in Stalenesses)
             {
-                data.Add(rate, days);
+                data.Add(rate, days, false);
+                data.Add(rate, days, true);
             }
         }
 
@@ -59,9 +64,10 @@ public class BurnWindowQueryAgreementTests
 
     [Theory]
     [MemberData(nameof(Grid))]
-    public void The_pool_query_selects_exactly_the_cards_the_scorer_calls_due(double rate, double days)
+    public void The_pool_query_selects_exactly_the_cards_the_scorer_calls_due(
+        double rate, double days, bool nearMiss)
     {
-        var card = Card(1, rate, days);
+        var card = Card(1, rate, days, nearMiss);
 
         var pool = VisitCandidatePool
             .DueByBurnWindow(new[] { card }.AsQueryable(), Now, Options)
@@ -72,13 +78,14 @@ public class BurnWindowQueryAgreementTests
             {
                 LastVisitedAt = card.LastVisitedAt,
                 ObservedSalesPerDay = card.ObservedSalesPerDay,
+                NearMiss = nearMiss,
             },
             Now,
             Options) >= BurnDueTier;
 
         Assert.True(
             pool == scored,
-            $"rate {rate}/day at {days}d: pool says {pool}, scorer says {scored}");
+            $"rate {rate}/day at {days}d (near miss: {nearMiss}): pool says {pool}, scorer says {scored}");
     }
 
     /// <summary>
@@ -138,5 +145,9 @@ public class BurnWindowQueryAgreementTests
 
         Assert.Contains("CASE", sql);
         Assert.Contains("observed_sales_per_day", sql);
+        // The ceiling (Math.Min → LEAST) and the near-miss leash must survive
+        // translation too — losing either would loosen admission silently.
+        Assert.Contains("LEAST", sql);
+        Assert.Contains("near_miss_at", sql);
     }
 }
