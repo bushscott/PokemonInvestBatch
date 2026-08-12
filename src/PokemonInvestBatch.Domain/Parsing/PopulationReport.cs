@@ -10,6 +10,13 @@ public sealed record PopulationReport
 
     public required IReadOnlyList<int> Cgc { get; init; }
 
+    // Sequence equality, not the record default (which would compare the two
+    // list REFERENCES and call every re-parse unequal). One live consumer:
+    // Parse_is_deterministic_across_identical_fetches asserts two parses of
+    // the same page are equal — precisely the semantics reference equality
+    // breaks. Verified the hard way on 2026-08-12: an audit called these
+    // overrides dead, removing them failed exactly that test, and they went
+    // straight back.
     public bool Equals(PopulationReport? other) =>
         other is not null && Psa.SequenceEqual(other.Psa) && Cgc.SequenceEqual(other.Cgc);
 

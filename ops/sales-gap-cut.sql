@@ -4,11 +4,13 @@
 -- Run as pokemon_owner or the postgres superuser: pokemon_app has no DELETE
 -- grant on any table (ops/postgres-setup.sql) and that restriction stays.
 --
---     ssh scott@<pi-ip> "cd /tmp && sudo -u postgres psql -d pokemon -v ON_ERROR_STOP=1 -f -" < ops/sales-gap-cut.sql
+-- Needs ops/sales-gap-common.sql BESIDE it (\ir cannot resolve from stdin):
+--     scp ops/sales-gap-common.sql ops/sales-gap-cut.sql scott@<pi-ip>:/tmp/
+--     ssh scott@<pi-ip> "cd /tmp && sudo -u postgres psql -d pokemon -v ON_ERROR_STOP=1 -f /tmp/sales-gap-cut.sql"
 --
 -- Run ops/sales-gap-audit.sql first and read its output. This script derives
--- its own cut list from the same rule rather than taking a hand-typed list, so
--- the two can never drift apart — but that also means it will act on whatever
+-- its own cut list from the same shared view (ops/sales-gap-common.sql), so
+-- the two cannot drift apart — but that also means it will act on whatever
 -- the audit currently finds, including gaps discovered since you last looked.
 --
 -- WHAT IT DELETES
@@ -33,35 +35,19 @@
 
 BEGIN;
 
--- The cut list, derived from the audit rule. See ops/sales-gap-audit.sql for
--- why the bucket cap is per-tier and why reach-back clears a batch.
+-- The cut list, derived from the SAME rule the audit prints — literally: both
+-- read the sales_gap_candidates view from ops/sales-gap-common.sql, which owns
+-- the per-tier bucket cap and its load-bearing floor of 30. The two used to
+-- share the rule by copy-paste, which made "can never drift apart" a hope
+-- rather than a property; in a script that deletes sale rows, hope is not a
+-- mechanism.
+\ir sales-gap-common.sql
+
 CREATE TEMP TABLE cut_list AS
-WITH batch AS (
-    SELECT card_id, grade_tier, captured_at,
-           count(*)     AS rows_written,
-           min(sold_on) AS batch_oldest,
-           max(sold_on) AS batch_newest
-    FROM sales
-    GROUP BY 1, 2, 3
-),
-sequenced AS (
-    SELECT *,
-           row_number() OVER w AS seq,
-           max(rows_written) OVER (PARTITION BY card_id, grade_tier) AS est_page_cap,
-           max(batch_newest) OVER (PARTITION BY card_id, grade_tier ORDER BY captured_at
-                                   ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS last_known_sale
-    FROM batch
-    WINDOW w AS (PARTITION BY card_id, grade_tier ORDER BY captured_at)
-),
-gaps AS (
+WITH gaps AS (
     SELECT *
-    FROM sequenced
-    WHERE seq > 1
-      -- Floored at 30: a bucket showing fewer than 30 rows cannot have rolled,
-      -- and without the floor a card this script has already trimmed reports a
-      -- collapsed cap, because the cut removes the first-visit batch that
-      -- established the page size. See ops/sales-gap-audit.sql.
-      AND rows_written >= CASE WHEN grade_tier = 'Ungraded' THEN greatest(est_page_cap, 30) ELSE 30 END
+    FROM sales_gap_candidates
+    WHERE rows_written >= page_cap                -- nothing we held survived
       AND batch_oldest > last_known_sale          -- reach-back clears the batch
 )
 SELECT DISTINCT ON (card_id)
