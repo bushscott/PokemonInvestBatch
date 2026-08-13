@@ -17,3 +17,4 @@ The format is Michael Nygard's, from *Documenting Architecture Decisions* (2011)
 | [0006](0006-localhost-intake-api-and-express-visits.md) | A localhost intake API, with express visits outside the polite gate | 2026-08-09 |
 | [0007](0007-schedule-on-the-hottest-buckets-pace.md) | The schedule follows the hottest bucket, and a capped card warns its set | 2026-08-10 |
 | [0008](0008-express-visits-have-no-time-barriers.md) | Express visits have no time barriers; the calling app owns the rate limit | 2026-08-10 |
+| [0009](0009-tcgdex-metadata-enrichment.md) | Collector numbers and set sizes join from a pinned TCGdex mirror | 2026-08-13 |

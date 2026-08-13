@@ -184,7 +184,7 @@ databases, no fake web servers, and almost no mocks anywhere in the suite.
 This is a deliberate trade against the more common "interface for everything" approach. The
 reasoning is written down in [ADR-0003](docs/adr/0003-functional-core-over-ports-and-adapters.md).
 
-### The six lanes
+### The seven lanes
 
 Independent background services, so one getting stuck cannot take down the others:
 
@@ -196,6 +196,7 @@ Independent background services, so one getting stuck cannot take down the other
 | `ImageLane` | Downloads card images from the CDN |
 | `StatsLane` | Publishes health metrics for the dashboard |
 | `DelistedProbeLane` | Once a month, checks whether a retired card's page came back |
+| `EnrichmentLane` | Joins each card to the TCGdex catalog for its collector number and set size — offline, against a pinned local mirror ([ADR-0009](docs/adr/0009-tcgdex-metadata-enrichment.md)) |
 
 ---
 
@@ -211,8 +212,11 @@ Three rules govern the database:
 
 ### The map
 
-Nine tables, in three groups: a **catalog** of what exists, an **append-only record** of what the
-site said, and a **diary** of what the crawler did.
+Nine tables, in four groups: a **catalog** of what exists, an **append-only record** of what the
+site said, a **diary** of what the crawler did, and one **derived verdict table**
+(`tcgdex_enrichments` — each card's collector number and set size joined from the TCGdex
+catalog, appended change-only with an explicit match status,
+[ADR-0009](docs/adr/0009-tcgdex-metadata-enrichment.md)).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/images/data-model-dark.svg">
@@ -335,6 +339,10 @@ chosen, what was rejected, and what it costs.
 | [0003](docs/adr/0003-functional-core-over-ports-and-adapters.md) | Pure decision classes instead of interfaces everywhere |
 | [0004](docs/adr/0004-card-faults-do-not-slow-the-crawl.md) | A broken page must not slow the whole crawl |
 | [0005](docs/adr/0005-pooled-grade-tiers.md) | Grading companies are pooled below grade 10 |
+| [0006](docs/adr/0006-localhost-intake-api-and-express-visits.md) | A localhost intake API, with express visits outside the polite gate |
+| [0007](docs/adr/0007-schedule-on-the-hottest-buckets-pace.md) | The schedule follows the hottest bucket, and a capped card warns its set |
+| [0008](docs/adr/0008-express-visits-have-no-time-barriers.md) | Express visits have no time barriers; the calling app owns the rate limit |
+| [0009](docs/adr/0009-tcgdex-metadata-enrichment.md) | Collector numbers and set sizes join from a pinned TCGdex mirror |
 
 ---
 

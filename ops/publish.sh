@@ -81,6 +81,7 @@ echo
 echo "Bundled .NET runtime: $shipped  (minimum $MIN_RUNTIME)"
 echo "Publish complete. Deploy with e.g.:"
 echo "  rsync -av --delete --exclude appsettings.Production.json --exclude blacklist.json \\"
+echo "        --exclude tcgdex-set-aliases.json \\"
 echo "        publish/ pokemon@<pi-ip>:/opt/pokemon-invest-batch/"
-echo "  rsync -av blacklist.json pokemon@<pi-ip>:/opt/pokemon-invest-batch/"
+echo "  rsync -av blacklist.json tcgdex-set-aliases.json pokemon@<pi-ip>:/opt/pokemon-invest-batch/"
 echo "Then on the Pi: sudo systemctl restart pokemon-invest-batch"
