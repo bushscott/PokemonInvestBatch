@@ -80,4 +80,23 @@ public sealed record ScraperOptions
     /// actual loss, which <see cref="PokemonInvestBatch.Application.Scheduling.SalesObservation"/>
     /// reports separately as a capped tier.</summary>
     public int NearMissMargin { get; init; } = 8;
+
+    /// <summary>TCGdex API root, used once per mirror pin (ADR-0009).</summary>
+    public string TcgdexBaseUrl { get; init; } = "https://api.tcgdex.net";
+
+    /// <summary>Where the TCGdex per-set JSON mirror lives. The directory IS
+    /// the version pin: enrichment joins against these files only, and
+    /// refreshing means deleting the directory so the next sweep
+    /// re-fetches.</summary>
+    public string TcgdexMirrorDirectory { get; init; } = "tcgdex-mirror";
+
+    /// <summary>Hand-curated set aliases (PriceCharting slug → TCGdex set
+    /// ids) for names exact matching cannot bridge; kept in the repo like
+    /// blacklist.json and re-read every sweep.</summary>
+    public string TcgdexSetAliasesPath { get; init; } = "tcgdex-set-aliases.json";
+
+    /// <summary>Cadence of the enrichment sweep. Daily is generous: inputs
+    /// only move when enumeration discovers cards (weekly) or the operator
+    /// re-pins the mirror, and a no-change sweep writes nothing.</summary>
+    public int TcgdexEnrichmentIntervalHours { get; init; } = 24;
 }

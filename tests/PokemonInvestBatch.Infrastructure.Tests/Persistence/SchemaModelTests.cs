@@ -106,4 +106,17 @@ public class SchemaModelTests
             [nameof(KnownFingerprint.Hash)],
             fingerprint.FindPrimaryKey()!.Properties.Select(p => p.Name).ToArray());
     }
+
+    [Fact]
+    public void Tcgdex_enrichment_is_change_only_append()
+    {
+        // ADR-0009: verdicts are appended when they differ, never updated in
+        // place — the PK ending in ComputedAt makes that structural, exactly
+        // like the two observational histories.
+        var entity = Model().FindEntityType(typeof(TcgdexEnrichment))!;
+
+        Assert.Equal(
+            [nameof(TcgdexEnrichment.CardId), nameof(TcgdexEnrichment.ComputedAt)],
+            entity.FindPrimaryKey()!.Properties.Select(p => p.Name).ToArray());
+    }
 }

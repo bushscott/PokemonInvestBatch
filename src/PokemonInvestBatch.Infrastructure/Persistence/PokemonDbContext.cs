@@ -21,6 +21,8 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
 
     public DbSet<ParseFailure> ParseFailures => Set<ParseFailure>();
 
+    public DbSet<TcgdexEnrichment> TcgdexEnrichments => Set<TcgdexEnrichment>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CardSet>(set =>
@@ -93,6 +95,19 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             failure.Property(f => f.Url).HasMaxLength(500);
             failure.Property(f => f.FingerprintHash).HasMaxLength(64);
             failure.HasIndex(f => f.FetchedAt);
+        });
+
+        modelBuilder.Entity<TcgdexEnrichment>(enrichment =>
+        {
+            // Change-only append (ADR-0009): one row per verdict that
+            // differed; latest per card is the current verdict.
+            enrichment.HasKey(e => new { e.CardId, e.ComputedAt });
+            enrichment.HasOne<Card>().WithMany().HasForeignKey(e => e.CardId).OnDelete(DeleteBehavior.Restrict);
+            enrichment.Property(e => e.CardNumber).HasMaxLength(32);
+            enrichment.Property(e => e.TcgdexSetId).HasMaxLength(32);
+            enrichment.Property(e => e.TcgdexCardId).HasMaxLength(64);
+            enrichment.Property(e => e.TcgdexName).HasMaxLength(300);
+            enrichment.Property(e => e.TcgdexVersion).HasMaxLength(64);
         });
     }
 }

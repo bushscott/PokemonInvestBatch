@@ -1,3 +1,4 @@
+using PokemonInvestBatch.Application.Enrichment;
 using PokemonInvestBatch.Domain.Parsing;
 
 namespace PokemonInvestBatch.Infrastructure.Persistence;
@@ -243,4 +244,45 @@ public class ParseFailure
     public required string Reason { get; set; }
 
     public string? FingerprintHash { get; set; }
+}
+
+/// <summary>
+/// One verdict of the TCGdex metadata join for one card (ADR-0009).
+/// Change-only append, like the observational histories: a row is written
+/// only when the verdict differs from the card's latest, so a re-run against
+/// an unchanged mirror writes nothing and the verdict trail stays auditable.
+/// Latest row per card is the current verdict; a card with no rows has never
+/// been attempted — consumers can tell "no match" from "not yet tried".
+/// </summary>
+public class TcgdexEnrichment
+{
+    public long CardId { get; set; }
+
+    public DateTimeOffset ComputedAt { get; set; }
+
+    public TcgdexMatchStatus Status { get; set; }
+
+    /// <summary>TCGdex's localId verbatim ("215", "TG23", "053").
+    /// Confirmed rows only. Text, never an int: numbers carry prefixes and
+    /// meaningful leading zeros.</summary>
+    public string? CardNumber { get; set; }
+
+    /// <summary>The matched set's official printed size — the denominator in
+    /// "215/203"; secret cards are numbered past it. Null when TCGdex
+    /// publishes 0 for the set. Confirmed rows only.</summary>
+    public int? SetOfficialSize { get; set; }
+
+    public string? TcgdexSetId { get; set; }
+
+    /// <summary>Deliberately N:1 — every PriceCharting variant product of one
+    /// physical card shares the TCGdex card. Never treat as unique.</summary>
+    public string? TcgdexCardId { get; set; }
+
+    /// <summary>TCGdex's name for the candidate: the confirmation record on
+    /// Confirmed, the review evidence on NameMismatch.</summary>
+    public string? TcgdexName { get; set; }
+
+    /// <summary>The mirror snapshot this verdict was computed against —
+    /// provenance, so a bad join is auditable back to its dataset.</summary>
+    public required string TcgdexVersion { get; set; }
 }

@@ -31,6 +31,7 @@ builder.Services.AddOptions<ScraperOptions>()
     .Validate(o => !string.IsNullOrWhiteSpace(o.ContactEmail), "Scraper:ContactEmail is required — it goes in the User-Agent.")
     .Validate(o => o.IntakePort is >= 1 and <= 65535, "Scraper:IntakePort must be 1-65535.")
     .Validate(o => IPAddress.TryParse(o.IntakeAddress, out _), "Scraper:IntakeAddress must be an IP literal.")
+    .Validate(o => o.TcgdexEnrichmentIntervalHours >= 1, "Scraper:TcgdexEnrichmentIntervalHours must be at least 1.")
     .ValidateOnStart();
 
 // Scheduling knobs share the "Scraper" section (same config file, same keys as
@@ -110,6 +111,17 @@ builder.Services.AddSingleton(services =>
     return new PriceChartingClient(http, scraper.ContactEmail, services.GetRequiredService<TimeProvider>());
 });
 builder.Services.AddHttpClient(ImageLane.HttpClientName, http => http.Timeout = TimeSpan.FromSeconds(60));
+// The TCGdex mirror fetch (ADR-0009) — a different host, outside the polite
+// gate like the image CDN. GitHub's API (the release-tag half of the pin)
+// rejects requests without a User-Agent, and the contact address belongs in
+// it for the same reason it goes to pricecharting.com.
+builder.Services.AddHttpClient(EnrichmentLane.HttpClientName, (services, http) =>
+{
+    var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
+    http.Timeout = TimeSpan.FromSeconds(60);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("PokemonInvestBatch/1.0");
+    http.DefaultRequestHeaders.UserAgent.ParseAdd($"(+{scraper.ContactEmail})");
+});
 builder.Services.AddSingleton(services =>
 {
     var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
@@ -140,6 +152,7 @@ builder.Services.AddHostedService<CanaryLane>();
 builder.Services.AddHostedService<ImageLane>();
 builder.Services.AddHostedService<StatsLane>();
 builder.Services.AddHostedService<DelistedProbeLane>();
+builder.Services.AddHostedService<EnrichmentLane>();
 
 // Loopback-only, port from validated config. The explicit Listen overrides
 // ASPNETCORE_URLS/launchSettings (Kestrel logs a benign "overriding" line) —
