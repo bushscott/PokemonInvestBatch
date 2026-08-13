@@ -136,6 +136,7 @@ builder.Services.AddSingleton(services =>
 // The walk behind two callers (CardVisitor precedent): the weekly enumeration
 // schedule, and the gone-verdict path's on-demand listing check.
 builder.Services.AddSingleton<SetWalker>();
+builder.Services.AddSingleton<MissingCardResolver>();
 builder.Services.AddSingleton<CardVisitor>();
 builder.Services.AddSingleton<RefreshRequestIntake>();
 builder.Services.AddSingleton(services => new ExpressVisitRunner(

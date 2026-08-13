@@ -25,6 +25,7 @@ public sealed class CardVisitor(
     IncidentThrottle throttle,
     IAlerter alerter,
     PageFingerprintArchive fingerprints,
+    MissingCardResolver resolver,
     TimeProvider time,
     IOptions<ScraperOptions> options,
     CrawlMetrics metrics,
@@ -64,7 +65,43 @@ public sealed class CardVisitor(
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, fingerprintHash: null, now));
             if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))
             {
-                await RecordStrikeAsync(card, $"http-{fetched.StatusCode}", now, ct);
+                // A 3xx that is about to bench asks the set's listing first —
+                // the redirect target is a search page and proves nothing,
+                // but the catalog separates renamed from removed from phantom
+                // in one polite walk. Sub-threshold strikes stay cheap: bad
+                // luck does not spend listing fetches.
+                var verdict = MissingCardVerdict.NoVerdict;
+                if (fetched.StatusCode is >= 300 and < 400
+                    && QuarantinePolicy.QuarantineUntil(card.FailureStreak + 1, now) is not null)
+                {
+                    verdict = await resolver.ResolveAsync(db, card, now, ct);
+                }
+
+                switch (verdict)
+                {
+                    case MissingCardVerdict.Healed:
+                        // The walk already landed the new URL; the streak was
+                        // the old URL's fault, not the card's.
+                        card.FailureStreak = 0;
+                        card.QuarantinedUntil = null;
+                        break;
+                    case MissingCardVerdict.Gone:
+                        // Machine verdict, machine-reversible: the probe
+                        // re-fetches on a doubling schedule and a 200 clears
+                        // this in the same transaction that writes the page.
+                        // Quiet on purpose — the resolver logged it, and
+                        // retirement of a removed product is bookkeeping,
+                        // not news. Like the not-a-card verdict, a standing
+                        // ask dies with the page it asked about.
+                        card.GoneAt = now;
+                        card.FailureStreak = 0;
+                        card.QuarantinedUntil = null;
+                        card.RefreshRequestedAt = null;
+                        break;
+                    default:
+                        await RecordStrikeAsync(card, $"http-{fetched.StatusCode}", now, ct);
+                        break;
+                }
             }
 
             await db.SaveChangesAsync(ct);

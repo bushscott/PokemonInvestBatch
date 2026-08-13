@@ -29,5 +29,6 @@ public class AtRiskQueryTranslationTests
         // counting them at-risk would ratchet into a permanent false alarm.
         Assert.Contains("delisted_at", sql);
         Assert.Contains("not_a_card_at", sql);
+        Assert.Contains("gone_at", sql);
     }
 }

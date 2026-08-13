@@ -29,6 +29,7 @@ public class BenchedQueryTranslationTests
         // page that will never be a card. If it ever stops reaching SQL the
         // bench silently refills and nothing else in the suite would say so.
         Assert.Contains("not_a_card_at", sql);
+        Assert.Contains("gone_at", sql);
     }
 
     [Fact]
@@ -45,5 +46,6 @@ public class BenchedQueryTranslationTests
 
         Assert.Contains("not_a_card_at", sql);
         Assert.Contains("delisted_at", sql);
+        Assert.Contains("gone_at", sql);
     }
 }

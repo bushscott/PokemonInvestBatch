@@ -46,6 +46,9 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             card.HasIndex(c => c.LastVisitedAt);
             // The intake tier's pick scan; partial because pending asks are rare.
             card.HasIndex(c => c.RefreshRequestedAt).HasFilter("refresh_requested_at IS NOT NULL");
+            // The probe's due scan over machine-retired cards; partial for the
+            // same reason — gone cards are rare.
+            card.HasIndex(c => c.GoneAt).HasFilter("gone_at IS NOT NULL");
         });
 
         modelBuilder.Entity<CardPriceMonth>(price =>

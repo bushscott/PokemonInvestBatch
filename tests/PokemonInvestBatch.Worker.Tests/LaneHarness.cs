@@ -113,6 +113,7 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             throttle,
             Alerter,
             new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
+            NewResolver(client, throttle, scraperOptions),
             TimeProvider.System,
             scraperOptions,
             Metrics,
@@ -158,6 +159,7 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             throttle,
             Alerter,
             new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
+            NewResolver(client, throttle, scraperOptions),
             clock,
             scraperOptions,
             Metrics,
@@ -174,6 +176,27 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
     }
 
     public void Dispose() => Metrics?.Dispose();
+
+    /// <summary>The verdict path's collaborators over the same scripted site:
+    /// listing fetches ride the SAME handler as card fetches, exactly as in
+    /// production where one PriceChartingClient serves both.</summary>
+    private MissingCardResolver NewResolver(
+        PriceChartingClient client, IncidentThrottle throttle, IOptions<ScraperOptions> scraperOptions) =>
+        new(
+            new SetWalker(
+                new Factory(options),
+                client,
+                new PoliteGate(Delay, TimeProvider.System),
+                Delay,
+                throttle,
+                Alerter,
+                TimeProvider.System,
+                scraperOptions,
+                Metrics,
+                NullLogger<SetWalker>.Instance),
+            throttle,
+            Alerter,
+            NullLogger<MissingCardResolver>.Instance);
 
     private sealed class Factory(DbContextOptions<PokemonDbContext> contextOptions)
         : IDbContextFactory<PokemonDbContext>

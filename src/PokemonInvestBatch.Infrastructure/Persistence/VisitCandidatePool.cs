@@ -76,7 +76,7 @@ public static class VisitCandidatePool
     /// ADR-0009).
     /// </summary>
     public static readonly System.Linq.Expressions.Expression<Func<Card, bool>> IsLiving =
-        c => c.DelistedAt == null && c.NotACardAt == null;
+        c => c.DelistedAt == null && c.NotACardAt == null && c.GoneAt == null;
 
     /// <summary>See <see cref="IsLiving"/>.</summary>
     public static IQueryable<Card> Living(PokemonDbContext db) => db.Cards.Where(IsLiving);

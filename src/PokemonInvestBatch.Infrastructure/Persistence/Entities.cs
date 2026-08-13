@@ -85,6 +85,18 @@ public class Card
     /// lapses.</summary>
     public DateTimeOffset? RefreshRequestedAt { get; set; }
 
+    /// <summary>The machine's removal verdict, and a reversible one: the card
+    /// was 302ing AND a completed walk of its own set's listing no longer
+    /// carried its product id — the site removed the product (dupe cleanup,
+    /// catalog pruning). Kept apart from <see cref="DelistedAt"/>, which is
+    /// only ever the operator's, exactly as <see cref="NotACardAt"/> is kept
+    /// apart — but unlike both neighbors this verdict undoes itself: the
+    /// probe re-fetches on a doubling schedule and a 200 runs the full visit,
+    /// which clears this column in the same transaction that writes the fresh
+    /// page. Invisible to scheduling, the bench, images, and alarms while
+    /// set; history rows stay put. See ADR-0010.</summary>
+    public DateTimeOffset? GoneAt { get; set; }
+
     /// <summary>Set by hand when the product is gone from the site outright —
     /// page and search both empty, so no set walk can ever heal the URL.
     /// The application never writes this column, it only honors it: a
