@@ -139,15 +139,18 @@ public class CrawlMetricsTests
         using var atCap = new MetricCollector<long>(metrics.Meter, "crawl.cards_at_cap");
         using var benched = new MetricCollector<long>(metrics.Meter, "crawl.cards_quarantined_now");
         using var delisted = new MetricCollector<long>(metrics.Meter, "crawl.cards_delisted");
+        using var gone = new MetricCollector<long>(metrics.Meter, "crawl.cards_gone");
 
-        metrics.SetSchedulerStats(cardsAtCap: 12, quarantinedNow: 3, delisted: 1);
+        metrics.SetSchedulerStats(cardsAtCap: 12, quarantinedNow: 3, delisted: 1, gone: 2);
         atCap.RecordObservableInstruments();
         benched.RecordObservableInstruments();
         delisted.RecordObservableInstruments();
+        gone.RecordObservableInstruments();
 
         Assert.Equal(12, atCap.LastMeasurement!.Value);
         Assert.Equal(3, benched.LastMeasurement!.Value);
         Assert.Equal(1, delisted.LastMeasurement!.Value);
+        Assert.Equal(2, gone.LastMeasurement!.Value);
     }
 
     [Fact]

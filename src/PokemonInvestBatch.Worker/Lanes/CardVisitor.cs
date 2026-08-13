@@ -63,7 +63,11 @@ public sealed class CardVisitor(
             }
             visit?.SetStatus(ActivityStatusCode.Error, $"HTTP {fetched.StatusCode}");
             db.Visits.Add(NewVisit(card, fetched.StatusCode, VisitOutcome.HttpError, fingerprintHash: null, now));
-            if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode))
+            // A gone card carries no streak and re-litigates no verdict: its
+            // probe owns the schedule, and walking the set again on every
+            // still-dead answer would spend listing fetches to reconfirm what
+            // the tombstone already says.
+            if (QuarantinePolicy.IsCardAttributable(fetched.StatusCode) && card.GoneAt is null)
             {
                 // A 3xx that is about to bench asks the set's listing first —
                 // the redirect target is a search page and proves nothing,

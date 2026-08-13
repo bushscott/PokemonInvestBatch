@@ -103,7 +103,8 @@ public sealed class StatsLane(
             cardsAtCap: await living.LongCountAsync(c => c.AnyBucketAtCap, ct),
             quarantinedNow: await living.LongCountAsync(
                 c => c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
-            delisted: await db.Cards.LongCountAsync(c => c.DelistedAt != null, ct));
+            delisted: await db.Cards.LongCountAsync(c => c.DelistedAt != null, ct),
+            gone: await db.Cards.LongCountAsync(c => c.GoneAt != null, ct));
 
         metrics.SetTotalRows(
             prices: await db.PriceMonths.LongCountAsync(ct),

@@ -146,7 +146,7 @@ Four projects in a straight line. **Each one may only reference the one below it
 enforced by the compiler, not by good intentions:
 
 ```
-   Worker            The moving parts: six independent background "lanes"
+   Worker            The moving parts: seven independent background "lanes"
       |              plus all wiring and configuration
       v
  Infrastructure      Talking to the outside world: HTTP client, database,

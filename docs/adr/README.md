@@ -18,3 +18,4 @@ The format is Michael Nygard's, from *Documenting Architecture Decisions* (2011)
 | [0007](0007-schedule-on-the-hottest-buckets-pace.md) | The schedule follows the hottest bucket, and a capped card warns its set | 2026-08-10 |
 | [0008](0008-express-visits-have-no-time-barriers.md) | Express visits have no time barriers; the calling app owns the rate limit | 2026-08-10 |
 | [0009](0009-tcgdex-metadata-enrichment.md) | Collector numbers and set sizes join from a pinned TCGdex mirror | 2026-08-13 |
+| [0010](0010-machine-retirement-with-brakes.md) | The listing retires a card, the probe brings it back (amends 0002) | 2026-08-13 |

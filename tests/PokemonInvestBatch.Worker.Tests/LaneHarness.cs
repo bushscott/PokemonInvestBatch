@@ -133,6 +133,47 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
             NullLogger<DetailCrawlLane>.Instance);
     }
 
+    /// <summary>The probe lane over the same scripted site — both tombstone
+    /// populations, the visitor wired for the gone path's full errand.</summary>
+    public DelistedProbeLane BuildProbeLane(ScriptedHandler handler)
+    {
+        Metrics = new CrawlMetrics(Delay);
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
+        var client = new PriceChartingClient(http, "tests@example.com", TimeProvider.System);
+        var throttle = new IncidentThrottle(TimeSpan.FromHours(6));
+        var scraperOptions = Options.Create(new ScraperOptions
+        {
+            ContactEmail = "tests@example.com",
+            FingerprintArchiveDirectory = fingerprintDirectory,
+            PauseCooldownMinutes = 0,
+        });
+
+        Visitor = new CardVisitor(
+            client,
+            Delay,
+            throttle,
+            Alerter,
+            new PageFingerprintArchive(throttle, Alerter, fingerprintDirectory),
+            NewResolver(client, throttle, scraperOptions),
+            TimeProvider.System,
+            scraperOptions,
+            Metrics,
+            NullLogger<CardVisitor>.Instance);
+
+        return new DelistedProbeLane(
+            new Factory(options),
+            client,
+            Visitor,
+            new PoliteGate(Delay, TimeProvider.System),
+            Delay,
+            throttle,
+            Alerter,
+            TimeProvider.System,
+            scraperOptions,
+            Metrics,
+            NullLogger<DelistedProbeLane>.Instance);
+    }
+
     /// <summary>The express path over the same scripted site. Any
     /// HttpMessageHandler is accepted so a test can gate a response open
     /// while a second caller coalesces onto the in-flight visit.</summary>

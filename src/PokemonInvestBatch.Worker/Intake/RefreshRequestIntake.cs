@@ -17,6 +17,12 @@ public enum RefreshRequestOutcome
     NotACard,
 
     Delisted,
+
+    /// <summary>Machine-retired: the site removed the product. Unlike the two
+    /// above this can reverse itself — the probe re-checks on a doubling
+    /// clock — so the caller's move is to try again later, or use an express
+    /// visit, which serves gone cards precisely because a 200 un-retires.</summary>
+    Gone,
 }
 
 public sealed record RefreshRequestReceipt(
@@ -54,6 +60,11 @@ public sealed class RefreshRequestIntake(
         if (card.DelistedAt is not null)
         {
             return new RefreshRequestReceipt(RefreshRequestOutcome.Delisted, null, null);
+        }
+
+        if (card.GoneAt is not null)
+        {
+            return new RefreshRequestReceipt(RefreshRequestOutcome.Gone, null, null);
         }
 
         var now = time.GetUtcNow();

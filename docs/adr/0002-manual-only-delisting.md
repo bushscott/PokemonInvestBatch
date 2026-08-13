@@ -1,7 +1,14 @@
 # ADR-0002: Retiring a dead card is a human decision, never automatic
 
 **Date:** 2026-08-03
-**Status:** Accepted
+**Status:** Amended by ADR-0010 (2026-08-13) — the rule below still governs
+`delisted_at`, which the application never writes; the machine got its own
+*reversible* tombstone (`gone_at`) with the brakes this ADR's objections asked
+for. The 20-minute-retry-forever loop this ADR describes is also gone: a card
+that keeps 302ing now triggers an on-demand walk of its own set listing, and
+the two-signal evidence this ADR rejected as too parser-trusting decides
+renamed vs removed vs phantom — under a failure-streak precondition, a
+completed-non-empty-walk requirement, and a mass-retirement circuit breaker.
 
 ## Context
 

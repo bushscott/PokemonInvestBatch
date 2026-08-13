@@ -128,6 +128,11 @@ public static class CardPageWriter
             card.ImageHash ??= page.ImageHash;
             card.FailureStreak = 0;
             card.QuarantinedUntil = null;
+            // The machine's removal verdict dies with the page that disproves
+            // it — any successful visit, by any path (the gone probe, an
+            // express ask, a walk-healed URL's next turn). The operator's
+            // delisted_at is never touched here; ADR-0002 still owns that.
+            card.GoneAt = null;
             // Any successful visit satisfies a pending refresh ask, whichever
             // path delivered it — the lane's turn or an express visit.
             card.RefreshRequestedAt = null;

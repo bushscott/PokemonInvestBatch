@@ -127,6 +127,33 @@ public static class VisitCandidatePool
     }
 
     /// <summary>
+    /// Machine-retired cards due a re-check, on a clock that needs no counter
+    /// column: a gone card is due when the silence since its last probe
+    /// exceeds the gap between retirement and that probe (capped at 30 days),
+    /// and a never-probed one is due a day after the verdict. The gap doubles
+    /// itself — probed at +1d, the next silence threshold is 1d, then 2d,
+    /// 4d… — so a false retirement costs a day and a long-gone card costs
+    /// about a visit a month. `delisted_probed_at` is the shared bookkeeping
+    /// stamp; one probed BEFORE this retirement began counts as never probed.
+    /// </summary>
+    public static IQueryable<Card> DueForGoneProbe(PokemonDbContext db, DateTimeOffset now)
+    {
+        var cap = TimeSpan.FromDays(30);
+        var firstProbeAfter = TimeSpan.FromDays(1);
+        return db.Cards
+            .Where(c => c.GoneAt != null)
+            .Where(c => c.DelistedProbedAt == null || c.DelistedProbedAt < c.GoneAt
+                ? c.GoneAt <= now - firstProbeAfter
+                : now - c.DelistedProbedAt!.Value
+                    >= (c.DelistedProbedAt!.Value - c.GoneAt!.Value > cap
+                        ? cap
+                        : c.DelistedProbedAt!.Value - c.GoneAt!.Value))
+            .OrderBy(c => c.DelistedProbedAt != null)
+            .ThenBy(c => c.DelistedProbedAt)
+            .Take(1);
+    }
+
+    /// <summary>
     /// Cards another app asked to refresh, oldest ask first — the intake
     /// tier's own window, since a merely-hours-stale card is invisible to
     /// every staleness-ordered query.

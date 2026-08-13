@@ -34,4 +34,26 @@ public class DelistedProbeQueryTranslationTests
         Assert.Contains("ORDER BY c.delisted_probed_at IS NOT NULL", sql);
         Assert.Contains("LIMIT", sql);
     }
+
+    [Fact]
+    public void Gone_probe_query_translates_to_sql()
+    {
+        // The doubling clock is pure timestamp arithmetic — silence since the
+        // last probe vs the capped gap between retirement and that probe — and
+        // interval subtraction inside a CASE is exactly the kind of expression
+        // that runs fine as LINQ-to-Objects and throws on the Pi.
+        var options = new DbContextOptionsBuilder<PokemonDbContext>()
+            .UseNpgsql("Host=localhost;Database=translation-check-only")
+            .UseSnakeCaseNamingConvention()
+            .Options;
+        using var db = new PokemonDbContext(options);
+        var now = new DateTimeOffset(2026, 8, 13, 0, 0, 0, TimeSpan.Zero);
+
+        var sql = VisitCandidatePool.DueForGoneProbe(db, now).ToQueryString();
+
+        Assert.Contains("gone_at IS NOT NULL", sql);
+        Assert.Contains("delisted_probed_at", sql);
+        Assert.Contains("CASE", sql);
+        Assert.Contains("LIMIT", sql);
+    }
 }

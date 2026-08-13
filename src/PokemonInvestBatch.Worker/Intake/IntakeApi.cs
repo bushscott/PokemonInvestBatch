@@ -46,6 +46,7 @@ public static class IntakeApi
         }),
         RefreshRequestOutcome.UnknownCard => (StatusCodes.Status404NotFound, Error(cardId, "unknown card")),
         RefreshRequestOutcome.NotACard => (StatusCodes.Status409Conflict, Error(cardId, "not a card")),
+        RefreshRequestOutcome.Gone => (StatusCodes.Status409Conflict, Error(cardId, "gone from the site (machine-retired; probed on a doubling schedule — an express visit can test it now)")),
         _ => (StatusCodes.Status409Conflict, Error(cardId, "delisted")),
     };
 

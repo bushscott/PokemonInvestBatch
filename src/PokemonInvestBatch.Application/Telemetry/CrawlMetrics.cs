@@ -46,6 +46,8 @@ public sealed class CrawlMetrics : IDisposable
     private long _cardsAtCap;
     private long _cardsQuarantinedNow;
     private long _cardsDelisted;
+
+    private long _cardsGone;
     private long _setsTotal;
     private double _worstCaseDays;
     private long _cardsAtRisk;
@@ -121,6 +123,9 @@ public sealed class CrawlMetrics : IDisposable
         Meter.CreateObservableGauge(
             "crawl.cards_delisted", () => _cardsDelisted,
             description: "Cards retired by hand because the product left the site — excluded from scheduling, retries, and alarms; history retained");
+        Meter.CreateObservableGauge(
+            "crawl.cards_gone", () => _cardsGone,
+            description: "Cards machine-retired because a completed walk of their own set no longer listed them — probed on a doubling schedule and un-retired automatically by the next 200; history retained");
         Meter.CreateObservableGauge(
             "crawl.total_rows", () =>
             new[]
@@ -249,11 +254,12 @@ public sealed class CrawlMetrics : IDisposable
     }
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>
-    public void SetSchedulerStats(long cardsAtCap, long quarantinedNow, long delisted)
+    public void SetSchedulerStats(long cardsAtCap, long quarantinedNow, long delisted, long gone)
     {
         _cardsAtCap = cardsAtCap;
         _cardsQuarantinedNow = quarantinedNow;
         _cardsDelisted = delisted;
+        _cardsGone = gone;
     }
 
     /// <summary>Refreshed by the stats sweep each interval.</summary>
