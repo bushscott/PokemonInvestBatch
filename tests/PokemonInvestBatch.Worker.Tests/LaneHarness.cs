@@ -71,12 +71,34 @@ public sealed class LaneHarness(DbContextOptions<PokemonDbContext> options, stri
 
     public CardVisitor Visitor { get; private set; } = null!;
 
-    public DetailCrawlLane Build(ScriptedHandler handler)
+    /// <summary>A real SetWalker over a scripted site — the cataloging errand
+    /// without the lane's schedule around it.</summary>
+    public SetWalker BuildWalker(ScriptedHandler handler, ScraperOptions? scraper = null)
     {
         Metrics = new CrawlMetrics(Delay);
         var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
         var client = new PriceChartingClient(http, "tests@example.com", TimeProvider.System);
-        var throttle = new IncidentThrottle(TimeSpan.FromHours(6));
+        return new SetWalker(
+            new Factory(options),
+            client,
+            new PoliteGate(Delay, TimeProvider.System),
+            Delay,
+            new IncidentThrottle(TimeSpan.FromHours(6)),
+            Alerter,
+            TimeProvider.System,
+            Options.Create(scraper ?? new ScraperOptions { ContactEmail = "tests@example.com" }),
+            Metrics,
+            NullLogger<SetWalker>.Instance);
+    }
+
+    public DetailCrawlLane Build(ScriptedHandler handler, IncidentThrottle? alertThrottle = null)
+    {
+        Metrics = new CrawlMetrics(Delay);
+        var http = new HttpClient(handler) { BaseAddress = new Uri("https://www.pricecharting.com") };
+        var client = new PriceChartingClient(http, "tests@example.com", TimeProvider.System);
+        // A test asserting alert CADENCE passes a zero-window throttle, so the
+        // suppression it observes is the code's own and not the 6h window's.
+        var throttle = alertThrottle ?? new IncidentThrottle(TimeSpan.FromHours(6));
         var scraperOptions = Options.Create(new ScraperOptions
         {
             ContactEmail = "tests@example.com",

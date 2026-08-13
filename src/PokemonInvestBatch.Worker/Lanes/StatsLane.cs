@@ -53,7 +53,7 @@ public sealed class StatsLane(
         // never cards will never be visited by design, so counting them as
         // "known" leaves the tile permanently short of complete — a gap that
         // reads as work remaining when the work is done.
-        var living = db.Cards.Where(c => c.DelistedAt == null && c.NotACardAt == null);
+        var living = VisitCandidatePool.Living(db);
         var corpusSize = await living.LongCountAsync(ct);
         var corpusVisited = await living.LongCountAsync(c => c.LastVisitedAt != null, ct);
         metrics.SetCorpusStats(
@@ -100,11 +100,9 @@ public sealed class StatsLane(
         metrics.SetSchedulerStats(
             // Retired cards keep their sticky at-cap flag but can never calm
             // down via a revisit — counting them would pin the tile red forever.
-            cardsAtCap: await db.Cards.LongCountAsync(
-                c => c.AnyBucketAtCap && c.DelistedAt == null && c.NotACardAt == null, ct),
-            quarantinedNow: await db.Cards.LongCountAsync(
-                c => c.DelistedAt == null && c.NotACardAt == null
-                     && c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
+            cardsAtCap: await living.LongCountAsync(c => c.AnyBucketAtCap, ct),
+            quarantinedNow: await living.LongCountAsync(
+                c => c.QuarantinedUntil != null && c.QuarantinedUntil > now, ct),
             delisted: await db.Cards.LongCountAsync(c => c.DelistedAt != null, ct));
 
         metrics.SetTotalRows(
@@ -115,7 +113,7 @@ public sealed class StatsLane(
         // Delisted and retired cards are excluded the same way the pool
         // excludes them: their asks are inert, and an inert ask on the gauge
         // would read as a scheduler falling behind.
-        metrics.SetRefreshRequestsPending(await db.Cards.LongCountAsync(
-            c => c.RefreshRequestedAt != null && c.DelistedAt == null && c.NotACardAt == null, ct));
+        metrics.SetRefreshRequestsPending(await living.LongCountAsync(
+            c => c.RefreshRequestedAt != null, ct));
     }
 }

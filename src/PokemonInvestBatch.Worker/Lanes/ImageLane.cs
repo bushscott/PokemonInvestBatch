@@ -54,9 +54,8 @@ public sealed class ImageLane(
     private async Task FetchPendingAsync(CancellationToken ct)
     {
         await using var db = await dbFactory.CreateDbContextAsync(ct);
-        var pending = await db.Cards
-            .Where(c => c.DelistedAt == null && c.NotACardAt == null
-                        && c.ImageHash != null && c.ImageFetchedAt == null)
+        var pending = await VisitCandidatePool.Living(db)
+            .Where(c => c.ImageHash != null && c.ImageFetchedAt == null)
             .OrderBy(c => c.Id)
             .Take(50)
             .ToListAsync(ct);

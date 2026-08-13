@@ -137,14 +137,21 @@ public sealed class CardVisitor(
         // ~144 — the count now matches the panel's own words, "cards added".
         var joiningBench = card.QuarantinedUntil is not { } sentence || sentence <= now;
         card.QuarantinedUntil = until;
-        if (joiningBench)
-        {
-            metrics.RecordCardQuarantined(reason);
-        }
         logger.LogWarning(
             "Card {CardId} ({Name}) quarantined until {Until:u} after {Streak} consecutive failures ({Reason})",
             card.Id, card.Name, until.Value, card.FailureStreak, reason);
+        if (!joiningBench)
+        {
+            // Re-benching is bookkeeping, not news: the metric learned this
+            // on 2026-08-08 (three broken pages pinned the 24h panel at ~144)
+            // and the alert learned it on 2026-08-13 — it sat outside this
+            // guard under one GLOBAL throttle key, so every re-bench across
+            // the corpus re-entered a 6h lottery and the inbox read
+            // "failed 3 / 7 / 9 visits" from whichever card won each window.
+            return;
+        }
 
+        metrics.RecordCardQuarantined(reason);
         if (throttle.ShouldAlert("card-quarantined", now))
         {
             await alerter.RaiseAsync(

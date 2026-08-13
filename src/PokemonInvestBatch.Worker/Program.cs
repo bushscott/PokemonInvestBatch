@@ -133,6 +133,9 @@ builder.Services.AddSingleton(services =>
 
 // One visit implementation for both paths: the detail lane's turn and the
 // intake API's express visits.
+// The walk behind two callers (CardVisitor precedent): the weekly enumeration
+// schedule, and the gone-verdict path's on-demand listing check.
+builder.Services.AddSingleton<SetWalker>();
 builder.Services.AddSingleton<CardVisitor>();
 builder.Services.AddSingleton<RefreshRequestIntake>();
 builder.Services.AddSingleton(services => new ExpressVisitRunner(

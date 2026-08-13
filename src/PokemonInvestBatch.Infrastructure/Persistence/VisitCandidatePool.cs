@@ -64,13 +64,27 @@ public static class VisitCandidatePool
             },
         };
 
+    /// <summary>
+    /// The ONE spelling of "this card has a page worth visiting" — no
+    /// tombstone of any kind. Every corpus-shaped query starts here (or
+    /// applies <see cref="IsLiving"/> to a queryable it already holds); the
+    /// predicate was once hand-copied across thirteen queries in six files,
+    /// which is exactly how a new tombstone column gets missed by one of them
+    /// and a tile starts lying. The deliberate exceptions, each of which
+    /// wants a specific tombstone: the delisted probe, the cards_delisted
+    /// gauge, and the enrichment lane (delisted cards stay enrichable,
+    /// ADR-0009).
+    /// </summary>
+    public static readonly System.Linq.Expressions.Expression<Func<Card, bool>> IsLiving =
+        c => c.DelistedAt == null && c.NotACardAt == null;
+
+    /// <summary>See <see cref="IsLiving"/>.</summary>
+    public static IQueryable<Card> Living(PokemonDbContext db) => db.Cards.Where(IsLiving);
+
     /// <summary>Quarantined cards are invisible until their sentence lapses;
-    /// delisted cards and things that were never cards are invisible for
-    /// good.</summary>
+    /// tombstoned cards are invisible for good.</summary>
     public static IQueryable<Card> Eligible(PokemonDbContext db, DateTimeOffset now) =>
-        db.Cards.Where(c =>
-            c.DelistedAt == null && c.NotACardAt == null
-            && (c.QuarantinedUntil == null || c.QuarantinedUntil < now));
+        Living(db).Where(c => c.QuarantinedUntil == null || c.QuarantinedUntil < now);
 
     /// <summary>
     /// The retry queue, for the bench recheck: still-benched cards,
@@ -83,8 +97,7 @@ public static class VisitCandidatePool
     /// Bounded like the other tier windows; two narrow columns cross the wire.
     /// </summary>
     public static IQueryable<BenchedCandidate> Benched(PokemonDbContext db, DateTimeOffset now) =>
-        db.Cards
-            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
+        Living(db)
             .Where(c => c.QuarantinedUntil != null && c.QuarantinedUntil >= now)
             .OrderBy(c => c.QuarantinedUntil)
             .Take(TierTake)
@@ -180,7 +193,7 @@ public static class VisitCandidatePool
     {
         var threshold = SalesObservation.BucketCap * fraction;
         return cards
-            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
+            .Where(IsLiving)
             .Where(c => c.LastVisitedAt != null && c.ObservedSalesPerDay > 0)
             .Where(c => (now - c.LastVisitedAt!.Value).TotalDays * c.ObservedSalesPerDay!.Value
                         > threshold);
@@ -200,10 +213,9 @@ public static class VisitCandidatePool
     /// </summary>
     public static IQueryable<long> HottestSetSiblings(
         PokemonDbContext db, long setId, long exceptCardId) =>
-        db.Cards
+        Living(db)
             .Where(c => c.SetId == setId && c.Id != exceptCardId)
             .Where(c => c.ObservedSalesPerDay > 0 && c.RefreshRequestedAt == null)
-            .Where(c => c.DelistedAt == null && c.NotACardAt == null)
             .OrderByDescending(c => c.ObservedSalesPerDay)
             .Take(SetContagionTake)
             .Select(c => c.Id);

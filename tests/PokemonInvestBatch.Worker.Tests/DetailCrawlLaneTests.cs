@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.Metrics.Testing;
+using PokemonInvestBatch.Application.Alerting;
 using PokemonInvestBatch.Domain.Tests.Fixtures;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.TestSupport;
@@ -201,6 +202,33 @@ public class DetailCrawlLaneTests : DatabaseTest, IDisposable
         Assert.Equal(4, card.FailureStreak);
         Assert.NotNull(card.QuarantinedUntil);
         Assert.Equal(1, quarantined.GetMeasurementSnapshot().Sum(m => m.Value));
+    }
+
+    [SkippableFact]
+    public async Task Re_benching_alerts_a_card_once_not_once_per_retry()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+
+        // The metric learned this lesson first (the test above); the ALERT
+        // never did — it sat outside the joining-bench guard under a single
+        // global 6h throttle key, so every re-bench re-entered the lottery
+        // and the operator's inbox read "failed 3 / 7 / 9 visits" from
+        // whichever card won each window. Joining the bench is news;
+        // re-benching is bookkeeping. The zero-window throttle here removes
+        // the lottery so the only suppression left is the guard itself.
+        await SeedCardAsync();
+
+        using var harness = NewHarness();
+        var lane = harness.Build(
+            new ScriptedHandler(
+                ScriptedHandler.Redirect("https://www.pricecharting.com/search-products?q=charizard")),
+            new IncidentThrottle(TimeSpan.Zero));
+        for (var i = 0; i < 4; i++)
+        {
+            await lane.CrawlOneAsync(CancellationToken.None);
+        }
+
+        Assert.Equal(1, harness.Alerter.Raised.Count(a => a.Subject == "Card quarantined"));
     }
 
     [SkippableFact]
