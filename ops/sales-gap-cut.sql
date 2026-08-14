@@ -49,6 +49,12 @@ WITH gaps AS (
     FROM sales_gap_candidates
     WHERE rows_written >= page_cap                -- nothing we held survived
       AND batch_oldest > last_known_sale          -- reach-back clears the batch
+      -- STANDING EXCLUSIONS — windows the operator ruled uncut, which the
+      -- audit will keep reporting as GAP forever (expected; do not re-litigate).
+      -- Slowbro #87, 2026-08-14: a 30+ single-day bulk dump (sequential eBay
+      -- ids, tight price band). The surviving rows ARE the event; cutting
+      -- would delete 30 real rows over a boundary-case loss of ~2.
+      AND NOT (card_id = 13077413 AND batch_oldest = DATE '2026-08-14')
 )
 SELECT DISTINCT ON (card_id)
        card_id,
