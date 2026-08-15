@@ -22,6 +22,16 @@ public sealed record TcgdexSet
     /// <summary>The serie the set belongs to ("swsh", "sv", "tcgp"…).</summary>
     public required string SerieId { get; init; }
 
+    /// <summary>The serie's display name ("Sword &amp; Shield"), distinct
+    /// from <see cref="SerieId"/> ("swsh") — the Pokédex phase's set-details
+    /// sweep (ADR-0011) stores this verbatim in <c>set_details.series</c>
+    /// and looks it up against the curated series→era file.</summary>
+    public required string SerieName { get; init; }
+
+    /// <summary>The set's release date, as TCGdex publishes it —
+    /// <c>set_details.released_on</c> (ADR-0011).</summary>
+    public required DateOnly ReleaseDate { get; init; }
+
     /// <summary>cardCount.official — the printed set size, the denominator in
     /// "215/203". Secret cards are numbered past it. Zero means TCGdex has no
     /// denominator for this set (new-era promo sets), not a size of zero.

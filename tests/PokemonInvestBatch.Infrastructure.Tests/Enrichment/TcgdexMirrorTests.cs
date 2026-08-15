@@ -21,6 +21,7 @@ public class TcgdexMirrorTests : IDisposable
           "id": "swsh7",
           "name": "Evolving Skies",
           "serie": { "id": "swsh", "name": "Sword & Shield" },
+          "releaseDate": "2021-08-27",
           "cardCount": { "official": 203, "total": 237, "holo": 130 },
           "cards": [
             { "id": "swsh7-215", "localId": "215", "name": "Umbreon VMAX" }
@@ -33,6 +34,7 @@ public class TcgdexMirrorTests : IDisposable
           "id": "A3b",
           "name": "Eevee Grove",
           "serie": { "id": "tcgp", "name": "Pokémon TCG Pocket" },
+          "releaseDate": "2025-06-26",
           "cardCount": { "official": 69, "total": 107 },
           "cards": []
         }

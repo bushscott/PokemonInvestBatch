@@ -38,7 +38,8 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
             {
               "id": "swsh7",
               "name": "Evolving Skies",
-              "serie": { "id": "swsh" },
+              "serie": { "id": "swsh", "name": "Sword & Shield" },
+              "releaseDate": "2021-08-27",
               "cardCount": { "official": 203, "total": 237 },
               "cards": [
                 { "id": "swsh7-95", "localId": "95", "name": "Umbreon VMAX" },
@@ -52,7 +53,8 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
             {
               "id": "cel25",
               "name": "Celebrations",
-              "serie": { "id": "swsh" },
+              "serie": { "id": "swsh", "name": "Sword & Shield" },
+              "releaseDate": "2021-10-08",
               "cardCount": { "official": 25, "total": 25 },
               "cards": [
                 { "id": "cel25-4", "localId": "4", "name": "Palkia" }

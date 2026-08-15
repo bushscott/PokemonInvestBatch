@@ -19,6 +19,8 @@ public class TcgdexMatcherTests
             Id = id,
             Name = name,
             SerieId = "swsh",
+            SerieName = "Sword & Shield",
+            ReleaseDate = new DateOnly(2021, 8, 27),
             OfficialCount = official,
             TotalCount = cards.Length,
             Cards = cards,

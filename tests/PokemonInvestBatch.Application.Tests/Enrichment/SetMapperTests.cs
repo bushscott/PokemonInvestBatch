@@ -8,7 +8,16 @@ public class SetMapperTests
         new Dictionary<string, IReadOnlyList<string>>();
 
     private static TcgdexSet Set(string id, string name, string serie = "swsh") =>
-        new() { Id = id, Name = name, SerieId = serie, OfficialCount = 100, TotalCount = 100 };
+        new()
+        {
+            Id = id,
+            Name = name,
+            SerieId = serie,
+            SerieName = serie,
+            ReleaseDate = new DateOnly(2021, 8, 27),
+            OfficialCount = 100,
+            TotalCount = 100,
+        };
 
     [Theory]
     [InlineData("pokemon-japanese-eevee-heroes", SetPartition.Japanese)]

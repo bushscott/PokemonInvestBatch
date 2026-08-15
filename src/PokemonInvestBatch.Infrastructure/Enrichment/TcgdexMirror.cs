@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using PokemonInvestBatch.Application.Enrichment;
 
@@ -138,15 +139,26 @@ public static class TcgdexMirror
             }
         }
 
+        // Required on purpose: serie is the digital-set exclusion, and a set
+        // whose serie we cannot read is a shape we refuse rather than
+        // classify by guesswork — the parsers' posture toward drift, applied
+        // here. Both id and name live on the same object and are equally
+        // reliable in the live catalog (verified 2026-08-15 across Base,
+        // Gym, Neo, E-Card, EX, Diamond & Pearl, Platinum, HeartGold &
+        // SoulSilver, Black & White, XY, Sun & Moon, Sword & Shield and
+        // Scarlet & Violet), so name gets the same strictness id already had.
+        var serie = Require(root, "serie", source);
+
         return new TcgdexSet
         {
             Id = RequireString(root, "id", source),
             Name = RequireString(root, "name", source),
-            // Required on purpose: serie is the digital-set exclusion, and a
-            // set whose serie we cannot read is a shape we refuse rather
-            // than classify by guesswork — the parsers' posture toward
-            // drift, applied here.
-            SerieId = RequireString(Require(root, "serie", source), "id", source),
+            SerieId = RequireString(serie, "id", source),
+            SerieName = RequireString(serie, "name", source),
+            // Same live-verified reliability as serie above — every set
+            // sampled (1999's Base Set through 2023's Scarlet & Violet)
+            // carried releaseDate in yyyy-MM-dd.
+            ReleaseDate = RequireDate(root, "releaseDate", source),
             OfficialCount = RequireInt(cardCount, "official", source),
             TotalCount = RequireInt(cardCount, "total", source),
             Cards = cards,
@@ -191,4 +203,14 @@ public static class TcgdexMirror
 
     private static int RequireInt(JsonElement element, string property, string source) =>
         Require(element, property, source).GetInt32();
+
+    private static DateOnly RequireDate(JsonElement element, string property, string source)
+    {
+        var raw = RequireString(element, property, source);
+        return DateOnly.TryParseExact(raw, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var date)
+            ? date
+            : throw new InvalidOperationException(
+                $"TCGdex data ({source}) has a '{property}' of '{raw}' that is not a yyyy-MM-dd date — " +
+                "refusing to enrich from a shape this code does not understand.");
+    }
 }

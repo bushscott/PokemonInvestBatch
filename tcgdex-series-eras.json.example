@@ -1,0 +1,15 @@
+{
+  "Base": "WOTC",
+  "Gym": "WOTC",
+  "Neo": "WOTC",
+  "E-Card": "WOTC",
+  "EX": "EX",
+  "Diamond & Pearl": "DP",
+  "Platinum": "DP",
+  "HeartGold & SoulSilver": "DP",
+  "Black & White": "BW",
+  "XY": "XY",
+  "Sun & Moon": "SM",
+  "Sword & Shield": "SWSH",
+  "Scarlet & Violet": "SV"
+}
