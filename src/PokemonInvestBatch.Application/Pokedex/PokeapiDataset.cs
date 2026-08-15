@@ -156,6 +156,12 @@ public static class PokeapiDataset
             .Select(entry => Capitalize(entry.Name))
             .ToList();
 
+        if (types.Count is 0 or > 2)
+        {
+            throw new InvalidOperationException(
+                $"{file}: default variety has {types.Count} types, expected 1-2.");
+        }
+
         return (types, types[0]);
     }
 

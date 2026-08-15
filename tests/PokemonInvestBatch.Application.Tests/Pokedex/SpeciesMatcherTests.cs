@@ -90,4 +90,28 @@ public class SpeciesMatcherTests
             new[] { 25, 26, 150, 644, 120 }.OrderBy(id => id),
             verdict.SpeciesIds.OrderBy(id => id));
     }
+
+    [Fact]
+    public void Three_species_tag_but_a_fourth_tips_it_into_quarantine()
+    {
+        var three = SpeciesMatcher.Match("Pikachu & Raichu & Zekrom #1", Candidates);
+        Assert.Equal(TagStatus.Tagged, three.Status);
+        Assert.Equal(new[] { 25, 26, 644 }.OrderBy(id => id), three.SpeciesIds.OrderBy(id => id));
+
+        var four = SpeciesMatcher.Match("Pikachu & Raichu & Zekrom & Staryu #1", Candidates);
+        Assert.Equal(TagStatus.Quarantined, four.Status);
+        Assert.Equal(new[] { 25, 26, 644, 120 }.OrderBy(id => id), four.SpeciesIds.OrderBy(id => id));
+    }
+
+    [Fact]
+    public void BuildCandidates_breaks_the_MimeJr_MrMime_tie_ordinally()
+    {
+        var candidates = SpeciesMatcher.BuildCandidates(new (int Id, string EnglishName)[]
+        {
+            (122, "Mr. Mime"),
+            (439, "Mime Jr."),
+        });
+
+        Assert.Equal(new[] { "mime jr.", "mr. mime" }, candidates.Select(c => c.Name));
+    }
 }

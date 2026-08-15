@@ -270,6 +270,34 @@ public class TaggingSweepTests : DatabaseTest
     }
 
     [SkippableFact]
+    public async Task A_delisted_card_is_still_examined_and_tagged()
+    {
+        // Acceptance invariant #1 (ops/README.md §8): every taggable card
+        // gets exactly one card_tagging row — delisted or not. Only
+        // not_a_card_at excludes (see A_not_a_card_page_is_never_examined,
+        // below); delisted_at must never join that filter.
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+        await using (var seed = NewContext())
+        {
+            seed.Sets.Add(SeedSet());
+            seed.SpeciesRows.Add(SeedSpecies(197, "Umbreon", "umbreon"));
+            var card = SeedCard(10, "Umbreon VMAX #215");
+            card.DelistedAt = Now;
+            seed.Cards.Add(card);
+            await seed.SaveChangesAsync();
+        }
+
+        var clock = new FakeTimeProvider();
+        clock.SetUtcNow(Now);
+
+        await using var db = NewContext();
+        var result = await new TaggingSweep().RunAsync(db, Candidates, clock, CancellationToken.None);
+
+        Assert.Equal(1, result.Examined);
+        Assert.Equal(1, result.Tagged);
+    }
+
+    [SkippableFact]
     public async Task A_not_a_card_page_is_never_examined()
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");

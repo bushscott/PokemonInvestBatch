@@ -132,6 +132,16 @@ public class PokeapiDatasetTests : IDisposable
     }
 
     [Fact]
+    public void A_default_variety_with_zero_types_throws_naming_the_file()
+    {
+        var mirror = BuildMirror(mutatePokemon: umbreon => umbreon["types"] = new JsonArray());
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PokeapiDataset.Load(mirror));
+
+        Assert.Contains("pokemon/197.json", ex.Message);
+    }
+
+    [Fact]
     public void An_unmapped_generation_throws()
     {
         var mirror = BuildMirror(mutateSpecies: umbreon =>
