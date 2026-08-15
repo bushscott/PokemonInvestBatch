@@ -96,13 +96,21 @@ public static class TitleNormalizer
 
     /// <summary>
     /// Maps a single lowercase accented Latin-1 letter to its unaccented
-    /// base letter. Covers exactly the letters Unicode defines a canonical
-    /// decomposition for, so it matches what NFD would strip if
-    /// <c>Normalize(FormD)</c> worked under this repo's invariant
-    /// globalization — not an approximation of it. æ, ø, ð, þ, ß are
-    /// intentionally absent: Unicode gives them no decomposition, so real
-    /// NFD would not touch them either. Anything else — including ♀
-    /// (U+2640) and ♂ (U+2642) — falls through the default arm unchanged.
+    /// base letter. This is a scoped table, not a complete NFD
+    /// implementation: Unicode defines canonical decompositions for plenty
+    /// of letters outside Latin-1 too (Latin Extended-A's ā, č, ő among
+    /// others), and this switch does not handle them. Latin-1 is enough for
+    /// this domain specifically: every accented letter across the pinned
+    /// PokéAPI dataset's 1,025 English species display names is Latin-1
+    /// (checked directly against the full English name list — the only
+    /// case is Flabébé's é), and the wider card-title corpus this repo
+    /// already crawls carries no non-ASCII letter at all — only 51 of
+    /// 91,646 active cards have any non-ASCII character in
+    /// <c>cards.name</c>, and every one is punctuation, not a letter
+    /// (ADR-0011). æ, ø, ð, þ, ß are intentionally absent even though they
+    /// are Latin-1: Unicode gives them no decomposition, so real NFD would
+    /// not touch them either. Anything else — including ♀ (U+2640) and ♂
+    /// (U+2642) — falls through the default arm unchanged.
     /// </summary>
     private static char FoldDiacritic(char c) => c switch
     {

@@ -18,10 +18,12 @@ namespace PokemonInvestBatch.Infrastructure.Enrichment;
 /// ensuring it exists is coordinated (<see cref="EnsureAsync"/>) rather than
 /// left to each caller's own Exists-then-fetch check.
 ///
-/// Loading is strict on the fields the join computes from (id, localId,
-/// name, cardCount.official): a shape this code does not understand refuses
-/// loudly rather than enriching from a guess — the same posture the page
-/// parsers take toward drift.
+/// Loading is strict on the fields the join computes from: id, name,
+/// serie.id, serie.name, releaseDate, cardCount.official and
+/// cardCount.total on every set, plus id/localId/name on every entry of a
+/// set's cards[] array when that (optional) array is present. A shape this
+/// code does not understand refuses loudly rather than enriching from a
+/// guess — the same posture the page parsers take toward drift.
 /// </summary>
 public static class TcgdexMirror
 {

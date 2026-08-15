@@ -26,8 +26,8 @@ public sealed record TaggingSweepResult(int Examined, int Tagged, int NoSpecies,
 /// Pokémon.</description></item>
 /// <item><description>A card whose <c>card_tagging.method</c> is
 /// <see cref="TagMethod.Manual"/> is skipped even when its name has changed
-/// — the Pokédex phase's R10 ruling: an operator's pin freezes the card
-/// until a human statement (never a sweep) unpins it.</description></item>
+/// (ADR-0011 item 7): an operator's pin freezes the card until a human
+/// statement (never a sweep) unpins it.</description></item>
 /// </list>
 ///
 /// Per card examined, <see cref="SpeciesMatcher.Match"/> decides the
@@ -41,9 +41,9 @@ public sealed record TaggingSweepResult(int Examined, int Tagged, int NoSpecies,
 /// insertion side too — <c>(card_id, species_id)</c> is card_species' whole
 /// primary key, so a machine link can never occupy a slot a Manual row
 /// already holds. A <see cref="TagStatus.Quarantined"/> verdict's candidate
-/// ids are recorded nowhere by this sweep (R5): card_tagging has no column
-/// for them, and the empty desired-link set below is what deletes any
-/// stale links a since-corrected title left behind.
+/// ids are recorded nowhere by this sweep: card_tagging has no column for
+/// them, and the empty desired-link set below is what deletes any stale
+/// links a since-corrected title left behind.
 /// </summary>
 public sealed class TaggingSweep
 {

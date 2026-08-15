@@ -244,9 +244,9 @@ public static class PokeapiMirror
     /// <summary>The id of the species' default variety (<c>varieties[]</c>
     /// entry with <c>is_default: true</c>) — the <c>pokemon/{id}.json</c>
     /// this mirror fetches for it. Always read from <c>varieties[]</c>
-    /// rather than assumed equal to the species id: Task 6's fixture survey
-    /// found that equality held for every species it checked but never
-    /// proved it dataset-wide.</summary>
+    /// rather than assumed equal to the species id: the fixture sample
+    /// checked confirms the two ids match for every species it covers, but
+    /// that is not a proof it holds dataset-wide.</summary>
     private static int DefaultVarietyId(JsonElement species, string file)
     {
         foreach (var variety in Require(species, "varieties", file).EnumerateArray())

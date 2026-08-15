@@ -132,8 +132,8 @@ public sealed record ScraperOptions
     public int PokedexTaggingIntervalHours { get; init; } = 24;
 
     /// <summary>Hand-curated TCGdex series→era mapping (ADR-0011), same
-    /// user-input posture as <see cref="TcgdexSetAliasesPath"/>. Reserved by
-    /// this option now; unused until the set-details sweep later in the
-    /// Pokédex phase reads it.</summary>
+    /// user-input posture as <see cref="TcgdexSetAliasesPath"/>. Read by
+    /// <see cref="PokemonInvestBatch.Infrastructure.Pokedex.SetDetailsSweep"/>,
+    /// wired in via <c>PokedexLane</c>.</summary>
     public string TcgdexSeriesEraPath { get; init; } = "tcgdex-series-eras.json";
 }

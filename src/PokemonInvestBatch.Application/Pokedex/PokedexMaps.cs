@@ -48,10 +48,10 @@ public static class PokedexMaps
 
     /// <summary>Maps a species' PokéAPI egg-group resource name to the
     /// display name CardStock's Character page shows. This table is the
-    /// <em>only</em> source for egg-group display names (controller ruling)
-    /// — the dataset's own localized-name arrays are never consulted, even
-    /// though they carry an English name too, so this list is the one place
-    /// that can ever disagree with PokéAPI's own wording. Three of the
+    /// <em>only</em> source for egg-group display names — the dataset's own
+    /// localized-name arrays are never consulted, even though they carry an
+    /// English name too, so this list is the one place that can ever
+    /// disagree with PokéAPI's own wording. Three of the
     /// fifteen rows rename outright on purpose: "ground" reads as "Field",
     /// "plant" as "Grass", "humanshape" as "Human-Like" — the games'
     /// familiar group names, not PokéAPI's internal resource ids. Anything
@@ -78,13 +78,18 @@ public static class PokedexMaps
     };
 
     /// <summary>Maps a species' primary type — Capitalized, e.g. "Dark" —
-    /// to the two-stop hex gradient its identity header and tiles render
-    /// (CardStock D-104). Eighteen rows, one per type the dataset defines.
-    /// Every pair is a hand-picked, tasteful gradient rather than a computed
-    /// tint; Dark's pair is the existing Umbreon pair already live in the
-    /// CardStock prototypes, carried over exactly rather than re-derived.
-    /// Anything else throws: a nineteenth type is drift, not a case to fall
-    /// back to a default gradient.</summary>
+    /// to the two-stop hex gradient stored as the species' own
+    /// <c>gradient_start</c>/<c>gradient_end</c> columns (ADR-0011 item 1).
+    /// Eighteen rows, one per type the dataset defines. Every pair is a
+    /// hand-picked, tasteful gradient rather than a computed tint; Dark's
+    /// pair is the existing Umbreon pair already live in the CardStock
+    /// prototypes, carried over exactly rather than re-derived. This is not
+    /// the species' identity image — ADR-0011 item 2 pins a per-species icon
+    /// from the PokéAPI sprites mirror for that — it is the product's
+    /// gradient-tile fallback convention: the tile rendered in an icon's
+    /// place for a species the icon fetch never finds one for at either
+    /// fallback tier (SpeciesIconStore). Anything else throws: a nineteenth
+    /// type is drift, not a case to fall back to a default gradient.</summary>
     public static (string Start, string End) TypeGradient(string primaryType) => primaryType switch
     {
         "Fire" => ("#B4522A", "#E8A46B"),

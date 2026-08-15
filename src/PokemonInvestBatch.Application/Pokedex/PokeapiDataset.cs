@@ -21,7 +21,8 @@ public sealed record SpeciesImport(
 /// <summary>
 /// Reads a pinned PokéAPI dataset mirror into import records (ADR-0011).
 /// Pure — no network, no database, no clock; the mirror directory on disk is
-/// the only input. Expects Task 7's mirror layout: flat
+/// the only input. Expects the layout the fetcher writes (Infrastructure's
+/// PokeapiMirror, ADR-0011 item 2): flat
 /// <c>pokemon-species/{dexNumber}.json</c>, <c>pokemon/{pokemonId}.json</c>
 /// and <c>evolution-chain/{chainId}.json</c> files directly under one root —
 /// flatter than upstream's own <c>{resource}/{n}/index.json</c> shape.

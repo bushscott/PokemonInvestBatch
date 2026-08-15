@@ -13,8 +13,10 @@ namespace PokemonInvestBatch.Application.Pokedex;
 public enum TagStatus : short
 {
     /// <summary>The longest-species-name-first title match (ADR-0011 item 3)
-    /// found exactly one species, and the link is written to
-    /// card_species.</summary>
+    /// found one to three species, and the link(s) are written to
+    /// card_species — a title naming more than one species ("Pikachu &amp;
+    /// Zekrom GX") is the point of allowing up to three, not an edge
+    /// case.</summary>
     Tagged,
 
     /// <summary>The title names no species at all. Covers trainers, energy,

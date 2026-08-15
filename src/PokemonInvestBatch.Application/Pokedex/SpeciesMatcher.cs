@@ -3,7 +3,8 @@ namespace PokemonInvestBatch.Application.Pokedex;
 /// <summary>
 /// The outcome of matching one card's title against the species catalog
 /// (ADR-0011 item 3): the status the match produced, and the species ids it
-/// found, in first-match order. Ids are preserved on every status, including
+/// found, in candidate-scan order (length-descending), not title order. Ids
+/// are preserved on every status, including
 /// <see cref="TagStatus.Quarantined"/> — quarantine keeps them for manual
 /// review rather than discarding the evidence that caused it.
 /// </summary>
@@ -35,9 +36,10 @@ public static class SpeciesMatcher
     /// accepted span out of a scratch buffer so it cannot re-match a
     /// shorter candidate later in the scan — this is what stops "Porygon"
     /// from consuming a prefix of an already-matched "Porygon2" or
-    /// "Porygon-Z". The distinct species ids found, in first-match order,
-    /// decide the status: zero is <see cref="TagStatus.NoSpecies"/>, one to
-    /// three is <see cref="TagStatus.Tagged"/>, four or more is
+    /// "Porygon-Z". The distinct species ids found, in candidate-scan order
+    /// (length-descending, not title order), decide the status: zero is
+    /// <see cref="TagStatus.NoSpecies"/>, one to three is
+    /// <see cref="TagStatus.Tagged"/>, four or more is
     /// <see cref="TagStatus.Quarantined"/> — guessing among four or more
     /// candidates is the one thing this match never does.
     /// </summary>
@@ -113,8 +115,13 @@ public static class SpeciesMatcher
     /// length descending so compound and multi-word names claim their text
     /// before a shorter name embedded in them can. Ties break ordinally —
     /// load-bearing for "mime jr." vs "mr. mime" (both 8 characters
-    /// normalized): ordinal puts "mime jr." first, which is what stops
-    /// "Mime Jr." from ever matching as "Mr. Mime".
+    /// normalized). Not because either order could make one match as the
+    /// other: equal-length strings can never nest as substrings of each
+    /// other, so no tie-break order changes any match verdict here. It is
+    /// what makes the candidate order — and therefore
+    /// <see cref="TagVerdict.SpeciesIds"/>' order, for a title that names
+    /// more than one equal-length candidate — deterministic rather than an
+    /// accident of the caller's enumeration order.
     /// </summary>
     public static IReadOnlyList<(string Name, int SpeciesId)> BuildCandidates(IEnumerable<(int Id, string EnglishName)> species)
         => species
