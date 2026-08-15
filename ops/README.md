@@ -76,6 +76,24 @@ Then apply the post-migration grants (the bottom of `postgres-setup.sql` says wh
 sudo -u postgres psql -d pokemon -c "GRANT UPDATE ON cards, fingerprints, sets TO pokemon_app;"
 ```
 
+The Pokédex tables (ADR-0011) take the same treatment once their migration has landed:
+
+```bash
+sudo -u postgres psql -d pokemon -c "
+GRANT UPDATE ON species, species_types, species_egg_groups, species_names,
+    card_tagging, set_details TO pokemon_app;
+GRANT UPDATE, DELETE ON card_species TO pokemon_app;
+GRANT DELETE ON species_types, species_egg_groups, species_names TO pokemon_app; -- re-import child replacement
+"
+```
+
+These seven tables are derived, rebuildable current-state, not observations, so the
+append-only posture that keeps `pokemon_app` off `DELETE` everywhere else in this
+schema doesn't hold for them (ADR-0011 items 5–6). `cardstock_app`'s `SELECT` on all
+seven needs no new grant here — ADR-0011 counts on it arriving through the existing
+default privileges. Verify that on deploy rather than assume it: §8's acceptance
+queries end with the read-check.
+
 ## 5. App deployment
 
 Self-contained publish — no runtime installed on the Pi:
@@ -145,3 +163,78 @@ outage and were never discontinuous.
 First run, 2026-08-10: 5 gaps on 4 cards (Snorlax #76 twice, Mega Charizard X EX #23,
 Psyduck #226, Mega Gengar ex #269 — every one the PSA 10 bucket), 1,290 rows cut,
 rollback CSV at `/home/scott/sales-cut-20260810.csv` on the Pi.
+
+## 8. Pokédex operations (ADR-0011)
+
+`species`, `card_species`, `card_tagging` and `set_details` are re-derived by the
+tagging lane on every sweep, not hand-maintained — but two things still need an
+operator: overriding a wrong or missing verdict by hand, and confirming a sweep did
+what ADR-0011 promises.
+
+**Manual overrides.** A card's species link (or lack of one) can be pinned by hand,
+the same posture ADR-0002 established for `delisted_at`: a human runs a documented
+statement, the tagging lane honours the result but never writes `Manual` rows itself
+and never overwrites one. The raw integers below are `TagStatus` (`Tagged = 0`,
+`NoSpecies = 1`, `Quarantined = 2`) and `TagMethod` (`TitleMatch = 0`, `Manual = 1`).
+
+```sql
+-- Pin a card's species by hand (survives every sweep):
+INSERT INTO card_species (card_id, species_id, method) VALUES (<card>, <dex>, 1)
+    ON CONFLICT (card_id, species_id) DO UPDATE SET method = 1;
+UPDATE card_tagging SET status = 0, method = 1, updated_at = now() WHERE card_id = <card>;
+-- Declare a card species-less by hand:
+DELETE FROM card_species WHERE card_id = <card> AND method = 0;
+UPDATE card_tagging SET status = 1, method = 1, updated_at = now() WHERE card_id = <card>;
+```
+
+A `method = 1` (`Manual`) row freezes the card: the tagging lane's work set skips it
+entirely on every future sweep, even after the card's title changes, until an
+operator reverses the pin with another hand-run statement.
+
+**Acceptance queries.** Re-run these any time after a sweep to confirm the lane did
+what ADR-0011 promises. All read-only, safe against live prod.
+
+1. Invariants — every taggable card has exactly one `card_tagging` row, and every
+   set has exactly one `set_details` row (ADR-0011 item 1: "always," never absence).
+   Both counts should read 0.
+2. Coverage splits — how the corpus split across `Tagged`/`NoSpecies`/`Quarantined`,
+   and how sets split across `Matched`/`Pending`.
+3. 100-card eyeball sample — a random card → status → matched-species cross-section,
+   for a human to skim.
+4. Full quarantine list — every card the matcher refused to guess on (four or more
+   candidate species), for manual review.
+5. Species completeness, a Character-page smoke test, and the `cardstock_app` read
+   check — the `species` table's row count; a plausible (not zero, not one)
+   `card_species` link count for a known species (Umbreon, dex 197); and
+   confirmation, run as `cardstock_app`, that the default-privileges `SELECT` noted
+   in §4 actually reads.
+
+```sql
+-- 1. Invariants (expect 0 and 0):
+SELECT count(*) FROM cards c LEFT JOIN card_tagging t ON t.card_id = c.id
+    WHERE c.not_a_card_at IS NULL AND t.card_id IS NULL;
+SELECT count(*) FROM sets s LEFT JOIN set_details d ON d.set_id = s.id WHERE d.set_id IS NULL;
+-- 2. Coverage splits (report verbatim):
+SELECT status, count(*) FROM card_tagging GROUP BY status ORDER BY status;
+SELECT match_status, count(*) FROM set_details GROUP BY match_status;
+-- 3. 100-card eyeball sample (owner reviews):
+SELECT c.name, t.status, string_agg(s.name, ' · ') FROM card_tagging t
+    JOIN cards c ON c.id = t.card_id
+    LEFT JOIN card_species cs ON cs.card_id = t.card_id LEFT JOIN species s ON s.id = cs.species_id
+    GROUP BY c.id, c.name, t.status ORDER BY random() LIMIT 100;
+-- 3b. Full quarantine list (owner reviews):
+SELECT c.id, c.name FROM card_tagging t JOIN cards c ON c.id = t.card_id WHERE t.status = 2;
+-- 4. Species completeness + icon gaps (icon gaps come from the lane's log line):
+SELECT count(*) FROM species;
+-- 5. Character-page smoke (expect Umbreon's printings, > 20 rows):
+SELECT count(*) FROM card_species WHERE species_id = 197;
+-- cardstock_app read check (run as cardstock_app):
+SELECT count(*) FROM species;
+```
+
+**First deploy.** The first sweep after the migration and §4 grants land
+self-bootstraps: a one-time PokéAPI dataset mirror fetch (~2,900 small files) and
+icon fetch (~1,025 files), then a full backfill across the ~91k active cards, in
+chunked transactions, taking minutes. Every sweep after that is incremental — it
+only re-examines cards with no tagging row yet or a name that has drifted from what
+was last tagged — and is usually a no-op.
