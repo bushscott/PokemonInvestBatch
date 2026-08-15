@@ -24,4 +24,11 @@
     <ProjectReference Include="..\..\src\PokemonInvestBatch.Application\PokemonInvestBatch.Application.csproj" />
   </ItemGroup>
 
+  <!-- Real, trimmed PokéAPI fixtures (Pokedex/Fixtures) read from disk by
+       PokeapiDatasetTests at run time — copied verbatim so the mirror-reader
+       under test sees exactly the layout Task 7's fetcher will produce. -->
+  <ItemGroup>
+    <None Include="Pokedex\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,259 @@
+{
+    "base_happiness": 70,
+    "capture_rate": 75,
+    "color": {
+        "name": "yellow",
+        "url": "/api/v2/pokemon-color/10/"
+    },
+    "egg_groups": [
+        {
+            "name": "ground",
+            "url": "/api/v2/egg-group/5/"
+        },
+        {
+            "name": "fairy",
+            "url": "/api/v2/egg-group/6/"
+        }
+    ],
+    "evolution_chain": {
+        "url": "/api/v2/evolution-chain/10/"
+    },
+    "evolves_from_species": {
+        "name": "pikachu",
+        "url": "/api/v2/pokemon-species/25/"
+    },
+    "flavor_text_entries": [
+        {
+            "flavor_text": "Its long tail\nserves as a\nground to protect\fitself from its\nown high voltage\npower.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "red",
+                "url": "/api/v2/version/1/"
+            }
+        },
+        {
+            "flavor_text": "Its long tail\nserves as a\nground to protect\fitself from its\nown high voltage\npower.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "blue",
+                "url": "/api/v2/version/2/"
+            }
+        },
+        {
+            "flavor_text": "When electricity\nbuilds up inside\nits body, it\fbecomes feisty.\nIt also glows in\nthe dark.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "yellow",
+                "url": "/api/v2/version/3/"
+            }
+        }
+    ],
+    "form_descriptions": [],
+    "forms_switchable": false,
+    "gender_rate": 4,
+    "genera": [
+        {
+            "genus": "ねずみポケモン",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            }
+        },
+        {
+            "genus": "쥐포켓몬",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            }
+        },
+        {
+            "genus": "鼠寶可夢",
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            }
+        }
+    ],
+    "generation": {
+        "name": "generation-i",
+        "url": "/api/v2/generation/1/"
+    },
+    "growth_rate": {
+        "name": "medium",
+        "url": "/api/v2/growth-rate/2/"
+    },
+    "habitat": {
+        "name": "forest",
+        "url": "/api/v2/pokemon-habitat/2/"
+    },
+    "has_gender_differences": true,
+    "hatch_counter": 10,
+    "id": 26,
+    "is_baby": false,
+    "is_legendary": false,
+    "is_mythical": false,
+    "name": "raichu",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "ライチュウ"
+        },
+        {
+            "language": {
+                "name": "ja-roma",
+                "url": "/api/v2/language/2/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "라이츄"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "雷丘"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Raichu"
+        },
+        {
+            "language": {
+                "name": "ja",
+                "url": "/api/v2/language/11/"
+            },
+            "name": "ライチュウ"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "雷丘"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Raichu"
+        }
+    ],
+    "order": 27,
+    "pal_park_encounters": [
+        {
+            "area": {
+                "name": "forest",
+                "url": "/api/v2/pal-park-area/1/"
+            },
+            "base_score": 90,
+            "rate": 3
+        }
+    ],
+    "pokedex_numbers": [
+        {
+            "entry_number": 26,
+            "pokedex": {
+                "name": "national",
+                "url": "/api/v2/pokedex/1/"
+            }
+        },
+        {
+            "entry_number": 26,
+            "pokedex": {
+                "name": "kanto",
+                "url": "/api/v2/pokedex/2/"
+            }
+        },
+        {
+            "entry_number": 23,
+            "pokedex": {
+                "name": "original-johto",
+                "url": "/api/v2/pokedex/3/"
+            }
+        }
+    ],
+    "shape": {
+        "name": "upright",
+        "url": "/api/v2/pokemon-shape/6/"
+    },
+    "varieties": [
+        {
+            "is_default": true,
+            "pokemon": {
+                "name": "raichu",
+                "url": "/api/v2/pokemon/26/"
+            }
+        },
+        {
+            "is_default": false,
+            "pokemon": {
+                "name": "raichu-alola",
+                "url": "/api/v2/pokemon/10100/"
+            }
+        },
+        {
+            "is_default": false,
+            "pokemon": {
+                "name": "raichu-mega-x",
+                "url": "/api/v2/pokemon/10304/"
+            }
+        },
+        {
+            "is_default": false,
+            "pokemon": {
+                "name": "raichu-mega-y",
+                "url": "/api/v2/pokemon/10305/"
+            }
+        }
+    ]
+}

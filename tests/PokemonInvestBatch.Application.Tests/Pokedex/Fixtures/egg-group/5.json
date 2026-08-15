@@ -1,0 +1,98 @@
+{
+    "id": 5,
+    "name": "ground",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "りくじょう"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "육상"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "陸上"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Terrestre"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Feld"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Campo"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Campo"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Field"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "陆上"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Campo"
+        }
+    ],
+    "pokemon_species": [
+        {
+            "name": "rattata",
+            "url": "/api/v2/pokemon-species/19/"
+        },
+        {
+            "name": "raticate",
+            "url": "/api/v2/pokemon-species/20/"
+        },
+        {
+            "name": "ekans",
+            "url": "/api/v2/pokemon-species/23/"
+        },
+        {
+            "name": "arbok",
+            "url": "/api/v2/pokemon-species/24/"
+        },
+        {
+            "name": "pikachu",
+            "url": "/api/v2/pokemon-species/25/"
+        }
+    ]
+}

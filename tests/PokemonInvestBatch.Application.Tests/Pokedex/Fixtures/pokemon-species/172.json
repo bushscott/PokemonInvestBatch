@@ -1,0 +1,246 @@
+{
+    "base_happiness": 70,
+    "capture_rate": 190,
+    "color": {
+        "name": "yellow",
+        "url": "/api/v2/pokemon-color/10/"
+    },
+    "egg_groups": [
+        {
+            "name": "no-eggs",
+            "url": "/api/v2/egg-group/15/"
+        }
+    ],
+    "evolution_chain": {
+        "url": "/api/v2/evolution-chain/10/"
+    },
+    "evolves_from_species": null,
+    "flavor_text_entries": [
+        {
+            "flavor_text": "It is not yet\nskilled at storing\nelectricity.\fIt may send out a\njolt if amused\nor startled.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "gold",
+                "url": "/api/v2/version/4/"
+            }
+        },
+        {
+            "flavor_text": "Despite its small\nsize, it can zap\neven adult humans.\fHowever, if it\ndoes so, it also\nsurprises itself.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "silver",
+                "url": "/api/v2/version/5/"
+            }
+        },
+        {
+            "flavor_text": "It is unskilled at\nstoring electric\npower. Any kind of\fshock causes it to\ndischarge energy\nspontaneously.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "crystal",
+                "url": "/api/v2/version/6/"
+            }
+        }
+    ],
+    "form_descriptions": [
+        {
+            "description": "Pichu Troizépi ne peut être obtenu qu’en emmenant un Pichu d’une distribution officielle au sanctuaireCelebi au Bois aux Chênes. Pichu Troizépi est toujours une femelle, ne peut pas évoluer, ne peut pas être emmené au Club Wi-Fi ou à la salle Union et ne peut pas être transféré vers la Génération V, mais est par ailleurs un Pichu normal.",
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            }
+        },
+        {
+            "description": "Spiky-eared Pichu can only be received by taking the shiny Pichu from an official promotion to Celebi’s shrine in Ilex Forest.  Spiky-eared Pichu is always female, cannot evolve, cannot be taken into the Wi-Fi Club or the Union Room, and cannot be transferred to Generation V, but is otherwise a normal Pichu.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            }
+        }
+    ],
+    "forms_switchable": false,
+    "gender_rate": 4,
+    "genera": [
+        {
+            "genus": "こねずみポケモン",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            }
+        },
+        {
+            "genus": "아기쥐포켓몬",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            }
+        },
+        {
+            "genus": "小鼠寶可夢",
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            }
+        }
+    ],
+    "generation": {
+        "name": "generation-ii",
+        "url": "/api/v2/generation/2/"
+    },
+    "growth_rate": {
+        "name": "medium",
+        "url": "/api/v2/growth-rate/2/"
+    },
+    "habitat": {
+        "name": "forest",
+        "url": "/api/v2/pokemon-habitat/2/"
+    },
+    "has_gender_differences": false,
+    "hatch_counter": 10,
+    "id": 172,
+    "is_baby": true,
+    "is_legendary": false,
+    "is_mythical": false,
+    "name": "pichu",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "ピチュー"
+        },
+        {
+            "language": {
+                "name": "ja-roma",
+                "url": "/api/v2/language/2/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "피츄"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "皮丘"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Pichu"
+        },
+        {
+            "language": {
+                "name": "ja",
+                "url": "/api/v2/language/11/"
+            },
+            "name": "ピチュー"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "皮丘"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Pichu"
+        }
+    ],
+    "order": 25,
+    "pal_park_encounters": [
+        {
+            "area": {
+                "name": "field",
+                "url": "/api/v2/pal-park-area/2/"
+            },
+            "base_score": 80,
+            "rate": 10
+        }
+    ],
+    "pokedex_numbers": [
+        {
+            "entry_number": 172,
+            "pokedex": {
+                "name": "national",
+                "url": "/api/v2/pokedex/1/"
+            }
+        },
+        {
+            "entry_number": 21,
+            "pokedex": {
+                "name": "original-johto",
+                "url": "/api/v2/pokedex/3/"
+            }
+        },
+        {
+            "entry_number": 155,
+            "pokedex": {
+                "name": "hoenn",
+                "url": "/api/v2/pokedex/4/"
+            }
+        }
+    ],
+    "shape": {
+        "name": "quadruped",
+        "url": "/api/v2/pokemon-shape/8/"
+    },
+    "varieties": [
+        {
+            "is_default": true,
+            "pokemon": {
+                "name": "pichu",
+                "url": "/api/v2/pokemon/172/"
+            }
+        }
+    ]
+}
