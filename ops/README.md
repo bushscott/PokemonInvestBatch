@@ -176,6 +176,11 @@ the same posture ADR-0002 established for `delisted_at`: a human runs a document
 statement, the tagging lane honours the result but never writes `Manual` rows itself
 and never overwrites one. The raw integers below are `TagStatus` (`Tagged = 0`,
 `NoSpecies = 1`, `Quarantined = 2`) and `TagMethod` (`TitleMatch = 0`, `Manual = 1`).
+Run these as `pokemon_app` once §4's grants land, or as `pokemon_owner` before then
+(the owner role always holds them — it owns every table). They also assume the card
+has already been swept at least once: on a never-swept card there is no existing
+`card_tagging` row yet, so the `UPDATE` below is a 0-row no-op and the machine tags
+the card fresh on its own next sweep regardless of which statement ran.
 
 ```sql
 -- Pin a card's species by hand (survives every sweep):
@@ -185,7 +190,13 @@ UPDATE card_tagging SET status = 0, method = 1, updated_at = now() WHERE card_id
 -- Declare a card species-less by hand:
 DELETE FROM card_species WHERE card_id = <card> AND method = 0;
 UPDATE card_tagging SET status = 1, method = 1, updated_at = now() WHERE card_id = <card>;
+-- Reverse a pin: remove the manual rows; the next sweep re-tags the card fresh:
+DELETE FROM card_species WHERE card_id = <card> AND method = 1;
+DELETE FROM card_tagging WHERE card_id = <card>;
 ```
+
+Deleting the `card_tagging` row is what does the work: it returns the card to the
+work set, and the next sweep re-examines it from scratch.
 
 A `method = 1` (`Manual`) row freezes the card: the tagging lane's work set skips it
 entirely on every future sweep, even after the card's title changes, until an
