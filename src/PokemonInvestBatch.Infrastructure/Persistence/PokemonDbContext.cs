@@ -23,6 +23,23 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
 
     public DbSet<TcgdexEnrichment> TcgdexEnrichments => Set<TcgdexEnrichment>();
 
+    // Named SpeciesRows, not Species: the DbSet property name drives the
+    // default table name under the snake_case convention, and "Species" would
+    // otherwise become "species_rows".
+    public DbSet<Species> SpeciesRows => Set<Species>();
+
+    public DbSet<SpeciesType> SpeciesTypes => Set<SpeciesType>();
+
+    public DbSet<SpeciesEggGroup> SpeciesEggGroups => Set<SpeciesEggGroup>();
+
+    public DbSet<SpeciesName> SpeciesNames => Set<SpeciesName>();
+
+    public DbSet<CardSpeciesLink> CardSpecies => Set<CardSpeciesLink>();
+
+    public DbSet<CardTagging> CardTagging => Set<CardTagging>();
+
+    public DbSet<SetDetail> SetDetails => Set<SetDetail>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CardSet>(set =>
@@ -111,6 +128,72 @@ public class PokemonDbContext(DbContextOptions<PokemonDbContext> options) : DbCo
             enrichment.Property(e => e.TcgdexCardId).HasMaxLength(64);
             enrichment.Property(e => e.TcgdexName).HasMaxLength(300);
             enrichment.Property(e => e.TcgdexVersion).HasMaxLength(64);
+        });
+
+        modelBuilder.Entity<Species>(species =>
+        {
+            species.ToTable("species");
+            species.Property(s => s.Id).ValueGeneratedNever();
+            species.HasIndex(s => s.Slug).IsUnique();
+            species.Property(s => s.Name).HasMaxLength(200);
+            species.Property(s => s.Slug).HasMaxLength(200);
+            species.Property(s => s.Region).HasMaxLength(24);
+            species.Property(s => s.Color).HasMaxLength(24);
+            species.Property(s => s.Habitat).HasMaxLength(24);
+            species.Property(s => s.GradientStart).HasMaxLength(7);
+            species.Property(s => s.GradientEnd).HasMaxLength(7);
+            // Self-referencing: a species' pre-evolution is another species
+            // row, or null at Stage 0.
+            species.HasOne<Species>().WithMany().HasForeignKey(s => s.EvolvesFromSpeciesId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SpeciesType>(type =>
+        {
+            type.HasKey(t => new { t.SpeciesId, t.Slot });
+            type.Property(t => t.Type).HasMaxLength(16);
+            type.HasOne<Species>().WithMany().HasForeignKey(t => t.SpeciesId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SpeciesEggGroup>(egg =>
+        {
+            egg.HasKey(e => new { e.SpeciesId, e.EggGroup });
+            egg.Property(e => e.EggGroup).HasMaxLength(24);
+            egg.HasOne<Species>().WithMany().HasForeignKey(e => e.SpeciesId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<SpeciesName>(name =>
+        {
+            name.HasKey(n => new { n.SpeciesId, n.Language });
+            name.Property(n => n.Language).HasMaxLength(12);
+            name.Property(n => n.Name).HasMaxLength(200);
+            name.HasOne<Species>().WithMany().HasForeignKey(n => n.SpeciesId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<CardSpeciesLink>(link =>
+        {
+            link.ToTable("card_species");
+            link.HasKey(l => new { l.CardId, l.SpeciesId });
+            link.HasOne<Card>().WithMany().HasForeignKey(l => l.CardId).OnDelete(DeleteBehavior.Restrict);
+            link.HasOne<Species>().WithMany().HasForeignKey(l => l.SpeciesId).OnDelete(DeleteBehavior.Restrict);
+            // The Character page's reverse lookup: every card tagged with one species.
+            link.HasIndex(l => new { l.SpeciesId, l.CardId });
+        });
+
+        modelBuilder.Entity<CardTagging>(tagging =>
+        {
+            tagging.ToTable("card_tagging");
+            tagging.HasKey(t => t.CardId);
+            tagging.HasOne<Card>().WithMany().HasForeignKey(t => t.CardId).OnDelete(DeleteBehavior.Restrict);
+            tagging.Property(t => t.TaggedName).HasMaxLength(300);
+        });
+
+        modelBuilder.Entity<SetDetail>(detail =>
+        {
+            detail.HasKey(d => d.SetId);
+            detail.HasOne<CardSet>().WithMany().HasForeignKey(d => d.SetId).OnDelete(DeleteBehavior.Restrict);
+            detail.Property(d => d.Code).HasMaxLength(32);
+            detail.Property(d => d.Series).HasMaxLength(100);
+            detail.Property(d => d.Era).HasMaxLength(24);
         });
     }
 }
