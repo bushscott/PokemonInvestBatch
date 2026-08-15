@@ -58,6 +58,12 @@ public sealed class PriceChartingClient(HttpClient http, string contactEmail, Ti
 
     private async Task<FetchResult> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
+        // This method owns the request from here: HttpClient never disposes the
+        // one it is handed, and PostFormAsync's FormUrlEncodedContent holds a
+        // buffer until someone does. Taken before the guard below so a refused
+        // path releases it too.
+        using var owned = request;
+
         var path = request.RequestUri?.OriginalString ?? string.Empty;
         if (!path.StartsWith('/') || path.StartsWith("//", StringComparison.Ordinal))
         {
