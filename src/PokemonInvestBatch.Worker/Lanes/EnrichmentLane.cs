@@ -64,20 +64,23 @@ public sealed class EnrichmentLane(
     public async Task<EnrichmentSweepResult> RunSweepAsync(CancellationToken ct)
     {
         var scraper = options.Value;
-        if (!TcgdexMirror.Exists(scraper.TcgdexMirrorDirectory))
-        {
-            logger.LogInformation(
-                "No TCGdex mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
-                scraper.TcgdexMirrorDirectory);
-            var fetched = await TcgdexMirror.FetchAsync(
-                httpFactory.CreateClient(HttpClientName),
-                scraper.TcgdexBaseUrl,
-                scraper.TcgdexMirrorDirectory,
-                time,
-                ct);
-            logger.LogInformation(
-                "Mirrored {Sets} TCGdex sets as version {Version}", fetched.SetCount, fetched.Version);
-        }
+
+        // EnsureAsync (not a bare Exists-then-FetchAsync) because PokedexLane
+        // shares this same mirror directory and calls it too — the gate
+        // inside EnsureAsync is what keeps the two lanes from racing to
+        // fetch it at once (see TcgdexMirror's class doc). A factory delegate
+        // goes in, not a pre-built HttpClient: EnsureAsync only actually
+        // calls it on the branch that fetches, so a warm sweep (the common
+        // case forever after the first) never pays for a client it will not
+        // use — passing httpFactory.CreateClient(...) directly here would
+        // evaluate eagerly, before EnsureAsync ever got a say.
+        await TcgdexMirror.EnsureAsync(
+            () => httpFactory.CreateClient(HttpClientName),
+            scraper.TcgdexBaseUrl,
+            scraper.TcgdexMirrorDirectory,
+            time,
+            logger,
+            ct);
 
         var (catalog, manifest) = await TcgdexMirror.LoadAsync(scraper.TcgdexMirrorDirectory, ct);
 

@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using PokemonInvestBatch.Application.Enrichment;
 using PokemonInvestBatch.Infrastructure.Enrichment;
 
@@ -161,6 +162,148 @@ public class TcgdexMirrorTests : IDisposable
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => TcgdexMirror.FetchAsync(
             http, "https://api.tcgdex.example", _directory, TimeProvider.System, CancellationToken.None));
+    }
+
+    /// <summary>
+    /// The race EnsureAsync exists to close: two lanes (EnrichmentLane and
+    /// PokedexLane) can both find the mirror missing — a fresh box, or an
+    /// operator deleting the directory to refresh — and both start fetching.
+    /// This proves the second caller's fetch never happens at all, not just
+    /// that its writes "happen to" land in a way that looks fine.
+    ///
+    /// Deterministic, not timing-based: <see cref="GatedCountingHandler"/>
+    /// suspends on the very first HTTP request via an uncompleted
+    /// <see cref="TaskCompletionSource"/>. Because <c>Exists</c> and an
+    /// uncontended <c>SemaphoreSlim.WaitAsync</c> both complete synchronously,
+    /// starting <c>first</c> runs synchronously all the way to that gated
+    /// request — meaning by the time the assignment statement returns,
+    /// <c>EnsureGate</c> is genuinely held. Starting <c>second</c> right after
+    /// then genuinely blocks on the (contended) gate itself, not on any
+    /// timing coincidence. Releasing the completion source afterward is what
+    /// lets both finish, in the order the gate — not the test — decides.
+    /// </summary>
+    [Fact]
+    public async Task EnsureAsync_lets_a_losing_concurrent_caller_skip_the_duplicate_fetch()
+    {
+        var releaseFirstRequest = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" } ]""",
+                ["https://api.tcgdex.example/v2/en/sets/swsh7"] = EvolvingSkiesJson,
+                ["https://api.github.com/repos/tcgdex/cards-database/releases/latest"] =
+                    """{ "tag_name": "v2.47.0" }""",
+            },
+            releaseFirstRequest);
+        using var http = new HttpClient(handler);
+        var clientRequests = 0;
+        HttpClient NewClient()
+        {
+            clientRequests++;
+            return http;
+        }
+
+        // Runs synchronously up to the gated request and suspends there —
+        // EnsureGate is now held, and only the sets/ subdirectory (not the
+        // manifest, written last) exists on disk.
+        var first = TcgdexMirror.EnsureAsync(
+            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            CancellationToken.None);
+        Assert.False(TcgdexMirror.Exists(_directory));
+
+        // Runs synchronously up to EnsureGate.WaitAsync, which is genuinely
+        // contended (first holds it) and genuinely suspends — this call has
+        // not skipped via its own pre-gate Exists() check (still false).
+        var second = TcgdexMirror.EnsureAsync(
+            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            CancellationToken.None);
+
+        releaseFirstRequest.SetResult();
+        await Task.WhenAll(first, second);
+
+        Assert.True(TcgdexMirror.Exists(_directory));
+        var (catalog, manifest) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal("v2.47.0", manifest.Version);
+        Assert.NotNull(catalog.ById("swsh7"));
+
+        // Exactly one fetch pass: every URL the fetch touches was requested
+        // once, not twice — the loser made none of these requests itself.
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets"));
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        Assert.Equal(
+            1, handler.CallCounts.GetValueOrDefault("https://api.github.com/repos/tcgdex/cards-database/releases/latest"));
+        // NewClient itself was only invoked once — the loser never even
+        // built a client, let alone used one (the eager-construction bug
+        // this signature shape exists to avoid; see EnsureAsync's doc).
+        Assert.Equal(1, clientRequests);
+
+        // A third, post-completion call — against the exact mirror the race
+        // above just produced — makes zero further requests and asks for
+        // zero further clients.
+        var totalRequestsSoFar = handler.CallCounts.Values.Sum();
+        await TcgdexMirror.EnsureAsync(
+            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            CancellationToken.None);
+        Assert.Equal(totalRequestsSoFar, handler.CallCounts.Values.Sum());
+        Assert.Equal(1, clientRequests);
+    }
+
+    [Fact]
+    public async Task EnsureAsync_asks_for_no_client_when_a_mirror_already_exists()
+    {
+        await WriteMirrorAsync(
+            """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "SetCount": 1 }""",
+            ("swsh7", EvolvingSkiesJson));
+
+        // No exception is itself the proof: NewClientMustNotBeCalled fails
+        // outright if ever invoked, so completing this call means
+        // EnsureAsync's unlocked fast-path Exists() check returned before
+        // the gate — let alone a client, let alone FetchAsync — was ever
+        // touched.
+        await TcgdexMirror.EnsureAsync(
+            NewClientMustNotBeCalled, "https://api.tcgdex.example", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        static HttpClient NewClientMustNotBeCalled() =>
+            throw new InvalidOperationException(
+                "Unexpected HttpClient request — the mirror already exists, so EnsureAsync must not need one.");
+    }
+
+    /// <summary>Gates exactly the first <c>SendAsync</c> call on
+    /// <paramref name="releaseFirstRequest"/>; every call after that —
+    /// including a second concurrent caller's, once it stops being blocked at
+    /// the semaphore — proceeds immediately. Tracks every URL's call count so
+    /// a test can assert a fetch pass touched each URL exactly once.</summary>
+    private sealed class GatedCountingHandler(
+        IReadOnlyDictionary<string, string> responses, TaskCompletionSource releaseFirstRequest) : HttpMessageHandler
+    {
+        private readonly Lock _lock = new();
+        private bool _gatedOnce;
+
+        public readonly Dictionary<string, int> CallCounts = new(StringComparer.Ordinal);
+
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.ToString();
+            bool shouldGate;
+            lock (_lock)
+            {
+                CallCounts[url] = CallCounts.GetValueOrDefault(url) + 1;
+                shouldGate = !_gatedOnce;
+                _gatedOnce = true;
+            }
+
+            if (shouldGate)
+            {
+                await releaseFirstRequest.Task;
+            }
+
+            return responses.TryGetValue(url, out var body)
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(body) }
+                : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound);
+        }
     }
 
     private sealed class StubHandler(IReadOnlyDictionary<string, string> responses) : HttpMessageHandler

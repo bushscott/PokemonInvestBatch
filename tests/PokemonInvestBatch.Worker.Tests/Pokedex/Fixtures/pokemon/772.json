@@ -1,0 +1,234 @@
+{
+    "abilities": [
+        {
+            "ability": {
+                "name": "battle-armor",
+                "url": "/api/v2/ability/4/"
+            },
+            "is_hidden": false,
+            "slot": 1
+        }
+    ],
+    "base_experience": 107,
+    "cries": {
+        "latest": "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/772.ogg",
+        "legacy": null
+    },
+    "forms": [
+        {
+            "name": "type-null",
+            "url": "/api/v2/pokemon-form/772/"
+        }
+    ],
+    "game_indices": [
+        {
+            "game_index": 772,
+            "version": {
+                "name": "sun",
+                "url": "/api/v2/version/27/"
+            }
+        },
+        {
+            "game_index": 772,
+            "version": {
+                "name": "moon",
+                "url": "/api/v2/version/28/"
+            }
+        },
+        {
+            "game_index": 772,
+            "version": {
+                "name": "ultra-sun",
+                "url": "/api/v2/version/29/"
+            }
+        }
+    ],
+    "height": 19,
+    "held_items": [],
+    "id": 772,
+    "is_default": true,
+    "location_area_encounters": "/api/v2/pokemon/772/encounters",
+    "moves": [
+        {
+            "move": {
+                "name": "razor-wind",
+                "url": "/api/v2/move/13/"
+            },
+            "version_group_details": [
+                {
+                    "level_learned_at": 70,
+                    "move_learn_method": {
+                        "name": "level-up",
+                        "url": "/api/v2/move-learn-method/1/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "sun-moon",
+                        "url": "/api/v2/version-group/17/"
+                    }
+                },
+                {
+                    "level_learned_at": 70,
+                    "move_learn_method": {
+                        "name": "level-up",
+                        "url": "/api/v2/move-learn-method/1/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "ultra-sun-ultra-moon",
+                        "url": "/api/v2/version-group/18/"
+                    }
+                }
+            ]
+        },
+        {
+            "move": {
+                "name": "swords-dance",
+                "url": "/api/v2/move/14/"
+            },
+            "version_group_details": [
+                {
+                    "level_learned_at": 0,
+                    "move_learn_method": {
+                        "name": "machine",
+                        "url": "/api/v2/move-learn-method/4/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "sun-moon",
+                        "url": "/api/v2/version-group/17/"
+                    }
+                },
+                {
+                    "level_learned_at": 0,
+                    "move_learn_method": {
+                        "name": "machine",
+                        "url": "/api/v2/move-learn-method/4/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "ultra-sun-ultra-moon",
+                        "url": "/api/v2/version-group/18/"
+                    }
+                }
+            ]
+        }
+    ],
+    "name": "type-null",
+    "order": 931,
+    "past_abilities": [],
+    "past_stats": [],
+    "past_types": [],
+    "species": {
+        "name": "type-null",
+        "url": "/api/v2/pokemon-species/772/"
+    },
+    "sprites": {
+        "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/772.png",
+        "back_female": null,
+        "back_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/772.png",
+        "back_shiny_female": null,
+        "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/772.png",
+        "front_female": null,
+        "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/772.png",
+        "front_shiny_female": null,
+        "other": {
+            "dream_world": {
+                "front_default": null,
+                "front_female": null
+            },
+            "home": {
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/772.png",
+                "front_female": null,
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/shiny/772.png",
+                "front_shiny_female": null
+            },
+            "official-artwork": {
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/772.png",
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/772.png"
+            },
+            "showdown": {
+                "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/772.gif",
+                "back_female": null,
+                "back_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/shiny/772.gif",
+                "back_shiny_female": null,
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/772.gif",
+                "front_female": null,
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/772.gif",
+                "front_shiny_female": null
+            }
+        },
+        "versions": {
+            "generation-i": {
+                "red-blue": {
+                    "back_default": null,
+                    "back_gray": null,
+                    "back_transparent": null,
+                    "front_default": null,
+                    "front_gray": null,
+                    "front_transparent": null
+                }
+            }
+        }
+    },
+    "stats": [
+        {
+            "base_stat": 95,
+            "effort": 2,
+            "stat": {
+                "name": "hp",
+                "url": "/api/v2/stat/1/"
+            }
+        },
+        {
+            "base_stat": 95,
+            "effort": 0,
+            "stat": {
+                "name": "attack",
+                "url": "/api/v2/stat/2/"
+            }
+        },
+        {
+            "base_stat": 95,
+            "effort": 0,
+            "stat": {
+                "name": "defense",
+                "url": "/api/v2/stat/3/"
+            }
+        },
+        {
+            "base_stat": 95,
+            "effort": 0,
+            "stat": {
+                "name": "special-attack",
+                "url": "/api/v2/stat/4/"
+            }
+        },
+        {
+            "base_stat": 95,
+            "effort": 0,
+            "stat": {
+                "name": "special-defense",
+                "url": "/api/v2/stat/5/"
+            }
+        },
+        {
+            "base_stat": 59,
+            "effort": 0,
+            "stat": {
+                "name": "speed",
+                "url": "/api/v2/stat/6/"
+            }
+        }
+    ],
+    "types": [
+        {
+            "slot": 1,
+            "type": {
+                "name": "normal",
+                "url": "/api/v2/type/1/"
+            }
+        }
+    ],
+    "weight": 1205
+}

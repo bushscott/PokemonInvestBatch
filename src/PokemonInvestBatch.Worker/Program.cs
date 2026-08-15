@@ -125,6 +125,17 @@ builder.Services.AddHttpClient(EnrichmentLane.HttpClientName, (services, http) =
     http.DefaultRequestHeaders.UserAgent.ParseAdd("PokemonInvestBatch/1.0");
     http.DefaultRequestHeaders.UserAgent.ParseAdd($"(+{scraper.ContactEmail})");
 });
+// The PokéAPI dataset + sprites mirror fetches (ADR-0011) — same
+// different-host, outside-the-polite-gate posture as the TCGdex mirror
+// above, and the same UA convention: raw.githubusercontent.com does not
+// require one, but the contact address costs nothing to include.
+builder.Services.AddHttpClient(PokedexLane.HttpClientName, (services, http) =>
+{
+    var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
+    http.Timeout = TimeSpan.FromSeconds(60);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("PokemonInvestBatch/1.0");
+    http.DefaultRequestHeaders.UserAgent.ParseAdd($"(+{scraper.ContactEmail})");
+});
 builder.Services.AddSingleton(services =>
 {
     var scraper = services.GetRequiredService<IOptions<ScraperOptions>>().Value;
@@ -160,6 +171,7 @@ builder.Services.AddHostedService<ImageLane>();
 builder.Services.AddHostedService<StatsLane>();
 builder.Services.AddHostedService<DelistedProbeLane>();
 builder.Services.AddHostedService<EnrichmentLane>();
+builder.Services.AddHostedService<PokedexLane>();
 
 // Loopback-only, port from validated config. The explicit Listen overrides
 // ASPNETCORE_URLS/launchSettings (Kestrel logs a benign "overriding" line) —

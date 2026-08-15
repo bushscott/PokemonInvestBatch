@@ -1,0 +1,245 @@
+{
+    "base_happiness": 70,
+    "capture_rate": 45,
+    "color": {
+        "name": "brown",
+        "url": "/api/v2/pokemon-color/3/"
+    },
+    "egg_groups": [
+        {
+            "name": "ground",
+            "url": "/api/v2/egg-group/5/"
+        }
+    ],
+    "evolution_chain": {
+        "url": "/api/v2/evolution-chain/67/"
+    },
+    "evolves_from_species": null,
+    "flavor_text_entries": [
+        {
+            "flavor_text": "Its genetic code\nis irregular.\nIt may mutate if\fit is exposed to\nradiation from\nelement STONEs.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "red",
+                "url": "/api/v2/version/1/"
+            }
+        },
+        {
+            "flavor_text": "Its genetic code\nis irregular.\nIt may mutate if\fit is exposed to\nradiation from\nelement STONEs.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "blue",
+                "url": "/api/v2/version/2/"
+            }
+        },
+        {
+            "flavor_text": "Its genetic code\nis unstable, so it\ncould evolve in\fa variety of ways.\nThere are only a\nfew alive.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "yellow",
+                "url": "/api/v2/version/3/"
+            }
+        }
+    ],
+    "form_descriptions": [],
+    "forms_switchable": false,
+    "gender_rate": 1,
+    "genera": [
+        {
+            "genus": "しんかポケモン",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            }
+        },
+        {
+            "genus": "진화포켓몬",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            }
+        },
+        {
+            "genus": "進化寶可夢",
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            }
+        }
+    ],
+    "generation": {
+        "name": "generation-i",
+        "url": "/api/v2/generation/1/"
+    },
+    "growth_rate": {
+        "name": "medium",
+        "url": "/api/v2/growth-rate/2/"
+    },
+    "habitat": {
+        "name": "urban",
+        "url": "/api/v2/pokemon-habitat/8/"
+    },
+    "has_gender_differences": true,
+    "hatch_counter": 35,
+    "id": 133,
+    "is_baby": false,
+    "is_legendary": false,
+    "is_mythical": false,
+    "name": "eevee",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "イーブイ"
+        },
+        {
+            "language": {
+                "name": "ja-roma",
+                "url": "/api/v2/language/2/"
+            },
+            "name": "Eievui"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "이브이"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "伊布"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Évoli"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Evoli"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Eevee"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Eevee"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Eevee"
+        },
+        {
+            "language": {
+                "name": "ja",
+                "url": "/api/v2/language/11/"
+            },
+            "name": "イーブイ"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "伊布"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Eevee"
+        }
+    ],
+    "order": 157,
+    "pal_park_encounters": [
+        {
+            "area": {
+                "name": "field",
+                "url": "/api/v2/pal-park-area/2/"
+            },
+            "base_score": 90,
+            "rate": 3
+        }
+    ],
+    "pokedex_numbers": [
+        {
+            "entry_number": 133,
+            "pokedex": {
+                "name": "national",
+                "url": "/api/v2/pokedex/1/"
+            }
+        },
+        {
+            "entry_number": 133,
+            "pokedex": {
+                "name": "kanto",
+                "url": "/api/v2/pokedex/2/"
+            }
+        },
+        {
+            "entry_number": 180,
+            "pokedex": {
+                "name": "original-johto",
+                "url": "/api/v2/pokedex/3/"
+            }
+        }
+    ],
+    "shape": {
+        "name": "quadruped",
+        "url": "/api/v2/pokemon-shape/8/"
+    },
+    "varieties": [
+        {
+            "is_default": true,
+            "pokemon": {
+                "name": "eevee",
+                "url": "/api/v2/pokemon/133/"
+            }
+        },
+        {
+            "is_default": false,
+            "pokemon": {
+                "name": "eevee-starter",
+                "url": "/api/v2/pokemon/10159/"
+            }
+        },
+        {
+            "is_default": false,
+            "pokemon": {
+                "name": "eevee-gmax",
+                "url": "/api/v2/pokemon/10205/"
+            }
+        }
+    ]
+}

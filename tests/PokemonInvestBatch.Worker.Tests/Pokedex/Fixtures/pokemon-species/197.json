@@ -1,0 +1,234 @@
+{
+    "base_happiness": 35,
+    "capture_rate": 45,
+    "color": {
+        "name": "black",
+        "url": "/api/v2/pokemon-color/1/"
+    },
+    "egg_groups": [
+        {
+            "name": "ground",
+            "url": "/api/v2/egg-group/5/"
+        }
+    ],
+    "evolution_chain": {
+        "url": "/api/v2/evolution-chain/67/"
+    },
+    "evolves_from_species": {
+        "name": "eevee",
+        "url": "/api/v2/pokemon-species/133/"
+    },
+    "flavor_text_entries": [
+        {
+            "flavor_text": "When agitated,\nthis POKéMON pro­\ntects itself by\fspraying poisonous\nsweat from its\npores.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "gold",
+                "url": "/api/v2/version/4/"
+            }
+        },
+        {
+            "flavor_text": "When darkness\nfalls, the rings\non the body begin\fto glow, striking\nfear in the hearts\nof anyone nearby.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "silver",
+                "url": "/api/v2/version/5/"
+            }
+        },
+        {
+            "flavor_text": "On the night of a\nfull moon, or when\nit gets excited,\fthe ring patterns\non its body glow\nyellow.",
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "version": {
+                "name": "crystal",
+                "url": "/api/v2/version/6/"
+            }
+        }
+    ],
+    "form_descriptions": [],
+    "forms_switchable": false,
+    "gender_rate": 1,
+    "genera": [
+        {
+            "genus": "げっこうポケモン",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            }
+        },
+        {
+            "genus": "달빛포켓몬",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            }
+        },
+        {
+            "genus": "月光寶可夢",
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            }
+        }
+    ],
+    "generation": {
+        "name": "generation-ii",
+        "url": "/api/v2/generation/2/"
+    },
+    "growth_rate": {
+        "name": "medium",
+        "url": "/api/v2/growth-rate/2/"
+    },
+    "habitat": {
+        "name": "urban",
+        "url": "/api/v2/pokemon-habitat/8/"
+    },
+    "has_gender_differences": false,
+    "hatch_counter": 35,
+    "id": 197,
+    "is_baby": false,
+    "is_legendary": false,
+    "is_mythical": false,
+    "name": "umbreon",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "ブラッキー"
+        },
+        {
+            "language": {
+                "name": "ja-roma",
+                "url": "/api/v2/language/2/"
+            },
+            "name": "Bracky"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "블래키"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "月亮伊布"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Noctali"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Nachtara"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Umbreon"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Umbreon"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Umbreon"
+        },
+        {
+            "language": {
+                "name": "ja",
+                "url": "/api/v2/language/11/"
+            },
+            "name": "ブラッキー"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "月亮伊布"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Umbreon"
+        }
+    ],
+    "order": 162,
+    "pal_park_encounters": [
+        {
+            "area": {
+                "name": "field",
+                "url": "/api/v2/pal-park-area/2/"
+            },
+            "base_score": 90,
+            "rate": 3
+        }
+    ],
+    "pokedex_numbers": [
+        {
+            "entry_number": 197,
+            "pokedex": {
+                "name": "national",
+                "url": "/api/v2/pokedex/1/"
+            }
+        },
+        {
+            "entry_number": 185,
+            "pokedex": {
+                "name": "original-johto",
+                "url": "/api/v2/pokedex/3/"
+            }
+        },
+        {
+            "entry_number": 168,
+            "pokedex": {
+                "name": "extended-sinnoh",
+                "url": "/api/v2/pokedex/6/"
+            }
+        }
+    ],
+    "shape": {
+        "name": "quadruped",
+        "url": "/api/v2/pokemon-shape/8/"
+    },
+    "varieties": [
+        {
+            "is_default": true,
+            "pokemon": {
+                "name": "umbreon",
+                "url": "/api/v2/pokemon/197/"
+            }
+        }
+    ]
+}

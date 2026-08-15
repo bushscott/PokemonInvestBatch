@@ -1,15 +1,22 @@
 using System.Globalization;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using PokemonInvestBatch.Application.Enrichment;
 
 namespace PokemonInvestBatch.Infrastructure.Enrichment;
 
 /// <summary>
 /// The pinned local copy of TCGdex's English catalog that enrichment joins
-/// against (ADR-0009). The directory IS the version pin: one fetch writes
-/// every per-set JSON plus a manifest, every sweep after that reads only
-/// disk, and refreshing is the operator deleting the directory so the next
-/// sweep re-fetches. The join never takes a live dependency on the API.
+/// against (ADR-0009), and that the Pokédex phase's set-details sweep
+/// (ADR-0011) reuses rather than mirroring separately. The directory IS the
+/// version pin: one fetch writes every per-set JSON plus a manifest, every
+/// sweep after that reads only disk, and refreshing is the operator deleting
+/// the directory so the next sweep re-fetches. The join never takes a live
+/// dependency on the API.
+///
+/// Two lanes — EnrichmentLane and PokedexLane — share this one mirror, so
+/// ensuring it exists is coordinated (<see cref="EnsureAsync"/>) rather than
+/// left to each caller's own Exists-then-fetch check.
 ///
 /// Loading is strict on the fields the join computes from (id, localId,
 /// name, cardCount.official): a shape this code does not understand refuses
@@ -28,6 +35,26 @@ public static class TcgdexMirror
 
     private static readonly JsonSerializerOptions ManifestJson = new() { WriteIndented = true };
 
+    /// <summary>Serializes first-fetches of this mirror directory across the
+    /// two lanes that share it (EnrichmentLane and PokedexLane). Both run as
+    /// <c>BackgroundService</c>s inside one process — one systemd unit
+    /// (ADR-0006) — so this gate only has to coordinate within that process;
+    /// there is no cross-process story to solve.
+    ///
+    /// Why it exists: without it, a fresh box starting both lanes within
+    /// milliseconds of each other, or an operator deleting the directory to
+    /// force a refresh on a live system (the very thing this class's own log
+    /// line invites — "delete the directory to refresh"), can start two
+    /// concurrent fetches into the same directory. <see cref="FetchAsync"/>
+    /// does not delete its output on failure, and two writers can interleave
+    /// writes to the same set file on Linux — worst case both "succeed," a
+    /// manifest lands, <see cref="Exists"/> reports true forever, and one
+    /// corrupted set file makes every future <see cref="LoadAsync"/> throw,
+    /// recoverable only by an operator manually deleting the directory.
+    /// Concurrent first-boot and post-delete refresh are exactly the two
+    /// scenarios <see cref="EnsureAsync"/> closes.</summary>
+    private static readonly SemaphoreSlim EnsureGate = new(1, 1);
+
     public sealed record Manifest
     {
         public required DateTimeOffset FetchedAt { get; init; }
@@ -45,9 +72,79 @@ public static class TcgdexMirror
 
     public static bool Exists(string directory) => File.Exists(Path.Combine(directory, ManifestFile));
 
+    /// <summary>The coordinated way to ensure a mirror exists at
+    /// <paramref name="directory"/> — what EnrichmentLane and PokedexLane
+    /// both call instead of an <see cref="Exists"/>-then-<see cref="FetchAsync"/>
+    /// check of their own, so the race two lanes sharing one mirror creates
+    /// is closed in exactly one place (see <see cref="EnsureGate"/> for why
+    /// it is needed at all).
+    ///
+    /// Takes <paramref name="newHttpClient"/> — a factory delegate — rather
+    /// than an already-built <see cref="HttpClient"/> deliberately: a caller
+    /// passing a pre-built client has already paid for
+    /// <c>IHttpClientFactory.CreateClient</c> (an eager-argument-evaluation
+    /// trap C# does not warn about) before this method gets a chance to
+    /// decide anything, which defeats the point of the steady-state fast path
+    /// below — every sweep after the mirror's first fetch would still
+    /// construct and immediately discard a client. Calling
+    /// <paramref name="newHttpClient"/> here, only in the branch that is
+    /// actually about to fetch, keeps "no mirror work needed" genuinely free.
+    /// A plain delegate rather than <c>IHttpClientFactory</c> itself because
+    /// this project (Infrastructure) does not otherwise depend on
+    /// <c>Microsoft.Extensions.Http</c> — the caller (a Worker lane, which
+    /// does) supplies <c>() =&gt; httpFactory.CreateClient(name)</c>.
+    ///
+    /// Double-checked: an unlocked fast-path <see cref="Exists"/> check first
+    /// — steady state, never touches <see cref="EnsureGate"/> or
+    /// <paramref name="newHttpClient"/> at all — and only when that finds no
+    /// mirror does it acquire the gate and check again before fetching. A
+    /// caller that loses the race sees the winner's already-completed mirror
+    /// on its post-acquire check and returns having fetched nothing itself.
+    /// Logs only when this call is the one that actually fetches — the
+    /// race's loser logs nothing, since it did nothing.</summary>
+    public static async Task EnsureAsync(
+        Func<HttpClient> newHttpClient,
+        string baseUrl,
+        string directory,
+        TimeProvider time,
+        ILogger log,
+        CancellationToken ct)
+    {
+        if (Exists(directory))
+        {
+            return;
+        }
+
+        await EnsureGate.WaitAsync(ct);
+        try
+        {
+            if (Exists(directory))
+            {
+                // Lost the race: a concurrent caller already fetched while
+                // this one waited for the gate.
+                return;
+            }
+
+            log.LogInformation(
+                "No TCGdex mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
+                directory);
+            var fetched = await FetchAsync(newHttpClient(), baseUrl, directory, time, ct);
+            log.LogInformation(
+                "Mirrored {Sets} TCGdex sets as version {Version}", fetched.SetCount, fetched.Version);
+        }
+        finally
+        {
+            EnsureGate.Release();
+        }
+    }
+
     /// <summary>Fetch the whole English catalog into the directory. Written
     /// set-by-set with the manifest last, so an interrupted fetch leaves no
-    /// manifest and the next sweep simply fetches again.</summary>
+    /// manifest and the next sweep simply fetches again. Public for its own
+    /// direct tests below and for <see cref="EnsureAsync"/>, which is what
+    /// production code should call instead — a bare Exists-then-FetchAsync
+    /// pair has none of <see cref="EnsureAsync"/>'s coordination against a
+    /// concurrent caller doing the same thing.</summary>
     public static async Task<Manifest> FetchAsync(
         HttpClient http, string baseUrl, string directory, TimeProvider time, CancellationToken ct)
     {

@@ -1,0 +1,294 @@
+{
+    "abilities": [
+        {
+            "ability": {
+                "name": "run-away",
+                "url": "/api/v2/ability/50/"
+            },
+            "is_hidden": false,
+            "slot": 1
+        },
+        {
+            "ability": {
+                "name": "adaptability",
+                "url": "/api/v2/ability/91/"
+            },
+            "is_hidden": false,
+            "slot": 2
+        },
+        {
+            "ability": {
+                "name": "anticipation",
+                "url": "/api/v2/ability/107/"
+            },
+            "is_hidden": true,
+            "slot": 3
+        }
+    ],
+    "base_experience": 65,
+    "cries": {
+        "latest": "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/latest/133.ogg",
+        "legacy": "https://raw.githubusercontent.com/PokeAPI/cries/main/cries/pokemon/legacy/133.ogg"
+    },
+    "forms": [
+        {
+            "name": "eevee",
+            "url": "/api/v2/pokemon-form/133/"
+        }
+    ],
+    "game_indices": [
+        {
+            "game_index": 102,
+            "version": {
+                "name": "red",
+                "url": "/api/v2/version/1/"
+            }
+        },
+        {
+            "game_index": 102,
+            "version": {
+                "name": "blue",
+                "url": "/api/v2/version/2/"
+            }
+        },
+        {
+            "game_index": 102,
+            "version": {
+                "name": "yellow",
+                "url": "/api/v2/version/3/"
+            }
+        }
+    ],
+    "height": 3,
+    "held_items": [],
+    "id": 133,
+    "is_default": true,
+    "location_area_encounters": "/api/v2/pokemon/133/encounters",
+    "moves": [
+        {
+            "move": {
+                "name": "pay-day",
+                "url": "/api/v2/move/6/"
+            },
+            "version_group_details": [
+                {
+                    "level_learned_at": 0,
+                    "move_learn_method": {
+                        "name": "machine",
+                        "url": "/api/v2/move-learn-method/4/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "lets-go-pikachu-lets-go-eevee",
+                        "url": "/api/v2/version-group/19/"
+                    }
+                },
+                {
+                    "level_learned_at": 0,
+                    "move_learn_method": {
+                        "name": "machine",
+                        "url": "/api/v2/move-learn-method/4/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "sword-shield",
+                        "url": "/api/v2/version-group/20/"
+                    }
+                }
+            ]
+        },
+        {
+            "move": {
+                "name": "double-kick",
+                "url": "/api/v2/move/24/"
+            },
+            "version_group_details": [
+                {
+                    "level_learned_at": 10,
+                    "move_learn_method": {
+                        "name": "level-up",
+                        "url": "/api/v2/move-learn-method/1/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "lets-go-pikachu-lets-go-eevee",
+                        "url": "/api/v2/version-group/19/"
+                    }
+                },
+                {
+                    "level_learned_at": 0,
+                    "move_learn_method": {
+                        "name": "egg",
+                        "url": "/api/v2/move-learn-method/2/"
+                    },
+                    "order": null,
+                    "version_group": {
+                        "name": "sword-shield",
+                        "url": "/api/v2/version-group/20/"
+                    }
+                }
+            ]
+        }
+    ],
+    "name": "eevee",
+    "order": 215,
+    "past_abilities": [
+        {
+            "abilities": [
+                {
+                    "ability": null,
+                    "is_hidden": false,
+                    "slot": 2
+                }
+            ],
+            "generation": {
+                "name": "generation-iii",
+                "url": "/api/v2/generation/3/"
+            }
+        },
+        {
+            "abilities": [
+                {
+                    "ability": null,
+                    "is_hidden": true,
+                    "slot": 3
+                }
+            ],
+            "generation": {
+                "name": "generation-iv",
+                "url": "/api/v2/generation/4/"
+            }
+        }
+    ],
+    "past_stats": [
+        {
+            "generation": {
+                "name": "generation-i",
+                "url": "/api/v2/generation/1/"
+            },
+            "stats": [
+                {
+                    "base_stat": 65,
+                    "effort": 0,
+                    "stat": {
+                        "name": "special",
+                        "url": "/api/v2/stat/9/"
+                    }
+                }
+            ]
+        }
+    ],
+    "past_types": [],
+    "species": {
+        "name": "eevee",
+        "url": "/api/v2/pokemon-species/133/"
+    },
+    "sprites": {
+        "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/133.png",
+        "back_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/female/133.png",
+        "back_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/133.png",
+        "back_shiny_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/back/shiny/female/133.png",
+        "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/133.png",
+        "front_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/female/133.png",
+        "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/133.png",
+        "front_shiny_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/shiny/female/133.png",
+        "other": {
+            "dream_world": {
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/dream-world/133.svg",
+                "front_female": null
+            },
+            "home": {
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/133.png",
+                "front_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/female/133.png",
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/shiny/133.png",
+                "front_shiny_female": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/home/shiny/female/133.png"
+            },
+            "official-artwork": {
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/133.png",
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/shiny/133.png"
+            },
+            "showdown": {
+                "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/133.gif",
+                "back_female": null,
+                "back_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/back/shiny/133.gif",
+                "back_shiny_female": null,
+                "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/133.gif",
+                "front_female": null,
+                "front_shiny": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/showdown/shiny/133.gif",
+                "front_shiny_female": null
+            }
+        },
+        "versions": {
+            "generation-i": {
+                "red-blue": {
+                    "back_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/back/133.png",
+                    "back_gray": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/back/gray/133.png",
+                    "back_transparent": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/back/133.png",
+                    "front_default": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/133.png",
+                    "front_gray": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/gray/133.png",
+                    "front_transparent": "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-i/red-blue/transparent/133.png"
+                }
+            }
+        }
+    },
+    "stats": [
+        {
+            "base_stat": 55,
+            "effort": 0,
+            "stat": {
+                "name": "hp",
+                "url": "/api/v2/stat/1/"
+            }
+        },
+        {
+            "base_stat": 55,
+            "effort": 0,
+            "stat": {
+                "name": "attack",
+                "url": "/api/v2/stat/2/"
+            }
+        },
+        {
+            "base_stat": 50,
+            "effort": 0,
+            "stat": {
+                "name": "defense",
+                "url": "/api/v2/stat/3/"
+            }
+        },
+        {
+            "base_stat": 45,
+            "effort": 0,
+            "stat": {
+                "name": "special-attack",
+                "url": "/api/v2/stat/4/"
+            }
+        },
+        {
+            "base_stat": 65,
+            "effort": 1,
+            "stat": {
+                "name": "special-defense",
+                "url": "/api/v2/stat/5/"
+            }
+        },
+        {
+            "base_stat": 55,
+            "effort": 0,
+            "stat": {
+                "name": "speed",
+                "url": "/api/v2/stat/6/"
+            }
+        }
+    ],
+    "types": [
+        {
+            "slot": 1,
+            "type": {
+                "name": "normal",
+                "url": "/api/v2/type/1/"
+            }
+        }
+    ],
+    "weight": 65
+}
