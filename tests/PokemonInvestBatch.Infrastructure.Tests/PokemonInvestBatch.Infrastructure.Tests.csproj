@@ -26,4 +26,12 @@
     <ProjectReference Include="..\PokemonInvestBatch.TestSupport\PokemonInvestBatch.TestSupport.csproj" />
   </ItemGroup>
 
+  <!-- Real, trimmed PokéAPI fixtures (Pokedex/Fixtures), copied from
+       Application.Tests' checked-in copies rather than referenced across
+       projects — read from disk by PokeapiMirrorTests' stub handler at run
+       time, standing in for the upstream nested layout it serves. -->
+  <ItemGroup>
+    <None Include="Pokedex\Fixtures\**\*.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -1,0 +1,219 @@
+{
+    "base_happiness": 0,
+    "capture_rate": 3,
+    "color": {
+        "name": "gray",
+        "url": "/api/v2/pokemon-color/4/"
+    },
+    "egg_groups": [
+        {
+            "name": "no-eggs",
+            "url": "/api/v2/egg-group/15/"
+        }
+    ],
+    "evolution_chain": {
+        "url": "/api/v2/evolution-chain/399/"
+    },
+    "evolves_from_species": null,
+    "flavor_text_entries": [
+        {
+            "flavor_text": "Da die Gefahr besteht, dass es sonst alles kurz\nund klein schlägt, muss es eine Kontrollmaske\ntragen, die seine wahre Macht unterdrückt.",
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "version": {
+                "name": "ultra-moon",
+                "url": "/api/v2/version/30/"
+            }
+        },
+        {
+            "flavor_text": "おもい　せいぎょマスクを　つけており\nほんらいの　のうりょくを　だせない。\nとくべつな　ちからを　ひめている。",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "version": {
+                "name": "sun",
+                "url": "/api/v2/version/27/"
+            }
+        },
+        {
+            "flavor_text": "무거운 제어마스크를 쓰고 있어\n본래의 능력을 발휘할 수 없다.\n특별한 힘을 숨기고 있다.",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "version": {
+                "name": "sun",
+                "url": "/api/v2/version/27/"
+            }
+        }
+    ],
+    "form_descriptions": [],
+    "forms_switchable": false,
+    "gender_rate": -1,
+    "genera": [
+        {
+            "genus": "じんこうポケモン",
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            }
+        },
+        {
+            "genus": "인공포켓몬",
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            }
+        },
+        {
+            "genus": "人工寶可夢",
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            }
+        }
+    ],
+    "generation": {
+        "name": "generation-vii",
+        "url": "/api/v2/generation/7/"
+    },
+    "growth_rate": {
+        "name": "slow",
+        "url": "/api/v2/growth-rate/1/"
+    },
+    "habitat": null,
+    "has_gender_differences": false,
+    "hatch_counter": 120,
+    "id": 772,
+    "is_baby": false,
+    "is_legendary": true,
+    "is_mythical": false,
+    "name": "type-null",
+    "names": [
+        {
+            "language": {
+                "name": "ja-hrkt",
+                "url": "/api/v2/language/1/"
+            },
+            "name": "タイプ：ヌル"
+        },
+        {
+            "language": {
+                "name": "ja-roma",
+                "url": "/api/v2/language/2/"
+            },
+            "name": "Type:Null"
+        },
+        {
+            "language": {
+                "name": "ko",
+                "url": "/api/v2/language/3/"
+            },
+            "name": "타입:널"
+        },
+        {
+            "language": {
+                "name": "zh-hant",
+                "url": "/api/v2/language/4/"
+            },
+            "name": "屬性：空"
+        },
+        {
+            "language": {
+                "name": "fr",
+                "url": "/api/v2/language/5/"
+            },
+            "name": "Type:0"
+        },
+        {
+            "language": {
+                "name": "de",
+                "url": "/api/v2/language/6/"
+            },
+            "name": "Typ:Null"
+        },
+        {
+            "language": {
+                "name": "es",
+                "url": "/api/v2/language/7/"
+            },
+            "name": "Código Cero"
+        },
+        {
+            "language": {
+                "name": "it",
+                "url": "/api/v2/language/8/"
+            },
+            "name": "Tipo Zero"
+        },
+        {
+            "language": {
+                "name": "en",
+                "url": "/api/v2/language/9/"
+            },
+            "name": "Type: Null"
+        },
+        {
+            "language": {
+                "name": "ja",
+                "url": "/api/v2/language/11/"
+            },
+            "name": "タイプ：ヌル"
+        },
+        {
+            "language": {
+                "name": "zh-hans",
+                "url": "/api/v2/language/12/"
+            },
+            "name": "属性：空"
+        },
+        {
+            "language": {
+                "name": "es-419",
+                "url": "/api/v2/language/14/"
+            },
+            "name": "Código Cero"
+        }
+    ],
+    "order": 772,
+    "pal_park_encounters": [],
+    "pokedex_numbers": [
+        {
+            "entry_number": 772,
+            "pokedex": {
+                "name": "national",
+                "url": "/api/v2/pokedex/1/"
+            }
+        },
+        {
+            "entry_number": 203,
+            "pokedex": {
+                "name": "original-alola",
+                "url": "/api/v2/pokedex/16/"
+            }
+        },
+        {
+            "entry_number": 259,
+            "pokedex": {
+                "name": "updated-alola",
+                "url": "/api/v2/pokedex/21/"
+            }
+        }
+    ],
+    "shape": {
+        "name": "quadruped",
+        "url": "/api/v2/pokemon-shape/8/"
+    },
+    "varieties": [
+        {
+            "is_default": true,
+            "pokemon": {
+                "name": "type-null",
+                "url": "/api/v2/pokemon/772/"
+            }
+        }
+    ]
+}
