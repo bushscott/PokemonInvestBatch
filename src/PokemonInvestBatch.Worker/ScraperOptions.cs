@@ -99,4 +99,41 @@ public sealed record ScraperOptions
     /// only move when enumeration discovers cards (weekly) or the operator
     /// re-pins the mirror, and a no-change sweep writes nothing.</summary>
     public int TcgdexEnrichmentIntervalHours { get; init; } = 24;
+
+    /// <summary>Raw-content base for the pinned PokéAPI dataset (ADR-0011).
+    /// The pin is the path segment — bump it to refresh, then delete the
+    /// mirror directory.</summary>
+    public string PokeapiDataBaseUrl { get; init; } =
+        "https://raw.githubusercontent.com/PokeAPI/api-data/";
+
+    /// <summary>Raw-content base for the pinned PokéAPI sprites repo
+    /// (ADR-0011), same refresh mechanic as <see cref="PokeapiDataBaseUrl"/>.</summary>
+    public string PokeapiSpritesBaseUrl { get; init; } =
+        "https://raw.githubusercontent.com/PokeAPI/sprites/";
+
+    /// <summary>Commit SHA of PokeAPI/api-data this Pokédex was built from.</summary>
+    public string PokeapiDataPin { get; init; } = "2cda0b56a3a8ad2529d8aac73528225f96d2c848";
+
+    /// <summary>Commit SHA of PokeAPI/sprites the icons come from.</summary>
+    public string PokeapiSpritesPin { get; init; } = "c10459b9b0129eaca5c5d9b1cac65336debb1d08";
+
+    /// <summary>Where the pinned PokéAPI dataset mirror lives. Same
+    /// directory-is-the-version-pin convention as <see cref="TcgdexMirrorDirectory"/>.</summary>
+    public string PokedexMirrorDirectory { get; init; } = "pokeapi-mirror";
+
+    /// <summary>Where fetched species icons land, one file per national dex
+    /// number, beside the card image corpus rather than inside it.</summary>
+    public string SpeciesIconDirectory { get; init; } = "species-icons";
+
+    /// <summary>Cadence of the Pokédex lane's sweep (mirror fetch/import,
+    /// icon fetch, card tagging). Daily is generous for the same reason as
+    /// <see cref="TcgdexEnrichmentIntervalHours"/>: a no-change sweep writes
+    /// nothing.</summary>
+    public int PokedexTaggingIntervalHours { get; init; } = 24;
+
+    /// <summary>Hand-curated TCGdex series→era mapping (ADR-0011), same
+    /// user-input posture as <see cref="TcgdexSetAliasesPath"/>. Reserved by
+    /// this option now; unused until the set-details sweep later in the
+    /// Pokédex phase reads it.</summary>
+    public string TcgdexSeriesEraPath { get; init; } = "tcgdex-series-eras.json";
 }

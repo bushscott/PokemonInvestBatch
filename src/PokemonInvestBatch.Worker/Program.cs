@@ -32,6 +32,9 @@ builder.Services.AddOptions<ScraperOptions>()
     .Validate(o => o.IntakePort is >= 1 and <= 65535, "Scraper:IntakePort must be 1-65535.")
     .Validate(o => IPAddress.TryParse(o.IntakeAddress, out _), "Scraper:IntakeAddress must be an IP literal.")
     .Validate(o => o.TcgdexEnrichmentIntervalHours >= 1, "Scraper:TcgdexEnrichmentIntervalHours must be at least 1.")
+    .Validate(o => o.PokedexTaggingIntervalHours >= 1, "Scraper:PokedexTaggingIntervalHours must be at least 1.")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.PokeapiDataPin), "Scraper:PokeapiDataPin is required.")
+    .Validate(o => !string.IsNullOrWhiteSpace(o.PokeapiSpritesPin), "Scraper:PokeapiSpritesPin is required.")
     .ValidateOnStart();
 
 // Scheduling knobs share the "Scraper" section (same config file, same keys as
