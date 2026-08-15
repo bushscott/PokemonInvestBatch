@@ -30,6 +30,18 @@ consumption for CardStock — no new grant, no cross-schema write.
 This ADR records that shape before Task 2 of the implementation plan writes a
 single migration.
 
+**Licensing, checked the same way as ADR-0009's TCGdex mirror.**
+`PokeAPI/api-data` is BSD-3-Clause (verified live 2026-08-14, recorded in
+CardStock D-106): redistribution, modification and commercial use permitted,
+the only obligation is preserving the copyright notice — the same shape as
+TCGdex's MIT. `PokeAPI/sprites` is CC0 1.0 Universal, and unlike TCGdex's MIT
+its own `LICENCE.txt` states the compilation/IP split outright rather than
+leaving it to inference: *"All image contents within are Copyright The
+Pokémon Company."* Both grants cover PokeAPI's compilation — the dataset's
+assembly, the sprite files' organization — not the Pokémon IP the data and
+sprites depict; the icons' IP posture rides the same non-affiliation stance
+this project already carries (ADR-0009).
+
 ## Decision
 
 **1. Seven new scraper-owned tables.**
