@@ -54,7 +54,7 @@ this project already carries (ADR-0009).
 | `species_names` | One row per species per dataset language (12, including Japanese) — imported now because the dataset carries it free; unused by any reader until a later phase |
 | `card_species` | The card ↔ species junction — a card can name more than one species ("Pikachu & Zekrom GX") |
 | `card_tagging` | One row per taggable card, always — the tagging verdict (`Tagged`/`NoSpecies`/`Quarantined`), the method, and the exact title text matched |
-| `set_details` | One row per set, always — era/series, release date, and set code, joined from the existing TCGdex mapping (ADR-0009) where set names match; `Pending` elsewhere. Series→era resolution reads a curated mapping file in the same posture as `tcgdex-set-aliases.json`; the option that names it (`TcgdexSeriesEraPath`) is reserved by this ADR but unused until that sweep is built later in this phase |
+| `set_details` | One row per set, always — era/series, release date, and set code, joined from the existing TCGdex mapping (ADR-0009) where set names match; `Pending` elsewhere. Series→era resolution reads a curated mapping file (`tcgdex-series-eras.json`, tracked in the repo in the same posture as `tcgdex-set-aliases.json`) named by the `TcgdexSeriesEraPath` option; `SetDetailsSweep` re-reads it on every sweep and re-resolves era on every row, so a new era lands by editing the file — no code change |
 
 This mirrors `tcgdex_enrichments`' precedent: a status column where "not yet
 matched" is a first-class value, never absence. Column types and constraints

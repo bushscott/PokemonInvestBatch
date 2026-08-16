@@ -202,6 +202,16 @@ A `method = 1` (`Manual`) row freezes the card: the tagging lane's work set skip
 entirely on every future sweep, even after the card's title changes, until an
 operator reverses the pin with another hand-run statement.
 
+**Era mapping.** `set_details.era` comes from `tcgdex-series-eras.json` (named by the
+`TcgdexSeriesEraPath` option; tracked in the repo and copied to the Pi by the deploy
+recipe `publish.sh` prints, same posture as `tcgdex-set-aliases.json`). The key is
+TCGdex's serie display name, character-for-character — a near-miss silently yields a
+null era with the row still `Matched`. The sweep re-reads the file and re-resolves
+era on **every** row every run, so adding an era is: add the key, deploy the file,
+and either wait for the next sweep (24h tick) or `sudo systemctl restart
+pokemon-invest-batch` to sweep now. A missing file is not an error — every era goes
+null on the next sweep — which is why the file must stay in the deploy copy list.
+
 **Acceptance queries.** Re-run these any time after a sweep to confirm the lane did
 what ADR-0011 promises. All read-only, safe against live prod.
 
@@ -209,7 +219,9 @@ what ADR-0011 promises. All read-only, safe against live prod.
    set has exactly one `set_details` row (ADR-0011 item 1: "always," never absence).
    Both counts should read 0.
 2. Coverage splits — how the corpus split across `Tagged`/`NoSpecies`/`Quarantined`,
-   and how sets split across `Matched`/`Pending`.
+   how sets split across `Matched`/`Pending`, and how matched sets split across eras
+   (every era in `tcgdex-series-eras.json` should appear; a mapped era suddenly
+   reading 0 means the file on the Pi lost a key).
 3. 100-card eyeball sample — a random card → status → matched-species cross-section,
    for a human to skim.
 4. Full quarantine list — every card the matcher refused to guess on (four or more
@@ -228,6 +240,7 @@ SELECT count(*) FROM sets s LEFT JOIN set_details d ON d.set_id = s.id WHERE d.s
 -- 2. Coverage splits (report verbatim):
 SELECT status, count(*) FROM card_tagging GROUP BY status ORDER BY status;
 SELECT match_status, count(*) FROM set_details GROUP BY match_status;
+SELECT era, count(*) FROM set_details GROUP BY era ORDER BY era;
 -- 3. 100-card eyeball sample (owner reviews):
 SELECT c.name, t.status, string_agg(s.name, ' · ') FROM card_tagging t
     JOIN cards c ON c.id = t.card_id

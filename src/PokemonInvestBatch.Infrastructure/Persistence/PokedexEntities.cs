@@ -118,6 +118,7 @@ public class SetDetail
 
     public string? Series { get; set; }
 
-    /// <summary>One of the 8 product eras, or null.</summary>
+    /// <summary>An era code from the curated series→era file
+    /// (tcgdex-series-eras.json), or null.</summary>
     public string? Era { get; set; }
 }
