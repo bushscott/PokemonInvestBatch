@@ -189,8 +189,8 @@ public class VisitPriorityTests
         // The floor: no card waits past MaxDaysBetweenVisits, however dull.
         // The busy card must be fresh enough to still be inside its burn-window
         // margin, or it belongs in the burn tier and outranks the floor by
-        // design — 5/day burns a 30-row bucket in 6 days, so at 0.3 it is not
-        // due until 1.8.
+        // design — 5/day burns a 30-row bucket in 6 days, so the fraction
+        // would allow 1.8 and the fast ceiling makes it due at 1.5.
         var busy = new CardVisitState { LastVisitedAt = Now.AddDays(-1), ObservedSalesPerDay = 5 };
 
         // Stated as a precondition so that tightening the dial again fails here
@@ -325,14 +325,15 @@ public class TieredBurnMarginTests
     [Fact]
     public void A_hot_card_is_due_at_three_tenths_of_its_burn_window()
     {
-        // 6/day burns a 30-row bucket in 5 days. Due at 1.5, not at 1.4. The
-        // rate is chosen fast enough that the fraction, not the band's
-        // interval ceiling, is the binding line — below 4.5/day the 2-day
-        // ceiling arrives first and this test would be measuring that instead.
-        Assert.True(30.0 / 6 * 0.3 < Options.FastCeilingDays, "fixture must let the fraction bind");
+        // 7.5/day burns a 30-row bucket in 4 days, so at three tenths the due
+        // line is 1.2 — past it at 1.25, short of it at 1.15. The rate is
+        // chosen fast enough that the fraction, not the band's interval
+        // ceiling, is the binding line — below 6/day the 1.5-day ceiling
+        // arrives first and this test would be measuring that instead.
+        Assert.True(30.0 / 7.5 * 0.3 < Options.FastCeilingDays, "fixture must let the fraction bind");
 
-        Assert.True(Score(6, 1.5) >= BurnDueTier);
-        Assert.True(Score(6, 1.4) < BurnDueTier);
+        Assert.True(Score(7.5, 1.25) >= BurnDueTier);
+        Assert.True(Score(7.5, 1.15) < BurnDueTier);
     }
 
     [Fact]
@@ -501,15 +502,49 @@ public class TieredBurnMarginTests
     {
         // Above 10/day a 3-day wait already loses rows, so cards selling at
         // least FastCeilingRate get FastCeilingDays instead: loss impossible
-        // below 15/day. Gengar-class numbers: read 3/day, ran at 12.
+        // below 20/day. Gengar-class numbers: read 3/day, ran at 12.
         const double observed = 3.0;
         const double actual = 12.0;
         var rolls = RollsAfter(actual);
 
-        Assert.True(RevisitDue(observed, Options) < rolls, "the 2-day band must beat the roll");
+        Assert.True(RevisitDue(observed, Options) < rolls, "the fast band must beat the roll");
         Assert.True(
             SalesObservation.BucketCap / observed * Options.SafetyFractionFor(observed) > rolls,
             "the dial alone must miss — otherwise this test isn't about the ceiling");
+    }
+
+    [Fact]
+    public void The_mewtwo_race_is_tied_at_two_days_and_won_at_a_day_and_a_half()
+    {
+        // Why FastCeilingDays moved to 1.5 on 2026-08-17, in the incident's
+        // real numbers. Mewtwo & Mew GX #SM191 read ~3.5/day off a calm page —
+        // the band where the ceiling and not the fraction is the binding
+        // line — then its PSA 10 bucket ran at 15/day or past it: a full page
+        // over a 2-day gap censors the measured rate at exactly the number
+        // the old ceiling protected. The bucket rolled in 2.0 days and the
+        // visit landed at two days plus sixteen seconds — the old ceiling was
+        // precisely wide enough to lose the race, ~7 rows, found 2026-08-16.
+        const double observed = 3.5;
+        const double actual = 15.0;
+        var rolls = RollsAfter(actual);
+
+        // Pinned at 2.0 explicitly: this is the record of why 1.5 replaced it,
+        // and the record must stay true if the ceiling ever moves again.
+        var old = new VisitPriorityOptions { FastCeilingDays = 2.0 };
+        Assert.True(RevisitDue(observed, old) >= rolls, "the 2-day ceiling must tie the roll — the tie is the incident");
+
+        // The documented response to an acceleration loss — turning the dial
+        // down — cannot reach a ceiling-bound card: even at 0.25 the fraction
+        // asks for later than the old ceiling, so the ceiling still decides.
+        var oldWithTighterDial = new VisitPriorityOptions
+        {
+            FastCeilingDays = 2.0,
+            HotBurnWindowSafetyFraction = 0.25,
+        };
+        Assert.True(RevisitDue(observed, oldWithTighterDial) >= rolls, "the dial must not reach it — that is why the ceiling moved");
+
+        // Whatever the ceiling is set to now, it may not regress this incident.
+        Assert.True(RevisitDue(observed, Options) < rolls, "a day and a half must win the race");
     }
 
     [Fact]

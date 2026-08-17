@@ -39,13 +39,14 @@ public class BurnWindowQueryAgreementTests
     /// either side of the hot-rate threshold, of the two ceiling bands, and of
     /// both fractions. The 7.33/3.9 pair is Kecleon #88's 2026-08-11 loss and
     /// the 1.57/12.2 pair is the cohort that outranked it; 1.99/2.01 straddle
-    /// FastCeilingRate and the 1.5/2.0/3.0 stalenesses sit on the ceiling and
-    /// half-ceiling lines the near-miss leash creates.</summary>
+    /// FastCeilingRate and the 0.75/1.5/3.0 stalenesses sit on the ceiling and
+    /// half-ceiling lines the near-miss leash creates (2.0 stays as the
+    /// retired fast-ceiling line the 2026-08-17 tightening moved off of).</summary>
     private static readonly double[] Rates =
         [0.05, 0.5, 0.99, 1.0, 1.01, 1.57, 1.99, 2.0, 2.01, 3.0, 4.5, 7.33, 15.0, 30.0];
 
     private static readonly double[] Stalenesses =
-        [0.1, 0.5, 1.0, 1.5, 1.637, 2.0, 2.046, 3.0, 3.9, 4.0, 12.0, 12.2, 15.0, 29.0, 31.0];
+        [0.1, 0.5, 0.75, 1.0, 1.5, 1.637, 2.0, 2.046, 3.0, 3.9, 4.0, 12.0, 12.2, 15.0, 29.0, 31.0];
 
     public static TheoryData<double, double, bool> Grid()
     {

@@ -80,8 +80,17 @@ public sealed record VisitPriorityOptions
     /// or above <see cref="HotRateThreshold"/> waits at most
     /// <see cref="HotCeilingDays"/>, and one at or above
     /// <see cref="FastCeilingRate"/> at most <see cref="FastCeilingDays"/> —
-    /// making loss impossible below BucketCap/ceiling (10/day and 15/day
+    /// making loss impossible below BucketCap/ceiling (10/day and 20/day
     /// respectively) no matter how stale the stored rate is.
+    ///
+    /// The fast ceiling tightened 2.0 → 1.5 on 2026-08-17, for Mewtwo & Mew GX
+    /// #SM191. It measured ~4/day off a calm page — the band where the ceiling
+    /// and not the fraction is the binding line — then its PSA 10 bucket ran at
+    /// 15/day or past it (a full page over a 2-day gap censors the rate at
+    /// exactly the number the old ceiling protected), and the visit landed at
+    /// two days plus sixteen seconds: wide enough to lose the race by ~7 rows.
+    /// The dial cannot reach a ceiling-bound card, so the ceiling itself moved.
+    /// Measured cost ~+270 visits/day on 2026-08-17 rates.
     ///
     /// Cold cards get no ceiling on purpose: sub-1/day buckets need a month to
     /// roll, and a ceiling there costs thousands of visits a day for cards that
@@ -92,7 +101,7 @@ public sealed record VisitPriorityOptions
     public double FastCeilingRate { get; init; } = 2.0;
 
     /// <summary>See <see cref="FastCeilingRate"/>.</summary>
-    public double FastCeilingDays { get; init; } = 2.0;
+    public double FastCeilingDays { get; init; } = 1.5;
 
     /// <summary>See <see cref="FastCeilingRate"/>.</summary>
     public double HotCeilingDays { get; init; } = 3.0;
