@@ -212,6 +212,45 @@ and either wait for the next sweep (24h tick) or `sudo systemctl restart
 pokemon-invest-batch` to sweep now. A missing file is not an error — every era goes
 null on the next sweep — which is why the file must stay in the deploy copy list.
 
+**The Japanese shelf (ADR-0012).** Japanese sets map through exactly one path:
+`tcgdex-ja-set-aliases.json` (PriceCharting slug → TCGdex ja set id, with a `reason`
+per row). There is no name matching for Japanese and never will be — Japanese script
+folds to nothing in the name normalizer, so a name-driven join could only produce
+wrong-but-plausible data. The ja mirror lives beside the English one
+(`tcgdex-mirror-ja/`, one directory per locale) and both stay fresh by themselves:
+every sweep re-reads the one-page set list and downloads only documents the
+directory lacks (the top-up), so a newly released TCGdex set arrives within a day
+while pinned documents never change. Deleting a mirror directory is still the full
+re-pin.
+
+The ongoing curation loop, when new sets appear:
+
+1. The sweep receipt log's per-shelf split (`sets N matched, M pending (English …,
+   Japanese …)`) or CardStock's "awaiting metadata" wall says a pending count rose.
+2. List the unaliased Japanese sets (query below) and find each one's TCGdex ja id
+   in `tcgdex-mirror-ja/sets/` (id, Japanese name, release date, card counts).
+3. Add a row per set to `tcgdex-ja-set-aliases.json` — the `reason` should carry the
+   evidence (name translation, release date, count agreement). **When unsure, leave
+   it unaliased**: a near-miss writes wrong-but-plausible data, and unaliased is an
+   honest verdict, not a failure. A set with no TCGdex counterpart (promo pools,
+   Bandai/Carddass products, DP- and BW-era sets TCGdex ja does not carry) simply
+   stays pending.
+4. If a new serie name appears, add its era key to `tcgdex-series-eras.json` —
+   ordinal-exact, copied byte-for-byte from the mirror document, mapped to an
+   existing era code so the shelves merge downstream.
+5. Deploy the json files (they ride the `publish.sh` copy line) and wait for the
+   next sweep or `sudo systemctl restart pokemon-invest-batch`.
+
+```sql
+-- Unaliased pending Japanese sets, the curation worksheet:
+SELECT s.slug, s.name, count(c.id) FILTER (WHERE c.delisted_at IS NULL AND c.gone_at IS NULL) AS live_cards
+FROM sets s
+LEFT JOIN set_details d ON d.set_id = s.id AND d.match_status = 0
+LEFT JOIN cards c ON c.set_id = s.id
+WHERE d.set_id IS NULL AND s.slug LIKE 'pokemon-japanese-%'
+GROUP BY s.slug, s.name ORDER BY live_cards DESC;
+```
+
 **Acceptance queries.** Re-run these any time after a sweep to confirm the lane did
 what ADR-0011 promises. All read-only, safe against live prod.
 
@@ -241,6 +280,16 @@ SELECT count(*) FROM sets s LEFT JOIN set_details d ON d.set_id = s.id WHERE d.s
 SELECT status, count(*) FROM card_tagging GROUP BY status ORDER BY status;
 SELECT match_status, count(*) FROM set_details GROUP BY match_status;
 SELECT era, count(*) FROM set_details GROUP BY era ORDER BY era;
+-- 2b. The same split by language shelf (mirrors SetMapper.PartitionOf):
+SELECT CASE
+         WHEN s.slug LIKE 'pokemon-japanese%' THEN 'japanese'
+         WHEN s.slug LIKE 'pokemon-chinese%'  THEN 'chinese'
+         WHEN s.slug LIKE 'pokemon-korean%'   THEN 'korean'
+         WHEN s.slug LIKE '%topps%'           THEN 'topps'
+         ELSE 'english' END AS shelf,
+       d.match_status, count(*)
+FROM sets s JOIN set_details d ON d.set_id = s.id
+GROUP BY 1, 2 ORDER BY 1, 2;
 -- 3. 100-card eyeball sample (owner reviews):
 SELECT c.name, t.status, string_agg(s.name, ' · ') FROM card_tagging t
     JOIN cards c ON c.id = t.card_id

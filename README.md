@@ -343,6 +343,9 @@ chosen, what was rejected, and what it costs.
 | [0007](docs/adr/0007-schedule-on-the-hottest-buckets-pace.md) | The schedule follows the hottest bucket, and a capped card warns its set |
 | [0008](docs/adr/0008-express-visits-have-no-time-barriers.md) | Express visits have no time barriers; the calling app owns the rate limit |
 | [0009](docs/adr/0009-tcgdex-metadata-enrichment.md) | Collector numbers and set sizes join from a pinned TCGdex mirror |
+| [0010](docs/adr/0010-machine-retirement-with-brakes.md) | Machine retirement with brakes |
+| [0011](docs/adr/0011-the-pokedex-lives-in-the-scraper.md) | The Pokédex — species, card tagging, and set metadata — is scraper-owned |
+| [0012](docs/adr/0012-the-japanese-shelf-joins-by-hand.md) | The Japanese shelf joins by hand-curated alias; the mirror learns to top up |
 
 ---
 

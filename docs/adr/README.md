@@ -20,3 +20,4 @@ The format is Michael Nygard's, from *Documenting Architecture Decisions* (2011)
 | [0009](0009-tcgdex-metadata-enrichment.md) | Collector numbers and set sizes join from a pinned TCGdex mirror | 2026-08-13 |
 | [0010](0010-machine-retirement-with-brakes.md) | The listing retires a card, the probe brings it back (amends 0002) | 2026-08-13 |
 | [0011](0011-the-pokedex-lives-in-the-scraper.md) | The Pokédex — species, card tagging, and set metadata — is scraper-owned | 2026-08-14 |
+| [0012](0012-the-japanese-shelf-joins-by-hand.md) | The Japanese shelf joins by hand-curated alias; the mirror learns to top up | 2026-08-19 |
