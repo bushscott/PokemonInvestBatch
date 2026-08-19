@@ -59,6 +59,18 @@ public static class SetMapper
     /// <summary>The grab-bag slug that fans out to per-era promo sets.</summary>
     public const string PromoSlug = "pokemon-promo";
 
+    /// <summary>The Japanese shelf's join inputs: its own locale's catalog
+    /// and its own hand-curated alias table — the ONLY path a Japanese set
+    /// may map through (ADR-0012). Japanese-script names fold to nothing in
+    /// <see cref="NameFold"/>, so name matching is structurally impossible
+    /// here, not merely switched off: a branch that consulted it could only
+    /// ever produce wrong-but-plausible data. A caller that does not carry
+    /// the shelf (the per-card enrichment, until its own guard ships) passes
+    /// none, and Japanese stays honestly Unmapped as before.</summary>
+    public sealed record JapaneseShelf(
+        TcgdexCatalog Catalog,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> Aliases);
+
     public static SetPartition PartitionOf(string slug)
     {
         if (slug.StartsWith("pokemon-japanese", StringComparison.Ordinal))
@@ -92,12 +104,13 @@ public static class SetMapper
     public static IReadOnlyDictionary<string, SetMapEntry> Resolve(
         IEnumerable<(string Slug, string Name)> priceChartingSets,
         TcgdexCatalog catalog,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> aliases)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> aliases,
+        JapaneseShelf? japanese = null)
     {
         var map = new Dictionary<string, SetMapEntry>(StringComparer.Ordinal);
         foreach (var (slug, name) in priceChartingSets)
         {
-            map[slug] = ResolveOne(slug, name, catalog, aliases);
+            map[slug] = ResolveOne(slug, name, catalog, aliases, japanese);
         }
 
         return map;
@@ -107,9 +120,39 @@ public static class SetMapper
         string slug,
         string name,
         TcgdexCatalog catalog,
-        IReadOnlyDictionary<string, IReadOnlyList<string>> aliases)
+        IReadOnlyDictionary<string, IReadOnlyList<string>> aliases,
+        JapaneseShelf? japanese)
     {
         var partition = PartitionOf(slug);
+        if (partition == SetPartition.Japanese && japanese is not null)
+        {
+            // Alias-only, into the ja catalog only — a hit or an honest
+            // miss, with the same loud dangling-target check as the English
+            // alias table and never a fallback to name matching.
+            if (japanese.Aliases.TryGetValue(slug, out var jaTargets))
+            {
+                foreach (var target in jaTargets)
+                {
+                    if (japanese.Catalog.ById(target) is not { IsPhysical: true })
+                    {
+                        throw new InvalidOperationException(
+                            $"Japanese set alias '{slug}' names TCGdex ja set '{target}', which the ja mirror " +
+                            "does not contain (or is a digital set). Fix the alias file or refresh the mirror.");
+                    }
+                }
+
+                return new SetMapEntry
+                {
+                    Slug = slug,
+                    Partition = partition,
+                    Kind = SetMapKind.Mapped,
+                    TcgdexSetIds = jaTargets,
+                };
+            }
+
+            return new SetMapEntry { Slug = slug, Partition = partition, Kind = SetMapKind.Unmapped };
+        }
+
         if (partition != SetPartition.English)
         {
             return new SetMapEntry { Slug = slug, Partition = partition, Kind = SetMapKind.Unmapped };

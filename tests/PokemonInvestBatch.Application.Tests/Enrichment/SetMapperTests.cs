@@ -63,6 +63,82 @@ public class SetMapperTests
     }
 
     [Fact]
+    public void A_japanese_set_with_a_curated_alias_maps_without_name_matching()
+    {
+        // The en shelf holds its own '151' — a fuzzy or name-driven path
+        // would land there. The ja join may only follow the curated alias
+        // into the ja catalog.
+        var english = new TcgdexCatalog([Set("sv03.5", "151", "sv")]);
+        var japanese = new SetMapper.JapaneseShelf(
+            new TcgdexCatalog([Set("SV2a", "ポケモンカード151", "sv-ja")]),
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+            {
+                ["pokemon-japanese-scarlet-&-violet-151"] = ["SV2a"],
+            });
+
+        var map = SetMapper.Resolve(
+            [("pokemon-japanese-scarlet-&-violet-151", "Pokemon Japanese Scarlet & Violet 151")],
+            english,
+            NoAliases,
+            japanese);
+
+        var entry = map["pokemon-japanese-scarlet-&-violet-151"];
+        Assert.Equal(SetPartition.Japanese, entry.Partition);
+        Assert.Equal(SetMapKind.Mapped, entry.Kind);
+        Assert.Equal(["SV2a"], entry.TcgdexSetIds);
+    }
+
+    [Fact]
+    public void An_unaliased_japanese_set_stays_unmapped()
+    {
+        // The ja shelf being wired changes nothing for a set no human has
+        // aliased: there is no name matching to fall back to, by design.
+        var japanese = new SetMapper.JapaneseShelf(
+            new TcgdexCatalog([Set("S6a", "イーブイヒーローズ", "swsh-ja")]),
+            NoAliases);
+
+        var map = SetMapper.Resolve(
+            [("pokemon-japanese-eevee-heroes", "Pokemon Japanese Eevee Heroes")],
+            new TcgdexCatalog([]),
+            NoAliases,
+            japanese);
+
+        Assert.Equal(SetMapKind.Unmapped, map["pokemon-japanese-eevee-heroes"].Kind);
+    }
+
+    [Fact]
+    public void A_japanese_alias_naming_a_missing_ja_set_refuses_loudly()
+    {
+        // Same posture as the English alias table: a silently dropped alias
+        // would quietly unmap a curated set, so a dangling target throws.
+        var japanese = new SetMapper.JapaneseShelf(
+            new TcgdexCatalog([Set("SV2a", "ポケモンカード151", "sv-ja")]),
+            new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+            {
+                ["pokemon-japanese-vstar-universe"] = ["S12a"],
+            });
+
+        Assert.Throws<InvalidOperationException>(() => _ = SetMapper.Resolve(
+            [("pokemon-japanese-vstar-universe", "Pokemon Japanese Vstar Universe")],
+            new TcgdexCatalog([]),
+            NoAliases,
+            japanese));
+    }
+
+    [Fact]
+    public void Without_a_japanese_shelf_a_japanese_set_stays_unmapped()
+    {
+        // EnrichmentLane resolves without the ja shelf until the per-card
+        // phase ships its own guard — Japanese stays honestly Unmapped there.
+        var map = SetMapper.Resolve(
+            [("pokemon-japanese-eevee-heroes", "Pokemon Japanese Eevee Heroes")],
+            new TcgdexCatalog([]),
+            NoAliases);
+
+        Assert.Equal(SetMapKind.Unmapped, map["pokemon-japanese-eevee-heroes"].Kind);
+    }
+
+    [Fact]
     public void A_digital_pocket_set_is_never_a_candidate()
     {
         // TCG Pocket reuses appealing physical-sounding names; a physical

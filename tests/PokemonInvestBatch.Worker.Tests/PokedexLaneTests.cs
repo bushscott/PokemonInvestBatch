@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
+using PokemonInvestBatch.Application.Enrichment;
 using PokemonInvestBatch.Application.Pokedex;
 using PokemonInvestBatch.Infrastructure.Enrichment;
 using PokemonInvestBatch.Infrastructure.Persistence;
@@ -244,6 +245,7 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         // Set details: one set seeded, empty TCGdex catalog, so it is Pending.
         Assert.Equal(0, result.SetDetails.Matched);
         Assert.Equal(1, result.SetDetails.Pending);
+        Assert.Equal((0, 1), result.SetDetails.Partitions[SetPartition.English]);
 
         await using var db = NewContext();
         Assert.Equal(3, await db.SpeciesRows.CountAsync());
@@ -346,6 +348,9 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         Assert.Contains("0 links removed", message, StringComparison.Ordinal);
         Assert.Contains("0 matched", message, StringComparison.Ordinal);
         Assert.Contains("1 pending", message, StringComparison.Ordinal);
+        // The per-shelf split rides in the same receipt line, so a curation
+        // session can see which language shelf's pending count moved.
+        Assert.Contains("English 0/1", message, StringComparison.Ordinal);
 
         // No stray "{Placeholder}" survives formatting — proves every named
         // hole in the template was actually filled, not silently mismatched

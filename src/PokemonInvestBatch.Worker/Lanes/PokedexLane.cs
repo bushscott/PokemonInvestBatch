@@ -145,8 +145,8 @@ public sealed class PokedexLane(
         var candidates = SpeciesMatcher.BuildCandidates(species.Select(s => (s.Id, s.Name)));
         var taggingResult = await new TaggingSweep().RunAsync(db, candidates, time, ct);
 
-        var (catalog, aliases) = await LoadTcgdexCatalogAsync(scraper, ct);
-        var setDetailsResult = await new SetDetailsSweep(catalog, aliases, scraper.TcgdexSeriesEraPath)
+        var (catalog, aliases, japanese) = await LoadTcgdexCatalogAsync(scraper, ct);
+        var setDetailsResult = await new SetDetailsSweep(catalog, aliases, japanese, scraper.TcgdexSeriesEraPath)
             .RunAsync(db, ct);
 
         logger.LogInformation(
@@ -154,12 +154,17 @@ public sealed class PokedexLane(
             + "icons {FromMenuIcons} from-menu, {FromDefaultSprites} from-default, {Skipped} skipped, "
             + "{Missing} missing; tagging {Examined} examined, {Tagged} tagged, {NoSpecies} no-species, "
             + "{Quarantined} quarantined, {LinksWritten} links written, {LinksRemoved} links removed; "
-            + "sets {Matched} matched, {Pending} pending",
+            + "sets {Matched} matched, {Pending} pending ({SetPartitions})",
             importResult.Inserted, importResult.Updated, importResult.Unchanged,
             iconResult.FromMenuIcons, iconResult.FromDefaultSprites, iconResult.Skipped, iconResult.Missing,
             taggingResult.Examined, taggingResult.Tagged, taggingResult.NoSpecies, taggingResult.Quarantined,
             taggingResult.LinksWritten, taggingResult.LinksRemoved,
-            setDetailsResult.Matched, setDetailsResult.Pending);
+            setDetailsResult.Matched, setDetailsResult.Pending,
+            string.Join(
+                ", ",
+                setDetailsResult.Partitions
+                    .OrderBy(p => p.Key)
+                    .Select(p => $"{p.Key} {p.Value.Matched}/{p.Value.Pending}")));
 
         return new PokedexSweepResult
         {
@@ -178,7 +183,10 @@ public sealed class PokedexLane(
     /// EnrichmentLane also writes to. <c>EnsureAsync</c>'s internal gate is
     /// what makes two lanes sharing one mirror directory safe; nothing local
     /// to this method or this lane does that coordination.</summary>
-    private async Task<(TcgdexCatalog Catalog, IReadOnlyDictionary<string, IReadOnlyList<string>> Aliases)>
+    private async Task<(
+        TcgdexCatalog Catalog,
+        IReadOnlyDictionary<string, IReadOnlyList<string>> Aliases,
+        SetMapper.JapaneseShelf Japanese)>
         LoadTcgdexCatalogAsync(ScraperOptions scraper, CancellationToken ct)
     {
         await TcgdexMirror.EnsureAsync(
@@ -203,6 +211,7 @@ public sealed class PokedexLane(
             ct);
 
         var (catalog, _) = await TcgdexMirror.LoadAsync(scraper.TcgdexMirrorDirectory, ct);
+        var (jaCatalog, _) = await TcgdexMirror.LoadAsync(scraper.TcgdexJaMirrorDirectory, ct);
 
         // Same posture as EnrichmentLane's own read of this file:
         // user-maintained JSON, absent means empty, malformed refuses
@@ -211,6 +220,12 @@ public sealed class PokedexLane(
             ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(scraper.TcgdexSetAliasesPath, ct))
             : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 
-        return (catalog, aliases);
+        // The ja alias file shares that posture — absent means empty, which
+        // is what lets the plumbing deploy before (or without) curation.
+        var jaAliases = File.Exists(scraper.TcgdexJaSetAliasesPath)
+            ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(scraper.TcgdexJaSetAliasesPath, ct))
+            : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+        return (catalog, aliases, new SetMapper.JapaneseShelf(jaCatalog, jaAliases));
     }
 }

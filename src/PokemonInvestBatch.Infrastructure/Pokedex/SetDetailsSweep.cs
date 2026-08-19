@@ -7,15 +7,23 @@ namespace PokemonInvestBatch.Infrastructure.Pokedex;
 
 /// <summary>Counts from one <see cref="SetDetailsSweep.RunAsync"/> call.
 /// <c>Matched + Pending</c> equals the number of rows in <c>sets</c> — every
-/// set gets exactly one <c>set_details</c> row, always.</summary>
-public sealed record SetDetailsSweepResult(int Matched, int Pending);
+/// set gets exactly one <c>set_details</c> row, always. <c>Partitions</c>
+/// splits the same totals by language shelf, which is what the receipt log
+/// prints so a curation session can see which shelf's pending count moved.</summary>
+public sealed record SetDetailsSweepResult(
+    int Matched,
+    int Pending,
+    IReadOnlyDictionary<SetPartition, (int Matched, int Pending)> Partitions);
 
 /// <summary>
 /// Fills <c>set_details</c> from the existing TCGdex set map (ADR-0009,
 /// reused rather than duplicated): one row per <c>sets</c> row, always. A
 /// set <see cref="SetMapper.Resolve"/> resolves to <see cref="SetMapKind.Mapped"/>
 /// becomes <see cref="SetMatchStatus.Matched"/> with its TCGdex code,
-/// release date and serie; everything else — no TCGdex counterpart
+/// release date and serie — a Japanese entry's targets read from the ja
+/// shelf's own catalog (ADR-0012), everything else from the English one,
+/// the same partition-scoping the resolver used; everything else — no
+/// TCGdex counterpart
 /// (<see cref="SetMapKind.Unmapped"/>), or the promo grab-bag slug that
 /// fans out per-card by number prefix rather than naming one set
 /// (<see cref="SetMapKind.PromoPool"/>) — is <see cref="SetMatchStatus.Pending"/>
@@ -40,6 +48,7 @@ public sealed record SetDetailsSweepResult(int Matched, int Pending);
 public sealed class SetDetailsSweep(
     TcgdexCatalog catalog,
     IReadOnlyDictionary<string, IReadOnlyList<string>> aliases,
+    SetMapper.JapaneseShelf japanese,
     string seriesEraPath)
 {
     public async Task<SetDetailsSweepResult> RunAsync(PokemonDbContext db, CancellationToken ct)
@@ -53,7 +62,7 @@ public sealed class SetDetailsSweep(
             : new Dictionary<string, string>(StringComparer.Ordinal);
 
         var sets = await db.Sets.Select(s => new { s.Id, s.Slug, s.Name }).ToListAsync(ct);
-        var map = SetMapper.Resolve(sets.Select(s => (s.Slug, s.Name)), catalog, aliases);
+        var map = SetMapper.Resolve(sets.Select(s => (s.Slug, s.Name)), catalog, aliases, japanese);
 
         // Tracked: an existing row is updated in place rather than
         // replaced, which is what makes the idempotency claim above hold —
@@ -62,6 +71,7 @@ public sealed class SetDetailsSweep(
 
         var matched = 0;
         var pending = 0;
+        var partitions = new Dictionary<SetPartition, (int Matched, int Pending)>();
 
         foreach (var set in sets)
         {
@@ -72,14 +82,18 @@ public sealed class SetDetailsSweep(
             }
 
             var entry = map[set.Slug];
+            var tally = partitions.GetValueOrDefault(entry.Partition);
             if (entry.Kind == SetMapKind.Mapped)
             {
                 // The first alias target when a PriceCharting set names more
                 // than one TCGdex set (trainer-kit half-decks) — see the
                 // class remarks for why that is a safe, documented choice
-                // rather than an arbitrary one.
+                // rather than an arbitrary one. A Japanese entry's targets
+                // live in the ja catalog; everything else joined through the
+                // English one — the same partition-scoping the resolver used.
+                var shelf = entry.Partition == SetPartition.Japanese ? japanese.Catalog : catalog;
                 var target = entry.TcgdexSetIds[0];
-                var tcgdexSet = catalog.ById(target)
+                var tcgdexSet = shelf.ById(target)
                     ?? throw new InvalidOperationException(
                         $"Set map for '{entry.Slug}' names TCGdex set '{target}', which the mirror does not contain.");
 
@@ -89,6 +103,7 @@ public sealed class SetDetailsSweep(
                 detail.Series = tcgdexSet.SerieName;
                 detail.Era = eras.GetValueOrDefault(tcgdexSet.SerieName);
                 matched++;
+                partitions[entry.Partition] = (tally.Matched + 1, tally.Pending);
             }
             else
             {
@@ -101,11 +116,12 @@ public sealed class SetDetailsSweep(
                 detail.Series = null;
                 detail.Era = null;
                 pending++;
+                partitions[entry.Partition] = (tally.Matched, tally.Pending + 1);
             }
         }
 
         await db.SaveChangesAsync(ct);
 
-        return new SetDetailsSweepResult(matched, pending);
+        return new SetDetailsSweepResult(matched, pending, partitions);
     }
 }

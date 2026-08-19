@@ -66,6 +66,31 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
     private static readonly IReadOnlyDictionary<string, IReadOnlyList<string>> NoAliases =
         new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 
+    /// <summary>An empty Japanese shelf: wired, holding nothing — every
+    /// Japanese set stays honestly Unmapped, exactly the pre-ja behavior.</summary>
+    private static readonly SetMapper.JapaneseShelf NoJapanese =
+        new(new TcgdexCatalog([]), NoAliases);
+
+    /// <summary>Read from the pinned ja mirror 2026-08-19 (SV2a), not
+    /// invented — same live-values rule as the fixtures above.</summary>
+    private static readonly TcgdexSet Pokemon151Ja = new()
+    {
+        Id = "SV2a",
+        Name = "ポケモンカード151",
+        SerieId = "sv",
+        SerieName = "ポケモンカードゲーム スカーレット&バイオレット",
+        ReleaseDate = new DateOnly(2023, 6, 16),
+        OfficialCount = 165,
+        TotalCount = 210,
+    };
+
+    private static SetMapper.JapaneseShelf Japanese151Shelf() => new(
+        new TcgdexCatalog([Pokemon151Ja]),
+        new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal)
+        {
+            ["pokemon-japanese-scarlet-&-violet-151"] = ["SV2a"],
+        });
+
     private Task WriteEraFileAsync(string content) => File.WriteAllTextAsync(_eraFilePath, content);
 
     [SkippableFact]
@@ -79,7 +104,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             await seed.SaveChangesAsync();
         }
 
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         var result = await sweep.RunAsync(db, CancellationToken.None);
@@ -108,7 +133,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
 
         // Never written: File.Exists(_eraFilePath) is false, same as the
         // absent-file case this sweep must tolerate.
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         var result = await sweep.RunAsync(db, CancellationToken.None);
@@ -138,7 +163,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             await seed.SaveChangesAsync();
         }
 
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         var result = await sweep.RunAsync(db, CancellationToken.None);
@@ -161,7 +186,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             await seed.SaveChangesAsync();
         }
 
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         await sweep.RunAsync(db, CancellationToken.None);
@@ -187,7 +212,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             await seed.SaveChangesAsync();
         }
 
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         await Assert.ThrowsAsync<InvalidOperationException>(() => sweep.RunAsync(db, CancellationToken.None));
@@ -213,7 +238,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             {
                 ["pokemon-sylveon-&-noivern"] = new[] { "tk-xy-sy", "tk-xy-n" },
             };
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([SylveonHalfDeck, NoivernHalfDeck]), aliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([SylveonHalfDeck, NoivernHalfDeck]), aliases, NoJapanese, _eraFilePath);
 
         await using var db = NewContext();
         var result = await sweep.RunAsync(db, CancellationToken.None);
@@ -239,7 +264,7 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
             await seed.SaveChangesAsync();
         }
 
-        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, _eraFilePath);
+        var sweep = new SetDetailsSweep(new TcgdexCatalog([EvolvingSkies]), NoAliases, NoJapanese, _eraFilePath);
 
         await using (var first = NewContext())
         {
@@ -265,6 +290,67 @@ public class SetDetailsSweepTests : DatabaseTest, IDisposable
         await connection.OpenAsync();
         await using var command = new NpgsqlCommand(sql, connection);
         return Assert.IsType<string>(await command.ExecuteScalarAsync());
+    }
+
+    [SkippableFact]
+    public async Task A_mapped_japanese_set_writes_code_date_series_and_era()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+        // The era file carries the Japanese serie name ordinal-exact, mapped
+        // to the same era code the English shelf uses — that is what merges
+        // the shelves downstream.
+        await WriteEraFileAsync(
+            """{ "Sword & Shield": "SWSH", "ポケモンカードゲーム スカーレット&バイオレット": "SV" }""");
+        await using (var seed = NewContext())
+        {
+            seed.Sets.Add(SeedSet(5, "pokemon-japanese-scarlet-&-violet-151", "Pokemon Japanese Scarlet & Violet 151"));
+            await seed.SaveChangesAsync();
+        }
+
+        var sweep = new SetDetailsSweep(
+            new TcgdexCatalog([EvolvingSkies]), NoAliases, Japanese151Shelf(), _eraFilePath);
+
+        await using var db = NewContext();
+        var result = await sweep.RunAsync(db, CancellationToken.None);
+
+        Assert.Equal(1, result.Matched);
+        Assert.Equal(0, result.Pending);
+        Assert.Equal((1, 0), result.Partitions[SetPartition.Japanese]);
+
+        await using var verify = NewContext();
+        var detail = await verify.SetDetails.SingleAsync(d => d.SetId == 5);
+        Assert.Equal(SetMatchStatus.Matched, detail.MatchStatus);
+        Assert.Equal("SV2a", detail.Code);
+        Assert.Equal(new DateOnly(2023, 6, 16), detail.ReleasedOn);
+        Assert.Equal("ポケモンカードゲーム スカーレット&バイオレット", detail.Series);
+        Assert.Equal("SV", detail.Era);
+    }
+
+    [SkippableFact]
+    public async Task A_japanese_serie_missing_from_the_era_file_stays_matched_with_null_era()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+        // Only the English key present: the ja serie misses ordinal-exactly,
+        // and a missing key means a null era on a still-Matched row — the
+        // existing contract, unchanged by the ja join.
+        await WriteEraFileAsync("""{ "Sword & Shield": "SWSH" }""");
+        await using (var seed = NewContext())
+        {
+            seed.Sets.Add(SeedSet(6, "pokemon-japanese-scarlet-&-violet-151", "Pokemon Japanese Scarlet & Violet 151"));
+            await seed.SaveChangesAsync();
+        }
+
+        var sweep = new SetDetailsSweep(
+            new TcgdexCatalog([EvolvingSkies]), NoAliases, Japanese151Shelf(), _eraFilePath);
+
+        await using var db = NewContext();
+        await sweep.RunAsync(db, CancellationToken.None);
+
+        await using var verify = NewContext();
+        var detail = await verify.SetDetails.SingleAsync(d => d.SetId == 6);
+        Assert.Equal(SetMatchStatus.Matched, detail.MatchStatus);
+        Assert.Equal("SV2a", detail.Code);
+        Assert.Null(detail.Era);
     }
 
     private static CardSet SeedSet(long id, string slug, string name) => new()
