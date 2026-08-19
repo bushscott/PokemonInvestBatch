@@ -25,3 +25,7 @@ coverage*.xml
 # Deploy tarballs staged for Pi Connect drag-and-drop
 *.tar.gz
 DATA_MODEL.md
+
+# TCGdex mirrors — the pin lives beside the service on the Pi; a local probe copy stays untracked
+tcgdex-mirror/
+tcgdex-mirror-ja/

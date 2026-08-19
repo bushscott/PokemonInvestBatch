@@ -1,0 +1,1129 @@
+[
+  {
+    "slug": "pokemon-japanese-expansion-pack",
+    "tcgdex": [
+      "PMCG1"
+    ],
+    "reason": "TCGdex ja 「拡張パック」 released 1996-10-20 (official 102/102) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-jungle",
+    "tcgdex": [
+      "PMCG2"
+    ],
+    "reason": "TCGdex ja 「ポケモンジャングル」 released 1997-03-05 (official 48/48) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mystery-of-the-fossils",
+    "tcgdex": [
+      "PMCG3"
+    ],
+    "reason": "TCGdex ja 「化石の秘密」 released 1997-06-21 (official 48/48) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rocket-gang",
+    "tcgdex": [
+      "PMCG4"
+    ],
+    "reason": "TCGdex ja 「ロケット団」 released 1997-11-21 (official 65/65) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-leaders%27-stadium",
+    "tcgdex": [
+      "PMCG5"
+    ],
+    "reason": "TCGdex ja 「リーダーズスタジアム」 released 1998-10-24 (official 96/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-challenge-from-the-darkness",
+    "tcgdex": [
+      "PMCG6"
+    ],
+    "reason": "TCGdex ja 「闇からの挑戦」 released 1999-06-25 (official 98/98) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-gold-silver-new-world",
+    "tcgdex": [
+      "neo1"
+    ],
+    "reason": "TCGdex ja 「金、銀、新世界へ...」 released 2000-02-04 (official 96/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-crossing-the-ruins",
+    "tcgdex": [
+      "neo2"
+    ],
+    "reason": "TCGdex ja 「遺跡をこえて...」 released 2000-07-07 (official 56/57) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-awakening-legends",
+    "tcgdex": [
+      "neo3"
+    ],
+    "reason": "TCGdex ja 「めざめる伝説」 released 2000-11-23 (official 57/57) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-darkness-and-to-light",
+    "tcgdex": [
+      "neo4"
+    ],
+    "reason": "TCGdex ja 「闇、そして光へ...」 released 2001-04-20 (official 113/113) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-vs",
+    "tcgdex": [
+      "VS1"
+    ],
+    "reason": "TCGdex ja 「ポケモンカード★VS」 released 2001-07-19 (official 141/143) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-web",
+    "tcgdex": [
+      "web1"
+    ],
+    "reason": "TCGdex ja 「ポケモンカード★web」 released 2001-10-20 (official 48/48) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-expedition-expansion-pack",
+    "tcgdex": [
+      "E1"
+    ],
+    "reason": "TCGdex names E1 'Base Expansion Pack'; PC uses the international Expedition name for the same 2001-12 e-series base set"
+  },
+  {
+    "slug": "pokemon-japanese-the-town-on-no-map",
+    "tcgdex": [
+      "E2"
+    ],
+    "reason": "TCGdex ja 「地図にない町」 released 2002-03-08 (official 92/92) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-wind-from-the-sea",
+    "tcgdex": [
+      "E3"
+    ],
+    "reason": "TCGdex ja 「海からの風」 released 2002-05-24 (official 87/90) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-split-earth",
+    "tcgdex": [
+      "E4"
+    ],
+    "reason": "TCGdex ja 「裂けた大地」 released 2002-08-23 (official 88/91) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mysterious-mountains",
+    "tcgdex": [
+      "E5"
+    ],
+    "reason": "TCGdex ja 「神秘なる山」 released 2002-10-04 (official 88/91) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ex-ruby-&-sapphire-expansion-pack",
+    "tcgdex": [
+      "ADV1"
+    ],
+    "reason": "TCGdex names ADV1 just 'Expansion Pack'; PC names it after the international EX Ruby & Sapphire"
+  },
+  {
+    "slug": "pokemon-japanese-miracle-of-the-desert",
+    "tcgdex": [
+      "ADV2"
+    ],
+    "reason": "TCGdex ja 「砂漠のきせき」 released 2003-04-18 (official 53/53) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rulers-of-the-heavens",
+    "tcgdex": [
+      "ADV3"
+    ],
+    "reason": "TCGdex ja 「天空の覇者」 released 2003-06-25 (official 54/54) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-magma-vs-aqua-two-ambitions",
+    "tcgdex": [
+      "ADV4"
+    ],
+    "reason": "TCGdex ja 「強化拡張パックex1マグマVSアクア ふたつの野望」 released 2003-10-24 (official 80/80) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-undone-seal",
+    "tcgdex": [
+      "ADV5"
+    ],
+    "reason": "TCGdex ja 「とかれた封印」 released 2004-01-16 (official 83/83) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-flight-of-legends",
+    "tcgdex": [
+      "PCG1"
+    ],
+    "reason": "TCGdex ja 「伝説の飛翔」 released 2004-04-09 (official 82/82) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-clash-of-the-blue-sky",
+    "tcgdex": [
+      "PCG2"
+    ],
+    "reason": "TCGdex ja 「蒼空の激突」 released 2004-07-01 (official 82/82) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rocket-gang-strikes-back",
+    "tcgdex": [
+      "PCG3"
+    ],
+    "reason": "TCGdex ja 「ロケット団の逆襲」 released 2004-10-15 (official 84/85) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-golden-sky-silvery-ocean",
+    "tcgdex": [
+      "PCG4"
+    ],
+    "reason": "TCGdex ja 「金の空、銀の海」 released 2005-04-08 (official 106/106) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mirage-forest",
+    "tcgdex": [
+      "PCG5"
+    ],
+    "reason": "TCGdex ja 「まぼろしの森」 released 2005-06-30 (official 86/86) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-holon-research",
+    "tcgdex": [
+      "PCG6"
+    ],
+    "reason": "TCGdex ja 「ホロンの研究塔」 released 2005-10-28 (official 86/86) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-holon-phantom",
+    "tcgdex": [
+      "PCG7"
+    ],
+    "reason": "TCGdex ja 「ホロンの幻影」 released 2006-01-27 (official 52/52) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-miracle-crystal",
+    "tcgdex": [
+      "PCG8"
+    ],
+    "reason": "TCGdex ja 「きせきの結晶」 released 2006-03-10 (official 75/75) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-offense-and-defense-of-the-furthest-ends",
+    "tcgdex": [
+      "PCG9"
+    ],
+    "reason": "TCGdex ja 「さいはての攻防」 released 2006-06-29 (official 68/68) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-world-champions-pack",
+    "tcgdex": [
+      "PCG10"
+    ],
+    "reason": "TCGdex ja 「ワールドチャンピオンズパック」 released 2007-07-05 (official 108/108) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-heartgold-collection",
+    "tcgdex": [
+      "L1a"
+    ],
+    "reason": "TCGdex ja 「ハートゴールドコレクション」 released 2009-10-09 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-soulsilver-collection",
+    "tcgdex": [
+      "L1b"
+    ],
+    "reason": "TCGdex ja 「ソウルシルバーコレクション」 released 2009-10-09 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-reviving-legends",
+    "tcgdex": [
+      "L2"
+    ],
+    "reason": "TCGdex ja 「よみがえる伝説」 released 2010-02-11 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-lost-link",
+    "tcgdex": [
+      "LL"
+    ],
+    "reason": "TCGdex ja 「強化パック ロストリンク」 released 2010-04-16 (official 40/40) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-clash-at-the-summit",
+    "tcgdex": [
+      "L3"
+    ],
+    "reason": "TCGdex ja 「頂上大激突」 released 2010-07-08 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-collection-x",
+    "tcgdex": [
+      "XY1a"
+    ],
+    "reason": "TCGdex ja 「コレクションX」 released 2013-12-13 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-collection-y",
+    "tcgdex": [
+      "XY1b"
+    ],
+    "reason": "TCGdex ja 「コレクションY」 released 2013-12-13 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-wild-blaze",
+    "tcgdex": [
+      "XY2"
+    ],
+    "reason": "TCGdex ja 「ワイルドブレイズ」 released 2014-03-15 (official 80/80) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rising-fist",
+    "tcgdex": [
+      "XY3"
+    ],
+    "reason": "TCGdex ja 「ライジングフィスト」 released 2014-09-13 (official 96/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-phantom-gate",
+    "tcgdex": [
+      "XY4"
+    ],
+    "reason": "TCGdex ja 「ファントムゲート」 released 2014-09-13 (official 88/88) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-gaia-volcano",
+    "tcgdex": [
+      "XY5a"
+    ],
+    "reason": "TCGdex ja 「ガイアボルケーノ」 released 2014-12-13 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-tidal-storm",
+    "tcgdex": [
+      "XY5b"
+    ],
+    "reason": "TCGdex ja 「タイダルストーム」 released 2014-12-13 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-double-crisis",
+    "tcgdex": [
+      "CP1"
+    ],
+    "reason": "TCGdex ja 「マグマ団VSアクア団 ダブルクライシス」 released 2015-01-30 (official 34/34) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-emerald-break",
+    "tcgdex": [
+      "XY6"
+    ],
+    "reason": "TCGdex ja 「エメラルドブレイク」 released 2015-03-14 (official 78/78) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-bandit-ring",
+    "tcgdex": [
+      "XY7"
+    ],
+    "reason": "TCGdex ja 「バンデットリング」 released 2015-06-20 (official 81/81) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-legendary-shine-collection",
+    "tcgdex": [
+      "CP2"
+    ],
+    "reason": "TCGdex ja 「伝説キラコレクション」 released 2015-07-18 (official 27/27) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-blue-shock",
+    "tcgdex": [
+      "XY8a"
+    ],
+    "reason": "TCGdex ja 「青い衝撃」 released 2015-09-26 (official 59/59) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-red-flash",
+    "tcgdex": [
+      "XY8b"
+    ],
+    "reason": "TCGdex ja 「赤い閃光」 released 2015-09-26 (official 59/59) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rage-of-the-broken-heavens",
+    "tcgdex": [
+      "XY9"
+    ],
+    "reason": "TCGdex ja 「破天の怒り」 released 2015-12-11 (official 80/80) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-pokekyun-collection",
+    "tcgdex": [
+      "CP3"
+    ],
+    "reason": "TCGdex ja 「ポケキュンコレクション」 released 2016-01-29 (official 32/32) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-awakening-psychic-king",
+    "tcgdex": [
+      "XY10"
+    ],
+    "reason": "TCGdex ja 「めざめる超王」 released 2016-03-18 (official 78/78) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-premium-champion-pack",
+    "tcgdex": [
+      "CP4"
+    ],
+    "reason": "TCGdex ja 「プレミアムチャンピオンパック EX×M×BREAK」 released 2016-04-16 (official 131/131) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-fever-burst-fighter",
+    "tcgdex": [
+      "XY11a"
+    ],
+    "reason": "TCGdex ja 爆熱の闘士 — PC's translation 'Fever-Burst Fighter'; twin of XY11b Cruel Traitor, same day and size"
+  },
+  {
+    "slug": "pokemon-japanese-cruel-traitor",
+    "tcgdex": [
+      "XY11b"
+    ],
+    "reason": "TCGdex ja 「冷酷の反逆者」 released 2016-06-17 (official 54/54) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-dream-shine-collection",
+    "tcgdex": [
+      "CP5"
+    ],
+    "reason": "TCGdex's ja name for CP5 is corrupt upstream (duplicates XY11b); date 2016-07-16 and size 36 are the Mythical & Legendary Dream Shine Collection"
+  },
+  {
+    "slug": "pokemon-japanese-20th-anniversary",
+    "tcgdex": [
+      "CP6"
+    ],
+    "reason": "TCGdex ja 「ポケットモンスターカードゲーム 拡張パック 20th Anniversary」 released 2016-09-16 (official 87/87) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-sun-&-moon-new-friends",
+    "tcgdex": [
+      "SM0"
+    ],
+    "reason": "TCGdex ja 「ピカチュウと新しい仲間たち」 released 2016-11-18 (official 4/4) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-collection-sun",
+    "tcgdex": [
+      "SM1S"
+    ],
+    "reason": "TCGdex ja 「コレクションサン」 released 2016-12-09 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-collection-moon",
+    "tcgdex": [
+      "SM1M"
+    ],
+    "reason": "TCGdex ja 「コレクションムーン」 released 2016-12-09 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-strength-expansion-pack-sun-&-moon",
+    "tcgdex": [
+      "SM1+"
+    ],
+    "reason": "TCGdex ja 「サン＆ムーン」 released 2017-01-27 (official 51/51) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-alolan-moonlight",
+    "tcgdex": [
+      "SM2L"
+    ],
+    "reason": "TCGdex ja 「アローラの月光」 released 2017-03-17 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-islands-await-you",
+    "tcgdex": [
+      "SM2K"
+    ],
+    "reason": "TCGdex ja 「キミを待つ島々」 released 2017-03-17 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-facing-a-new-trial",
+    "tcgdex": [
+      "sm2+"
+    ],
+    "reason": "TCGdex ja 「新たなる試練の向こう」 released 2017-04-21 (official 49/49) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-darkness-that-consumes-light",
+    "tcgdex": [
+      "SM3N"
+    ],
+    "reason": "TCGdex ja 「光を喰らう闇」 released 2017-06-16 (official 51/51) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-battle-rainbow",
+    "tcgdex": [
+      "SM3H"
+    ],
+    "reason": "TCGdex ja 闘う虹を見たか ('Did You See the Battle Rainbow') — PC shortens to Battle Rainbow; twin of SM3N, same day and size"
+  },
+  {
+    "slug": "pokemon-japanese-shining-legends",
+    "tcgdex": [
+      "SM3+"
+    ],
+    "reason": "TCGdex ja 「ひかる伝説」 released 2017-07-15 (official 72/72) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-awakened-heroes",
+    "tcgdex": [
+      "SM4S"
+    ],
+    "reason": "TCGdex ja 「覚醒の勇者」 released 2017-09-15 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ultradimensional-beasts",
+    "tcgdex": [
+      "SM4A"
+    ],
+    "reason": "TCGdex ja 「超次元の暴獣」 released 2017-09-15 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-gx-battle-boost",
+    "tcgdex": [
+      "SM4+"
+    ],
+    "reason": "TCGdex ja 「GXバトルブースト」 released 2017-10-20 (official 114/114) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ultra-sun",
+    "tcgdex": [
+      "SM5S"
+    ],
+    "reason": "TCGdex ja 「ウルトラサン」 released 2017-12-08 (official 66/66) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ultra-moon",
+    "tcgdex": [
+      "SM5M"
+    ],
+    "reason": "TCGdex ja 「ウルトラムーン」 released 2017-12-08 (official 66/66) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ultra-force",
+    "tcgdex": [
+      "SM5+"
+    ],
+    "reason": "TCGdex ja 「ウルトラフォース」 released 2018-01-19 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-forbidden-light",
+    "tcgdex": [
+      "SM6"
+    ],
+    "reason": "TCGdex ja 「禁断の光」 released 2018-03-02 (official 94/94) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-dragon-storm",
+    "tcgdex": [
+      "SM6a"
+    ],
+    "reason": "TCGdex ja 「ドラゴンストーム」 released 2018-04-06 (official 53/53) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-champion-road",
+    "tcgdex": [
+      "SM6b"
+    ],
+    "reason": "TCGdex ja 「チャンピオンロード」 released 2018-05-30 (official 66/66) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-sky-splitting-charisma",
+    "tcgdex": [
+      "SM7"
+    ],
+    "reason": "TCGdex ja 「裂空のカリスマ」 released 2018-06-01 (official 96/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-thunderclap-spark",
+    "tcgdex": [
+      "SM7a"
+    ],
+    "reason": "TCGdex ja 「迅雷スパーク」 released 2018-08-03 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-fairy-rise",
+    "tcgdex": [
+      "SM7b"
+    ],
+    "reason": "TCGdex ja 「フェアリーライズ」 released 2018-08-03 (official 50/50) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-super-burst-impact",
+    "tcgdex": [
+      "SM8"
+    ],
+    "reason": "TCGdex ja 「超爆インパクト」 released 2018-09-07 (official 95/95) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-dark-order",
+    "tcgdex": [
+      "SM8a"
+    ],
+    "reason": "TCGdex ja 「ダークオーダー」 released 2018-10-05 (official 52/52) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-gx-ultra-shiny",
+    "tcgdex": [
+      "SM8b"
+    ],
+    "reason": "TCGdex ja 「GXウルトラシャイニー」 released 2018-10-05 (official 150/150) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-tag-bolt",
+    "tcgdex": [
+      "SM9"
+    ],
+    "reason": "TCGdex ja 「タッグボルト」 released 2018-12-07 (official 95/95) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-night-unison",
+    "tcgdex": [
+      "SM9a"
+    ],
+    "reason": "TCGdex ja 「ナイトユニゾン」 released 2019-01-11 (official 55/55) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-full-metal-wall",
+    "tcgdex": [
+      "SM9b"
+    ],
+    "reason": "TCGdex ja 「フルメタルウォール」 released 2019-02-01 (official 54/54) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-double-blaze",
+    "tcgdex": [
+      "SM10"
+    ],
+    "reason": "TCGdex ja 「ダブルブレイズ」 released 2019-03-01 (official 95/116) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-gg-end",
+    "tcgdex": [
+      "sn10a"
+    ],
+    "reason": "TCGdex's id for GG End is the odd lowercase 'sn10a' — verbatim from their catalog"
+  },
+  {
+    "slug": "pokemon-japanese-detective-pikachu",
+    "tcgdex": [
+      "SMP2"
+    ],
+    "reason": "TCGdex ja 「名探偵ピカチュウ」 released 2019-04-26 (official 24/24) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-sky-legend",
+    "tcgdex": [
+      "SM10b"
+    ],
+    "reason": "TCGdex ja 「スカイレジェンド」 released 2019-04-26 (official 56/56) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-miracle-twins",
+    "tcgdex": [
+      "sn11"
+    ],
+    "reason": "TCGdex's id for Miracle Twin is the odd lowercase 'sn11' — verbatim from their catalog"
+  },
+  {
+    "slug": "pokemon-japanese-remix-bout",
+    "tcgdex": [
+      "SM11a"
+    ],
+    "reason": "TCGdex ja 「リミックスバウト」 released 2019-07-05 (official 64/64) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-dream-league",
+    "tcgdex": [
+      "SM11b"
+    ],
+    "reason": "TCGdex ja 「ドリームリーグ」 released 2019-08-02 (official 49/75) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-alter-genesis",
+    "tcgdex": [
+      "SM12"
+    ],
+    "reason": "TCGdex ja 「オルタージェネシス」 released 2019-09-06 (official 95/117) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-tag-all-stars",
+    "tcgdex": [
+      "SM12a"
+    ],
+    "reason": "TCGdex ja 「TAG TEAM GX タッグオールスターズ」 released 2019-10-04 (official 173/226) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-sword",
+    "tcgdex": [
+      "S1W"
+    ],
+    "reason": "TCGdex ja 「ソード」 released 2019-12-06 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-shield",
+    "tcgdex": [
+      "S1H"
+    ],
+    "reason": "TCGdex ja 「シールド」 released 2019-12-06 (official 60/60) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-vmax-rising",
+    "tcgdex": [
+      "S1a"
+    ],
+    "reason": "TCGdex ja 「VMAXライジング」 released 2020-02-07 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rebel-clash",
+    "tcgdex": [
+      "S2"
+    ],
+    "reason": "TCGdex ja 「反逆クラッシュ」 released 2020-03-06 (official 96/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-explosive-walker",
+    "tcgdex": [
+      "S2a"
+    ],
+    "reason": "TCGdex ja 「爆炎ウォーカー」 released 2020-04-24 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-infinity-zone",
+    "tcgdex": [
+      "S3"
+    ],
+    "reason": "TCGdex ja 「ムゲンゾーン」 released 2020-06-05 (official 100/100) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-legendary-heartbeat",
+    "tcgdex": [
+      "S3a"
+    ],
+    "reason": "TCGdex ja 「伝説の鼓動」 released 2020-07-10 (official 76/76) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-amazing-volt-tackle",
+    "tcgdex": [
+      "S4"
+    ],
+    "reason": "TCGdex ja 「仰天のボルテッカー」 released 2020-09-18 (official 100/100) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-shiny-star-v",
+    "tcgdex": [
+      "S4a"
+    ],
+    "reason": "TCGdex ja 「シャイニースターV」 released 2020-11-20 (official 190/190) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-single-strike-master",
+    "tcgdex": [
+      "S5I"
+    ],
+    "reason": "TCGdex ja 「一撃マスター」 released 2021-01-22 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-rapid-strike-master",
+    "tcgdex": [
+      "S5R"
+    ],
+    "reason": "TCGdex ja 「連撃マスター」 released 2021-01-22 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-matchless-fighter",
+    "tcgdex": [
+      "S5a"
+    ],
+    "reason": "TCGdex ja 「双璧のファイター」 released 2021-03-19 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-jet-black-spirit",
+    "tcgdex": [
+      "S6K"
+    ],
+    "reason": "TCGdex ja 「漆黒のガイスト」 released 2021-04-23 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-silver-lance",
+    "tcgdex": [
+      "S6H"
+    ],
+    "reason": "TCGdex ja 「白銀のランス」 released 2021-04-23 (official 70/70) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-eevee-heroes",
+    "tcgdex": [
+      "S6a"
+    ],
+    "reason": "TCGdex ja 「イーブイヒーローズ」 released 2021-05-28 (official 69/69) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-skyscraping-perfection",
+    "tcgdex": [
+      "S7D"
+    ],
+    "reason": "TCGdex ja 「摩天パーフェクト」 released 2021-07-09 (official 67/67) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-blue-sky-stream",
+    "tcgdex": [
+      "S7R"
+    ],
+    "reason": "TCGdex ja 「蒼空ストリーム」 released 2021-07-09 (official 67/67) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-fusion-arts",
+    "tcgdex": [
+      "S8"
+    ],
+    "reason": "TCGdex ja 「フュージョンアーツ」 released 2021-09-24 (official 100/100) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-25th-anniversary-collection",
+    "tcgdex": [
+      "S8a"
+    ],
+    "reason": "TCGdex ja 「25th アニバーサリーコレクション」 released 2021-10-22 (official 28/28) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-vmax-climax",
+    "tcgdex": [
+      "S8b"
+    ],
+    "reason": "TCGdex ja 「VMAXクライマックス」 released 2021-12-03 (official 184/184) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-star-birth",
+    "tcgdex": [
+      "S9"
+    ],
+    "reason": "TCGdex ja 「スターバース」 released 2022-01-14 (official 100/127) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-battle-region",
+    "tcgdex": [
+      "S9a"
+    ],
+    "reason": "TCGdex ja 「バトルリージョン」 released 2022-02-25 (official 67/93) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-space-juggler",
+    "tcgdex": [
+      "S10P"
+    ],
+    "reason": "TCGdex ja 「スペースジャグラー」 released 2022-04-08 (official 67/67) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-time-gazer",
+    "tcgdex": [
+      "S10D"
+    ],
+    "reason": "TCGdex ja 「タイムゲイザー」 released 2022-04-08 (official 67/67) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-dark-phantasma",
+    "tcgdex": [
+      "S10a"
+    ],
+    "reason": "TCGdex ja 「ダークファンタズマ」 released 2022-05-13 (official 71/71) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-go",
+    "tcgdex": [
+      "S10b"
+    ],
+    "reason": "TCGdex ja 「Pokémon GO」 released 2022-06-17 (official 71/71) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-lost-abyss",
+    "tcgdex": [
+      "S11"
+    ],
+    "reason": "TCGdex ja 「ロストアビス」 released 2022-07-15 (official 100/100) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-incandescent-arcana",
+    "tcgdex": [
+      "S11a"
+    ],
+    "reason": "TCGdex ja 「白熱のアルカナ」 released 2022-09-02 (official 68/68) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-paradigm-trigger",
+    "tcgdex": [
+      "S12"
+    ],
+    "reason": "TCGdex ja 「パラダイムトリガー」 released 2022-10-21 (official 98/125) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-vstar-universe",
+    "tcgdex": [
+      "S12a"
+    ],
+    "reason": "TCGdex ja 「VSTARユニバース」 released 2022-12-02 (official 172/254) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-scarlet-ex",
+    "tcgdex": [
+      "SV1S"
+    ],
+    "reason": "TCGdex ja 「スカーレットex」 released 2023-01-20 (official 78/108) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-violet-ex",
+    "tcgdex": [
+      "SV1V"
+    ],
+    "reason": "TCGdex ja 「バイオレットex」 released 2023-01-20 (official 78/108) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-triplet-beat",
+    "tcgdex": [
+      "SV1a"
+    ],
+    "reason": "TCGdex ja 「トリプレットビート」 released 2023-03-10 (official 73/103) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-clay-burst",
+    "tcgdex": [
+      "SV2D"
+    ],
+    "reason": "TCGdex ja 「クレイバースト」 released 2023-04-14 (official 71/99) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-snow-hazard",
+    "tcgdex": [
+      "SV2P"
+    ],
+    "reason": "TCGdex ja 「スノーハザード」 released 2023-04-14 (official 71/99) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-scarlet-&-violet-151",
+    "tcgdex": [
+      "SV2a"
+    ],
+    "reason": "TCGdex names the set bare 'ポケモンカード151'; PC files it under Scarlet & Violet 151"
+  },
+  {
+    "slug": "pokemon-japanese-ruler-of-the-black-flame",
+    "tcgdex": [
+      "SV3"
+    ],
+    "reason": "TCGdex ja 「黒炎の支配者」 released 2023-07-28 (official 108/141) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-raging-surf",
+    "tcgdex": [
+      "SV3a"
+    ],
+    "reason": "TCGdex ja 「レイジングサーフ」 released 2023-09-22 (official 62/92) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ancient-roar",
+    "tcgdex": [
+      "SV4K"
+    ],
+    "reason": "TCGdex ja 「古代の咆哮」 released 2023-10-27 (official 66/95) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-future-flash",
+    "tcgdex": [
+      "SV4M"
+    ],
+    "reason": "TCGdex ja 「未来の一閃」 released 2023-10-27 (official 66/95) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-shiny-treasure-ex",
+    "tcgdex": [
+      "SV4a"
+    ],
+    "reason": "TCGdex's ja name for SV4a is corrupt upstream (duplicates SV3a Raging Surf); date 2023-12-01 and 190/320 counts are Shiny Treasure ex"
+  },
+  {
+    "slug": "pokemon-japanese-cyber-judge",
+    "tcgdex": [
+      "SV5M"
+    ],
+    "reason": "TCGdex ja 「サイバージャッジ」 released 2024-01-26 (official 71/71) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-wild-force",
+    "tcgdex": [
+      "SV5K"
+    ],
+    "reason": "TCGdex ja 「ワイルドフォース」 released 2024-01-26 (official 71/71) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-crimson-haze",
+    "tcgdex": [
+      "SV5a"
+    ],
+    "reason": "TCGdex ja 「クリムゾンヘイズ」 released 2024-03-22 (official 66/96) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mask-of-change",
+    "tcgdex": [
+      "SV6"
+    ],
+    "reason": "TCGdex ja 「変幻の仮面」 released 2024-04-26 (official 101/101) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-night-wanderer",
+    "tcgdex": [
+      "SV6a"
+    ],
+    "reason": "TCGdex ja 「ナイトワンダラー」 released 2024-06-07 (official 64/64) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-stellar-miracle",
+    "tcgdex": [
+      "SV7"
+    ],
+    "reason": "TCGdex ja 「ステラミラクル」 released 2024-07-19 (official 102/135) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-stellar-miracle-deck-build-box",
+    "tcgdex": [
+      "SVK"
+    ],
+    "reason": "TCGdex ja 「デッキビルドBOX ステラミラクル」 released 2024-07-19 (official 44/44) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-stellar-tera-starter-set-ceruledge-ex",
+    "tcgdex": [
+      "SVLS"
+    ],
+    "reason": "ソウブレイズex = Ceruledge ex"
+  },
+  {
+    "slug": "pokemon-japanese-stellar-tera-starter-set-sylveon-ex",
+    "tcgdex": [
+      "SVLN"
+    ],
+    "reason": "ニンフィアex = Sylveon ex"
+  },
+  {
+    "slug": "pokemon-japanese-paradise-dragona",
+    "tcgdex": [
+      "SV7a"
+    ],
+    "reason": "TCGdex ja 「楽園ドラゴーナ」 released 2024-09-13 (official 64/94) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-super-electric-breaker",
+    "tcgdex": [
+      "SV8"
+    ],
+    "reason": "TCGdex ja 「超電ブレイカー」 released 2024-10-18 (official 106/106) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-terastal-festival",
+    "tcgdex": [
+      "SV8a"
+    ],
+    "reason": "TCGdex ja 「テラスタルフェスex」 released 2024-12-06 (official 187/237) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-battle-partners",
+    "tcgdex": [
+      "SV9"
+    ],
+    "reason": "TCGdex ja 「バトルパートナーズ」 released 2025-01-24 (official 100/132) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-heat-wave-arena",
+    "tcgdex": [
+      "SV9a"
+    ],
+    "reason": "TCGdex ja 「熱風のアリーナ」 released 2025-03-14 (official 63/92) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-glory-of-team-rocket",
+    "tcgdex": [
+      "SV10"
+    ],
+    "reason": "TCGdex ja 「ロケット団の栄光」 released 2025-04-18 (official 98/98) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-black-bolt",
+    "tcgdex": [
+      "SV11B"
+    ],
+    "reason": "TCGdex ja 「ブラックボルト」 released 2025-06-06 (official 174/174) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-white-flare",
+    "tcgdex": [
+      "SV11W"
+    ],
+    "reason": "TCGdex ja 「ホワイトフレア」 released 2025-06-06 (official 86/174) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mega-symphonia",
+    "tcgdex": [
+      "M1S"
+    ],
+    "reason": "TCGdex ja 「メガシンフォニア」 released 2025-08-01 (official 63/92) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mega-brave",
+    "tcgdex": [
+      "M1L"
+    ],
+    "reason": "TCGdex ja 「メガブレイブ」 released 2025-08-01 (official 63/92) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-inferno-x",
+    "tcgdex": [
+      "M2"
+    ],
+    "reason": "TCGdex ja 「インフェルノX」 released 2025-09-26 (official 80/116) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-mega-dream-ex",
+    "tcgdex": [
+      "M2a"
+    ],
+    "reason": "TCGdex ja 「MEGAドリームex」 released 2025-11-28 (official 193/250) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-start-deck-100-battle-collection",
+    "tcgdex": [
+      "MC"
+    ],
+    "reason": "the join proven live 2026-08-06: PC numbering matched TCGdex localId exactly across all 1,509 entries during the phantom-card incident"
+  },
+  {
+    "slug": "pokemon-japanese-nihil-zero",
+    "tcgdex": [
+      "M3"
+    ],
+    "reason": "TCGdex ja 「ムニキスゼロ」 released 2026-01-23 (official 80/117) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-ninja-spinner",
+    "tcgdex": [
+      "M4"
+    ],
+    "reason": "TCGdex ja 「ニンジャスピナー」 released 2026-03-13 (official 83/120) — PC's English marketing name for it"
+  },
+  {
+    "slug": "pokemon-japanese-abyss-eye",
+    "tcgdex": [
+      "M5"
+    ],
+    "reason": "TCGdex ja 「アビスアイ」 released 2026-05-22 (official 81/118) — PC's English marketing name for it"
+  }
+]
