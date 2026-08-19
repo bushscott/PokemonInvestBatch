@@ -319,14 +319,18 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         public PokemonDbContext CreateDbContext() => new(options);
     }
 
-    /// <summary>Proves the sweep never touches the network when every mirror
-    /// and icon file is pre-placed. <c>CreateClient</c> itself must succeed —
+    /// <summary>Proves the sweep touches the network for exactly one thing
+    /// when every mirror and icon file is pre-placed: the TCGdex top-up's
+    /// list check, answered here with an empty list to match the empty
+    /// fixture mirror (nothing missing, nothing fetched, manifest untouched).
+    /// <c>CreateClient</c> itself must succeed —
     /// <c>SpeciesIconStore.FetchMissingAsync</c> always receives a
     /// constructed <see cref="HttpClient"/> even when every dex is skipped,
     /// so refusing to construct one (the <c>EnrichmentLaneTests</c> pattern)
     /// would fail this lane for a reason that has nothing to do with the
-    /// network. The real guarantee lives one layer down: any actual request —
-    /// <c>SendAsync</c> ever being invoked — throws immediately.</summary>
+    /// network. The real guarantee lives one layer down: any other request —
+    /// <c>SendAsync</c> for anything but the sanctioned list — throws
+    /// immediately.</summary>
     private sealed class NetworkFreeHttpClientFactory : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => new(new ThrowingHandler());
@@ -335,9 +339,14 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         {
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken) =>
-                throw new InvalidOperationException(
-                    $"Unexpected network request to {request.RequestUri} — every mirror and icon file is " +
-                    "pre-placed for this test, so the sweep must never actually send one.");
+                request.RequestUri!.ToString() == "https://api.tcgdex.net/v2/en/sets"
+                    ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("[]"),
+                    })
+                    : throw new InvalidOperationException(
+                        $"Unexpected network request to {request.RequestUri} — every mirror and icon file is " +
+                        "pre-placed for this test, so the only sanctioned request is the top-up list check.");
         }
     }
 }

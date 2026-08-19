@@ -178,11 +178,28 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
         public PokemonDbContext CreateDbContext() => new(options);
     }
 
-    /// <summary>The sweep only touches the network when the mirror is absent;
-    /// these tests always provide one, so a client is never created.</summary>
+    /// <summary>Against a pre-placed mirror the sweep's one sanctioned
+    /// request is the top-up freshness check. This answers that list with
+    /// exactly the ids the fixture mirror already pins — nothing missing, so
+    /// nothing is fetched and the manifest is untouched — and any other
+    /// request throws, keeping these tests provably network-free beyond that
+    /// single check.</summary>
     private sealed class UnusedHttpClientFactory : IHttpClientFactory
     {
-        public HttpClient CreateClient(string name) =>
-            throw new InvalidOperationException("The sweep must not fetch when a mirror exists.");
+        public HttpClient CreateClient(string name) => new(new TopUpListOnlyHandler());
+
+        private sealed class TopUpListOnlyHandler : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(
+                HttpRequestMessage request, CancellationToken cancellationToken) =>
+                request.RequestUri!.ToString() == "https://api.tcgdex.net/v2/en/sets"
+                    ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
+                    {
+                        Content = new StringContent("""[ { "id": "swsh7" }, { "id": "cel25" } ]"""),
+                    })
+                    : throw new InvalidOperationException(
+                        $"Unexpected network request to {request.RequestUri} — the sweep's only sanctioned " +
+                        "request against a pre-placed mirror is the top-up list check.");
+        }
     }
 }

@@ -11,9 +11,14 @@ namespace PokemonInvestBatch.Infrastructure.Enrichment;
 /// that the Pokédex phase's set-details sweep (ADR-0011) reuses rather than
 /// mirroring separately. One directory holds one locale. The directory IS
 /// the version pin: one fetch writes every per-set JSON plus a manifest,
-/// every sweep after that reads only disk, and refreshing is the operator
-/// deleting the directory so the next sweep re-fetches. The join never
-/// takes a live dependency on the API.
+/// and already-pinned documents are never re-fetched. What keeps the pin
+/// current is the top-up: every <see cref="EnsureAsync"/> against an
+/// existing mirror re-reads the one-page set list and downloads only sets
+/// the directory lacks, so a newly released set arrives within a sweep
+/// while everything already pinned stays byte-identical. Deleting the
+/// directory remains the full refresh. The join never takes a live
+/// dependency on the API — a failed top-up is a logged warning and the
+/// sweep proceeds on the existing pin.
 ///
 /// Two lanes — EnrichmentLane and PokedexLane — share this one mirror, so
 /// ensuring it exists is coordinated (<see cref="EnsureAsync"/>) rather than
@@ -102,14 +107,13 @@ public static class TcgdexMirror
     /// <c>Microsoft.Extensions.Http</c> — the caller (a Worker lane, which
     /// does) supplies <c>() =&gt; httpFactory.CreateClient(name)</c>.
     ///
-    /// Double-checked: an unlocked fast-path <see cref="Exists"/> check first
-    /// — steady state, never touches <see cref="EnsureGate"/> or
-    /// <paramref name="newHttpClient"/> at all — and only when that finds no
-    /// mirror does it acquire the gate and check again before fetching. A
-    /// caller that loses the race sees the winner's already-completed mirror
-    /// on its post-acquire check and returns having fetched nothing itself.
-    /// Logs only when this call is the one that actually fetches — the
-    /// race's loser logs nothing, since it did nothing.</summary>
+    /// Every call holds the gate for its whole pass. No mirror on disk means
+    /// the full first fetch. A mirror that appeared while this caller waited
+    /// at the gate is seconds old — a top-up would find nothing, so the race's
+    /// loser returns having fetched nothing itself. A mirror that already
+    /// existed before the wait gets the top-up: re-list the locale's sets,
+    /// download only what the directory lacks, and re-pin the manifest when
+    /// anything changed (see <see cref="TopUpAsync"/>).</summary>
     public static async Task EnsureAsync(
         Func<HttpClient> newHttpClient,
         string baseUrl,
@@ -119,36 +123,127 @@ public static class TcgdexMirror
         ILogger log,
         CancellationToken ct)
     {
-        if (Exists(directory))
-        {
-            return;
-        }
-
+        var existedBeforeWait = Exists(directory);
         await EnsureGate.WaitAsync(ct);
         try
         {
-            if (Exists(directory))
+            if (!Exists(directory))
             {
-                // Lost the race: a concurrent caller already fetched while
-                // this one waited for the gate.
+                log.LogInformation(
+                    "No TCGdex {Locale} mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
+                    locale,
+                    directory);
+                var fetched = await FetchAsync(newHttpClient(), baseUrl, locale, directory, time, ct);
+                log.LogInformation(
+                    "Mirrored {Sets} TCGdex {Locale} sets as version {Version}",
+                    fetched.SetCount,
+                    locale,
+                    fetched.Version);
                 return;
             }
 
-            log.LogInformation(
-                "No TCGdex {Locale} mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
-                locale,
-                directory);
-            var fetched = await FetchAsync(newHttpClient(), baseUrl, locale, directory, time, ct);
-            log.LogInformation(
-                "Mirrored {Sets} TCGdex {Locale} sets as version {Version}",
-                fetched.SetCount,
-                locale,
-                fetched.Version);
+            if (!existedBeforeWait)
+            {
+                // Lost a first-fetch race: the winner's mirror is seconds
+                // old, so a top-up would find nothing — skip it entirely.
+                return;
+            }
+
+            await TopUpAsync(newHttpClient, baseUrl, locale, directory, time, log, ct);
         }
         finally
         {
             EnsureGate.Release();
         }
+    }
+
+    /// <summary>The freshness half of the pin: re-read the one-page set list
+    /// and download only sets the directory lacks. Pinned documents are never
+    /// re-fetched or compared — a set that changed upstream stays as pinned
+    /// until the operator deletes the directory. Best-effort by design: any
+    /// network trouble is a logged warning and the sweep proceeds on the
+    /// existing mirror (a malformed shape still refuses loudly, same as
+    /// everywhere else). The manifest is rewritten only when the directory's
+    /// contents actually changed — or when its count disagrees with the files
+    /// on disk, which is how an interrupted top-up heals.</summary>
+    private static async Task TopUpAsync(
+        Func<HttpClient> newHttpClient,
+        string baseUrl,
+        string locale,
+        string directory,
+        TimeProvider time,
+        ILogger log,
+        CancellationToken ct)
+    {
+        var manifest = JsonSerializer.Deserialize<Manifest>(
+                await File.ReadAllTextAsync(Path.Combine(directory, ManifestFile), ct))
+            ?? throw new InvalidOperationException($"The TCGdex mirror manifest in '{directory}' is empty.");
+        var pinnedLocale = manifest.Locale ?? "en";
+        if (pinnedLocale != locale)
+        {
+            throw new InvalidOperationException(
+                $"The TCGdex mirror in '{directory}' holds the '{pinnedLocale}' locale but was asked to top " +
+                $"up as '{locale}' — one directory holds one locale.");
+        }
+
+        var onDisk = Directory.EnumerateFiles(Path.Combine(directory, SetsDirectory), "*.json")
+            .Select(Path.GetFileNameWithoutExtension)
+            .OfType<string>()
+            .ToHashSet(StringComparer.Ordinal);
+
+        var http = newHttpClient();
+        var downloaded = 0;
+        try
+        {
+            foreach (var id in await FetchSetIdsAsync(http, baseUrl, locale, ct))
+            {
+                if (onDisk.Contains(id))
+                {
+                    continue;
+                }
+
+                await DownloadSetAsync(http, baseUrl, locale, directory, id, time, ct);
+                downloaded++;
+            }
+        }
+        catch (Exception e) when (e is HttpRequestException
+                                  || (e is TaskCanceledException && !ct.IsCancellationRequested))
+        {
+            // The daily freshness check is best-effort: a TCGdex hiccup must
+            // not stall a sweep that only needs the already-pinned mirror.
+            // Whatever was downloaded before the trouble stays on disk as a
+            // benign surplus; the next ensure finishes the job and re-pins.
+            log.LogWarning(
+                e,
+                "TCGdex {Locale} top-up at {Directory} gave up after {Downloaded} new sets — " +
+                "sweeping on the existing mirror",
+                locale,
+                directory,
+                downloaded);
+            return;
+        }
+
+        var filesNow = Directory.EnumerateFiles(Path.Combine(directory, SetsDirectory), "*.json").Count();
+        if (downloaded == 0 && filesNow == manifest.SetCount)
+        {
+            return;
+        }
+
+        var repinned = manifest with
+        {
+            FetchedAt = time.GetUtcNow(),
+            ReleaseTag = await TryFetchReleaseTagAsync(http, ct) ?? manifest.ReleaseTag,
+            SetCount = filesNow,
+            Locale = locale,
+        };
+        await File.WriteAllTextAsync(
+            Path.Combine(directory, ManifestFile), JsonSerializer.Serialize(repinned, ManifestJson), ct);
+        log.LogInformation(
+            "Topped up the TCGdex {Locale} mirror with {New} new sets ({Total} total) as version {Version}",
+            locale,
+            downloaded,
+            filesNow,
+            repinned.Version);
     }
 
     /// <summary>Fetch one locale's whole catalog into the directory. Written
@@ -163,35 +258,10 @@ public static class TcgdexMirror
     {
         Directory.CreateDirectory(Path.Combine(directory, SetsDirectory));
 
-        using var listResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets", ct);
-        listResponse.EnsureSuccessStatusCode();
-        var setIds = new List<string>();
-        using (var list = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync(ct)))
-        {
-            foreach (var entry in list.RootElement.EnumerateArray())
-            {
-                setIds.Add(RequireString(entry, "id", "set list"));
-            }
-        }
-
+        var setIds = await FetchSetIdsAsync(http, baseUrl, locale, ct);
         foreach (var id in setIds)
         {
-            ct.ThrowIfCancellationRequested();
-            // Set ids become file names; anything that could escape the
-            // directory is a shape we refuse, not sanitize.
-            if (id.Length == 0 || id.Contains('/') || id.Contains('\\') || id.Contains(".."))
-            {
-                throw new InvalidOperationException(
-                    $"TCGdex set id '{id}' is not a safe file name — refusing the mirror.");
-            }
-
-            await Task.Delay(FetchSpacing, time, ct);
-            using var setResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets/{Uri.EscapeDataString(id)}", ct);
-            setResponse.EnsureSuccessStatusCode();
-            await File.WriteAllTextAsync(
-                Path.Combine(directory, SetsDirectory, $"{id}.json"),
-                await setResponse.Content.ReadAsStringAsync(ct),
-                ct);
+            await DownloadSetAsync(http, baseUrl, locale, directory, id, time, ct);
         }
 
         var manifest = new Manifest
@@ -204,6 +274,43 @@ public static class TcgdexMirror
         await File.WriteAllTextAsync(
             Path.Combine(directory, ManifestFile), JsonSerializer.Serialize(manifest, ManifestJson), ct);
         return manifest;
+    }
+
+    private static async Task<List<string>> FetchSetIdsAsync(
+        HttpClient http, string baseUrl, string locale, CancellationToken ct)
+    {
+        using var listResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets", ct);
+        listResponse.EnsureSuccessStatusCode();
+        var setIds = new List<string>();
+        using var list = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync(ct));
+        foreach (var entry in list.RootElement.EnumerateArray())
+        {
+            setIds.Add(RequireString(entry, "id", "set list"));
+        }
+
+        return setIds;
+    }
+
+    private static async Task DownloadSetAsync(
+        HttpClient http, string baseUrl, string locale, string directory, string id, TimeProvider time,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        // Set ids become file names; anything that could escape the
+        // directory is a shape we refuse, not sanitize.
+        if (id.Length == 0 || id.Contains('/') || id.Contains('\\') || id.Contains(".."))
+        {
+            throw new InvalidOperationException(
+                $"TCGdex set id '{id}' is not a safe file name — refusing the mirror.");
+        }
+
+        await Task.Delay(FetchSpacing, time, ct);
+        using var setResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets/{Uri.EscapeDataString(id)}", ct);
+        setResponse.EnsureSuccessStatusCode();
+        await File.WriteAllTextAsync(
+            Path.Combine(directory, SetsDirectory, $"{id}.json"),
+            await setResponse.Content.ReadAsStringAsync(ct),
+            ct);
     }
 
     public static async Task<(TcgdexCatalog Catalog, Manifest Manifest)> LoadAsync(
@@ -220,7 +327,11 @@ public static class TcgdexMirror
             sets.Add(ParseSet(await File.ReadAllTextAsync(file, ct), Path.GetFileName(file)));
         }
 
-        if (sets.Count != manifest.SetCount)
+        // Directional on purpose: MORE files than the manifest counts is an
+        // interrupted top-up (documents land before the manifest re-pin) —
+        // benign, loaded in full, healed by the next ensure. FEWER files is
+        // corruption, and corruption refuses.
+        if (sets.Count < manifest.SetCount)
         {
             throw new InvalidOperationException(
                 $"The TCGdex mirror in '{directory}' holds {sets.Count} sets but its manifest says " +

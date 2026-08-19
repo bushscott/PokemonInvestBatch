@@ -273,35 +273,132 @@ public class TcgdexMirrorTests : IDisposable
         Assert.Equal(1, clientRequests);
 
         // A third, post-completion call — against the exact mirror the race
-        // above just produced — makes zero further requests and asks for
-        // zero further clients.
-        var totalRequestsSoFar = handler.CallCounts.Values.Sum();
+        // above just produced — is the steady state: exactly one list
+        // request (the top-up freshness check), which finds nothing missing
+        // and re-fetches no pinned document and rewrites no manifest.
         await TcgdexMirror.EnsureAsync(
             NewClient, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, NullLogger.Instance,
             CancellationToken.None);
-        Assert.Equal(totalRequestsSoFar, handler.CallCounts.Values.Sum());
-        Assert.Equal(1, clientRequests);
+        Assert.Equal(2, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets"));
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        Assert.Equal(
+            1, handler.CallCounts.GetValueOrDefault("https://api.github.com/repos/tcgdex/cards-database/releases/latest"));
+        Assert.Equal(2, clientRequests);
+    }
+
+    private static TaskCompletionSource CompletedGate()
+    {
+        var gate = new TaskCompletionSource();
+        gate.SetResult();
+        return gate;
     }
 
     [Fact]
-    public async Task EnsureAsync_asks_for_no_client_when_a_mirror_already_exists()
+    public async Task A_topup_downloads_only_missing_sets_and_repins_the_manifest()
     {
+        await WriteMirrorAsync(
+            """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "ReleaseTag": "v2.47.0", "SetCount": 1, "Locale": "en" }""",
+            ("swsh7", EvolvingSkiesJson));
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" }, { "id": "A3b", "name": "Eevee Grove" } ]""",
+                ["https://api.tcgdex.example/v2/en/sets/A3b"] = PocketJson,
+                ["https://api.github.com/repos/tcgdex/cards-database/releases/latest"] =
+                    """{ "tag_name": "v2.48.0" }""",
+            },
+            CompletedGate());
+        using var http = new HttpClient(handler);
+
+        await TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        // Only the set the mirror lacked was fetched; the pinned document
+        // was never re-requested, and the manifest now covers both.
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets"));
+        Assert.Equal(0, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/A3b"));
+        var (catalog, manifest) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal(2, manifest.SetCount);
+        Assert.Equal("v2.48.0", manifest.ReleaseTag);
+        Assert.NotNull(catalog.ById("swsh7"));
+        Assert.NotNull(catalog.ById("A3b"));
+    }
+
+    [Fact]
+    public async Task A_topup_with_nothing_missing_writes_nothing()
+    {
+        await WriteMirrorAsync(
+            """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "ReleaseTag": "v2.47.0", "SetCount": 1, "Locale": "en" }""",
+            ("swsh7", EvolvingSkiesJson));
+        var manifestPath = Path.Combine(_directory, "manifest.json");
+        var manifestBefore = await File.ReadAllTextAsync(manifestPath);
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" } ]""",
+            },
+            CompletedGate());
+        using var http = new HttpClient(handler);
+
+        await TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        // The daily list check found the pin complete: no set fetched, no
+        // manifest rewrite — the pin's fetch date still tells the truth.
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets"));
+        Assert.Equal(manifestBefore, await File.ReadAllTextAsync(manifestPath));
+    }
+
+    [Fact]
+    public async Task An_interrupted_topup_heals_on_the_next_ensure()
+    {
+        // An interrupted top-up leaves more set files than the manifest
+        // counts (the manifest is only rewritten at the end). Loading
+        // tolerates the surplus, and the next ensure re-pins the manifest.
+        await WriteMirrorAsync(
+            """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "SetCount": 1, "Locale": "en" }""",
+            ("swsh7", EvolvingSkiesJson),
+            ("A3b", PocketJson));
+
+        var (catalog, manifest) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal(1, manifest.SetCount);
+        Assert.NotNull(catalog.ById("A3b"));
+
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" }, { "id": "A3b", "name": "Eevee Grove" } ]""",
+            },
+            CompletedGate());
+        using var http = new HttpClient(handler);
+        await TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        Assert.Equal(0, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/A3b"));
+        var (_, healed) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal(2, healed.SetCount);
+    }
+
+    [Fact]
+    public async Task A_directory_of_one_locale_refuses_a_topup_as_another()
+    {
+        // A manifest without a Locale predates the locale-aware mirror and
+        // is English by construction — so even it refuses a "ja" top-up.
         await WriteMirrorAsync(
             """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "SetCount": 1 }""",
             ("swsh7", EvolvingSkiesJson));
+        using var http = new HttpClient(new StubHandler(new Dictionary<string, string>()));
 
-        // No exception is itself the proof: NewClientMustNotBeCalled fails
-        // outright if ever invoked, so completing this call means
-        // EnsureAsync's unlocked fast-path Exists() check returned before
-        // the gate — let alone a client, let alone FetchAsync — was ever
-        // touched.
-        await TcgdexMirror.EnsureAsync(
-            NewClientMustNotBeCalled, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
-            NullLogger.Instance, CancellationToken.None);
-
-        static HttpClient NewClientMustNotBeCalled() =>
-            throw new InvalidOperationException(
-                "Unexpected HttpClient request — the mirror already exists, so EnsureAsync must not need one.");
+        await Assert.ThrowsAsync<InvalidOperationException>(() => TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "ja", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None));
     }
 
     /// <summary>Gates exactly the first <c>SendAsync</c> call on
