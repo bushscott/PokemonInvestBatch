@@ -77,6 +77,7 @@ public sealed class EnrichmentLane(
         await TcgdexMirror.EnsureAsync(
             () => httpFactory.CreateClient(HttpClientName),
             scraper.TcgdexBaseUrl,
+            "en",
             scraper.TcgdexMirrorDirectory,
             time,
             logger,

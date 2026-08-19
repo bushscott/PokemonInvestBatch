@@ -184,6 +184,7 @@ public sealed class PokedexLane(
         await TcgdexMirror.EnsureAsync(
             () => httpFactory.CreateClient(EnrichmentLane.HttpClientName),
             scraper.TcgdexBaseUrl,
+            "en",
             scraper.TcgdexMirrorDirectory,
             time,
             logger,

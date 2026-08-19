@@ -138,7 +138,7 @@ public class TcgdexMirrorTests : IDisposable
         using var http = new HttpClient(handler);
 
         var manifest = await TcgdexMirror.FetchAsync(
-            http, "https://api.tcgdex.example", _directory, TimeProvider.System, CancellationToken.None);
+            http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, CancellationToken.None);
 
         Assert.Equal(2, manifest.SetCount);
         Assert.Equal("v2.47.0", manifest.ReleaseTag);
@@ -152,6 +152,40 @@ public class TcgdexMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task The_fetch_uses_the_requested_locale()
+    {
+        var handler = new StubHandler(new Dictionary<string, string>
+        {
+            ["https://api.tcgdex.example/v2/ja/sets"] =
+                """[ { "id": "SV2a", "name": "ポケモンカード151" } ]""",
+            ["https://api.tcgdex.example/v2/ja/sets/SV2a"] = """
+                {
+                  "id": "SV2a",
+                  "name": "ポケモンカード151",
+                  "serie": { "id": "sv", "name": "ポケモンカードゲーム スカーレット&バイオレット" },
+                  "releaseDate": "2023-06-16",
+                  "cardCount": { "official": 165, "total": 210 },
+                  "cards": [
+                    { "id": "SV2a-025", "localId": "025", "name": "ピカチュウ" }
+                  ]
+                }
+                """,
+        });
+        using var http = new HttpClient(handler);
+
+        var manifest = await TcgdexMirror.FetchAsync(
+            http, "https://api.tcgdex.example", "ja", _directory, TimeProvider.System, CancellationToken.None);
+
+        // The locale is part of the pin: it decides the URLs fetched and is
+        // recorded in the manifest so a directory says which shelf it holds.
+        Assert.Equal("ja", manifest.Locale);
+        var (catalog, loaded) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal("ja", loaded.Locale);
+        Assert.Equal("ポケモンカード151", catalog.ById("SV2a")!.Name);
+        Assert.Equal("ピカチュウ", Assert.Single(catalog.ById("SV2a")!.Cards).Name);
+    }
+
+    [Fact]
     public async Task A_set_id_that_is_not_a_safe_file_name_refuses_the_mirror()
     {
         var handler = new StubHandler(new Dictionary<string, string>
@@ -161,7 +195,7 @@ public class TcgdexMirrorTests : IDisposable
         using var http = new HttpClient(handler);
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => TcgdexMirror.FetchAsync(
-            http, "https://api.tcgdex.example", _directory, TimeProvider.System, CancellationToken.None));
+            http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, CancellationToken.None));
     }
 
     /// <summary>
@@ -208,7 +242,7 @@ public class TcgdexMirrorTests : IDisposable
         // EnsureGate is now held, and only the sets/ subdirectory (not the
         // manifest, written last) exists on disk.
         var first = TcgdexMirror.EnsureAsync(
-            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            NewClient, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, NullLogger.Instance,
             CancellationToken.None);
         Assert.False(TcgdexMirror.Exists(_directory));
 
@@ -216,7 +250,7 @@ public class TcgdexMirrorTests : IDisposable
         // contended (first holds it) and genuinely suspends — this call has
         // not skipped via its own pre-gate Exists() check (still false).
         var second = TcgdexMirror.EnsureAsync(
-            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            NewClient, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, NullLogger.Instance,
             CancellationToken.None);
 
         releaseFirstRequest.SetResult();
@@ -243,7 +277,7 @@ public class TcgdexMirrorTests : IDisposable
         // zero further clients.
         var totalRequestsSoFar = handler.CallCounts.Values.Sum();
         await TcgdexMirror.EnsureAsync(
-            NewClient, "https://api.tcgdex.example", _directory, TimeProvider.System, NullLogger.Instance,
+            NewClient, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, NullLogger.Instance,
             CancellationToken.None);
         Assert.Equal(totalRequestsSoFar, handler.CallCounts.Values.Sum());
         Assert.Equal(1, clientRequests);
@@ -262,7 +296,7 @@ public class TcgdexMirrorTests : IDisposable
         // the gate — let alone a client, let alone FetchAsync — was ever
         // touched.
         await TcgdexMirror.EnsureAsync(
-            NewClientMustNotBeCalled, "https://api.tcgdex.example", _directory, TimeProvider.System,
+            NewClientMustNotBeCalled, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
             NullLogger.Instance, CancellationToken.None);
 
         static HttpClient NewClientMustNotBeCalled() =>

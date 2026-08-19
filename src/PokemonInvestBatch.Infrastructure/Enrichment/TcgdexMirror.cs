@@ -6,13 +6,14 @@ using PokemonInvestBatch.Application.Enrichment;
 namespace PokemonInvestBatch.Infrastructure.Enrichment;
 
 /// <summary>
-/// The pinned local copy of TCGdex's English catalog that enrichment joins
-/// against (ADR-0009), and that the Pokédex phase's set-details sweep
-/// (ADR-0011) reuses rather than mirroring separately. The directory IS the
-/// version pin: one fetch writes every per-set JSON plus a manifest, every
-/// sweep after that reads only disk, and refreshing is the operator deleting
-/// the directory so the next sweep re-fetches. The join never takes a live
-/// dependency on the API.
+/// The pinned local copy of one locale of TCGdex's catalog that enrichment
+/// joins against (ADR-0009: en; the Japanese shelf adds a ja mirror), and
+/// that the Pokédex phase's set-details sweep (ADR-0011) reuses rather than
+/// mirroring separately. One directory holds one locale. The directory IS
+/// the version pin: one fetch writes every per-set JSON plus a manifest,
+/// every sweep after that reads only disk, and refreshing is the operator
+/// deleting the directory so the next sweep re-fetches. The join never
+/// takes a live dependency on the API.
 ///
 /// Two lanes — EnrichmentLane and PokedexLane — share this one mirror, so
 /// ensuring it exists is coordinated (<see cref="EnsureAsync"/>) rather than
@@ -67,6 +68,11 @@ public static class TcgdexMirror
 
         public required int SetCount { get; init; }
 
+        /// <summary>Which TCGdex locale this directory mirrors. Null on
+        /// manifests written before the mirror learned locales — those are
+        /// all English, so read null as "en".</summary>
+        public string? Locale { get; init; }
+
         /// <summary>What enrichment rows carry as provenance.</summary>
         public string Version =>
             ReleaseTag is { Length: > 0 } tag ? tag : $"api-{FetchedAt:yyyy-MM-dd}";
@@ -107,6 +113,7 @@ public static class TcgdexMirror
     public static async Task EnsureAsync(
         Func<HttpClient> newHttpClient,
         string baseUrl,
+        string locale,
         string directory,
         TimeProvider time,
         ILogger log,
@@ -128,11 +135,15 @@ public static class TcgdexMirror
             }
 
             log.LogInformation(
-                "No TCGdex mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
+                "No TCGdex {Locale} mirror at {Directory} — fetching one (the pin; delete the directory to refresh)",
+                locale,
                 directory);
-            var fetched = await FetchAsync(newHttpClient(), baseUrl, directory, time, ct);
+            var fetched = await FetchAsync(newHttpClient(), baseUrl, locale, directory, time, ct);
             log.LogInformation(
-                "Mirrored {Sets} TCGdex sets as version {Version}", fetched.SetCount, fetched.Version);
+                "Mirrored {Sets} TCGdex {Locale} sets as version {Version}",
+                fetched.SetCount,
+                locale,
+                fetched.Version);
         }
         finally
         {
@@ -140,7 +151,7 @@ public static class TcgdexMirror
         }
     }
 
-    /// <summary>Fetch the whole English catalog into the directory. Written
+    /// <summary>Fetch one locale's whole catalog into the directory. Written
     /// set-by-set with the manifest last, so an interrupted fetch leaves no
     /// manifest and the next sweep simply fetches again. Public for its own
     /// direct tests below and for <see cref="EnsureAsync"/>, which is what
@@ -148,11 +159,11 @@ public static class TcgdexMirror
     /// pair has none of <see cref="EnsureAsync"/>'s coordination against a
     /// concurrent caller doing the same thing.</summary>
     public static async Task<Manifest> FetchAsync(
-        HttpClient http, string baseUrl, string directory, TimeProvider time, CancellationToken ct)
+        HttpClient http, string baseUrl, string locale, string directory, TimeProvider time, CancellationToken ct)
     {
         Directory.CreateDirectory(Path.Combine(directory, SetsDirectory));
 
-        using var listResponse = await http.GetAsync($"{baseUrl}/v2/en/sets", ct);
+        using var listResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets", ct);
         listResponse.EnsureSuccessStatusCode();
         var setIds = new List<string>();
         using (var list = JsonDocument.Parse(await listResponse.Content.ReadAsStringAsync(ct)))
@@ -175,7 +186,7 @@ public static class TcgdexMirror
             }
 
             await Task.Delay(FetchSpacing, time, ct);
-            using var setResponse = await http.GetAsync($"{baseUrl}/v2/en/sets/{Uri.EscapeDataString(id)}", ct);
+            using var setResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets/{Uri.EscapeDataString(id)}", ct);
             setResponse.EnsureSuccessStatusCode();
             await File.WriteAllTextAsync(
                 Path.Combine(directory, SetsDirectory, $"{id}.json"),
@@ -188,6 +199,7 @@ public static class TcgdexMirror
             FetchedAt = time.GetUtcNow(),
             ReleaseTag = await TryFetchReleaseTagAsync(http, ct),
             SetCount = setIds.Count,
+            Locale = locale,
         };
         await File.WriteAllTextAsync(
             Path.Combine(directory, ManifestFile), JsonSerializer.Serialize(manifest, ManifestJson), ct);

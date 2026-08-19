@@ -38,7 +38,7 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
             using var http = new HttpClient();
             http.DefaultRequestHeaders.UserAgent.ParseAdd("PokemonInvestBatch-coverage-audit/1.0");
             await TcgdexMirror.FetchAsync(
-                http, "https://api.tcgdex.net", mirrorDirectory, TimeProvider.System, CancellationToken.None);
+                http, "https://api.tcgdex.net", "en", mirrorDirectory, TimeProvider.System, CancellationToken.None);
         }
 
         var (catalog, manifest) = await TcgdexMirror.LoadAsync(mirrorDirectory, CancellationToken.None);
