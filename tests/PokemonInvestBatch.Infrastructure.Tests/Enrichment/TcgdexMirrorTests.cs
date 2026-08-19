@@ -387,6 +387,88 @@ public class TcgdexMirrorTests : IDisposable
     }
 
     [Fact]
+    public async Task An_interrupted_first_fetch_resumes_where_it_stopped()
+    {
+        // A first fetch that died mid-way (the 2026-08-19 ja fetch: one
+        // stalled TLS read at document 103 of 177) leaves documents but no
+        // manifest. The next attempt must not start over: already-landed
+        // documents are skipped, only the remainder is fetched.
+        Directory.CreateDirectory(Path.Combine(_directory, "sets"));
+        await File.WriteAllTextAsync(Path.Combine(_directory, "sets", "swsh7.json"), EvolvingSkiesJson);
+
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" }, { "id": "A3b", "name": "Eevee Grove" } ]""",
+                ["https://api.tcgdex.example/v2/en/sets/A3b"] = PocketJson,
+            },
+            CompletedGate());
+        using var http = new HttpClient(handler);
+
+        await TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        Assert.Equal(0, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/A3b"));
+        var (catalog, manifest) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal(2, manifest.SetCount);
+        Assert.NotNull(catalog.ById("swsh7"));
+        Assert.NotNull(catalog.ById("A3b"));
+    }
+
+    [Fact]
+    public async Task A_transient_document_failure_is_retried_once()
+    {
+        // One flaky response among ~180 must not abort a whole sweep for a
+        // day; a second genuine failure still refuses loudly.
+        var handler = new FlakyOnceHandler(new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["https://api.tcgdex.example/v2/en/sets"] =
+                """[ { "id": "swsh7", "name": "Evolving Skies" } ]""",
+            ["https://api.tcgdex.example/v2/en/sets/swsh7"] = EvolvingSkiesJson,
+        })
+        { FailFirstRequestTo = "https://api.tcgdex.example/v2/en/sets/swsh7" };
+        using var http = new HttpClient(handler);
+
+        var manifest = await TcgdexMirror.FetchAsync(
+            http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System, CancellationToken.None);
+
+        Assert.Equal(1, manifest.SetCount);
+        Assert.Equal(2, handler.RequestsTo("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        var (catalog, _) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.NotNull(catalog.ById("swsh7"));
+    }
+
+    /// <summary>Fails the first request to one URL with the transport-level
+    /// exception a stalled read produces, then answers normally — the shape
+    /// of the 2026-08-19 production failure.</summary>
+    private sealed class FlakyOnceHandler(IReadOnlyDictionary<string, string> responses) : HttpMessageHandler
+    {
+        private readonly Dictionary<string, int> _counts = new(StringComparer.Ordinal);
+
+        public required string FailFirstRequestTo { get; init; }
+
+        public int RequestsTo(string url) => _counts.GetValueOrDefault(url);
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            var url = request.RequestUri!.ToString();
+            _counts[url] = _counts.GetValueOrDefault(url) + 1;
+            if (url == FailFirstRequestTo && _counts[url] == 1)
+            {
+                throw new HttpRequestException("Simulated stalled transport read.");
+            }
+
+            return Task.FromResult(responses.TryGetValue(url, out var body)
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new StringContent(body) }
+                : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
+    [Fact]
     public async Task A_directory_of_one_locale_refuses_a_topup_as_another()
     {
         // A manifest without a Locale predates the locale-aware mirror and

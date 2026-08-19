@@ -47,7 +47,11 @@ exact name translation with release-date and card-count coherence.
    hiccup must not stall a lane — the 2026-08-17 lesson). Delete-to-repin remains
    the full refresh. The load-time count guard turned directional to make an
    interrupted top-up benign: surplus files load and heal; missing files still
-   refuse.
+   refuse. The first fetch got the same posture the hard way — its first
+   production run died at document 103 of 177 on one stalled TLS read
+   (2026-08-19, 11:14) and cost the sweep a day — so per-document downloads
+   retry once on transport trouble, and an interrupted first fetch resumes past
+   every document that already landed instead of starting over.
 4. **Japanese eras pool into the existing era codes** via new ordinal-exact
    Japanese serie-name keys in `tcgdex-series-eras.json` (剣と盾 → SWSH,
    サン＆ムーン → SM, PCG/ADV → EX, LEGEND → DP, neo/e/VS/web and the original

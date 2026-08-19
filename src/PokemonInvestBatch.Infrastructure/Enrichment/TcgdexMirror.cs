@@ -248,7 +248,8 @@ public static class TcgdexMirror
 
     /// <summary>Fetch one locale's whole catalog into the directory. Written
     /// set-by-set with the manifest last, so an interrupted fetch leaves no
-    /// manifest and the next sweep simply fetches again. Public for its own
+    /// manifest and the next sweep simply fetches again — resuming past
+    /// every document that already landed, never re-downloading it. Public for its own
     /// direct tests below and for <see cref="EnsureAsync"/>, which is what
     /// production code should call instead — a bare Exists-then-FetchAsync
     /// pair has none of <see cref="EnsureAsync"/>'s coordination against a
@@ -258,9 +259,17 @@ public static class TcgdexMirror
     {
         Directory.CreateDirectory(Path.Combine(directory, SetsDirectory));
 
-        var setIds = await FetchSetIdsAsync(http, baseUrl, locale, ct);
-        foreach (var id in setIds)
+        // Resume, don't restart: a first fetch that died mid-way (one
+        // stalled read at document 103 of 177 killed the 2026-08-19 ja
+        // fetch) leaves documents but no manifest. Skipping what already
+        // landed makes progress monotonic across attempts.
+        foreach (var id in await FetchSetIdsAsync(http, baseUrl, locale, ct))
         {
+            if (File.Exists(Path.Combine(directory, SetsDirectory, $"{id}.json")))
+            {
+                continue;
+            }
+
             await DownloadSetAsync(http, baseUrl, locale, directory, id, time, ct);
         }
 
@@ -268,7 +277,7 @@ public static class TcgdexMirror
         {
             FetchedAt = time.GetUtcNow(),
             ReleaseTag = await TryFetchReleaseTagAsync(http, ct),
-            SetCount = setIds.Count,
+            SetCount = Directory.EnumerateFiles(Path.Combine(directory, SetsDirectory), "*.json").Count(),
             Locale = locale,
         };
         await File.WriteAllTextAsync(
@@ -304,6 +313,26 @@ public static class TcgdexMirror
                 $"TCGdex set id '{id}' is not a safe file name — refusing the mirror.");
         }
 
+        try
+        {
+            await DownloadSetOnceAsync(http, baseUrl, locale, directory, id, time, ct);
+        }
+        catch (Exception e) when (e is HttpRequestException
+                                  || (e is TaskCanceledException && !ct.IsCancellationRequested))
+        {
+            // One bounded retry on a fresh request: a single flaky response
+            // among ~180 must not abort a whole sweep (a stalled TLS read
+            // did exactly that on 2026-08-19). A second failure is real
+            // trouble and propagates loudly.
+            await Task.Delay(FetchSpacing, time, ct);
+            await DownloadSetOnceAsync(http, baseUrl, locale, directory, id, time, ct);
+        }
+    }
+
+    private static async Task DownloadSetOnceAsync(
+        HttpClient http, string baseUrl, string locale, string directory, string id, TimeProvider time,
+        CancellationToken ct)
+    {
         await Task.Delay(FetchSpacing, time, ct);
         using var setResponse = await http.GetAsync($"{baseUrl}/v2/{locale}/sets/{Uri.EscapeDataString(id)}", ct);
         setResponse.EnsureSuccessStatusCode();
