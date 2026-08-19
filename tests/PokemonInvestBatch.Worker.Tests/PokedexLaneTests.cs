@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Logging.Testing;
 using Microsoft.Extensions.Options;
 using PokemonInvestBatch.Application.Pokedex;
+using PokemonInvestBatch.Infrastructure.Enrichment;
 using PokemonInvestBatch.Infrastructure.Persistence;
 using PokemonInvestBatch.TestSupport;
 using PokemonInvestBatch.Worker.Lanes;
@@ -37,12 +38,16 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
     private readonly string _tcgdexMirrorDirectory =
         Path.Combine(Path.GetTempPath(), $"tcgdex-mirror-{Guid.NewGuid():N}");
 
+    private readonly string _tcgdexJaMirrorDirectory =
+        Path.Combine(Path.GetTempPath(), $"tcgdex-mirror-ja-{Guid.NewGuid():N}");
+
     private readonly string _iconDirectory =
         Path.Combine(Path.GetTempPath(), $"species-icons-{Guid.NewGuid():N}");
 
     public void Dispose()
     {
-        foreach (var directory in new[] { _pokeapiMirrorDirectory, _tcgdexMirrorDirectory, _iconDirectory })
+        foreach (var directory in
+                 new[] { _pokeapiMirrorDirectory, _tcgdexMirrorDirectory, _tcgdexJaMirrorDirectory, _iconDirectory })
         {
             if (Directory.Exists(directory))
             {
@@ -85,6 +90,19 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         await File.WriteAllTextAsync(
             Path.Combine(_tcgdexMirrorDirectory, "manifest.json"),
             """{ "FetchedAt": "2026-08-15T00:00:00+00:00", "ReleaseTag": "v-test", "SetCount": 0 }""");
+    }
+
+    /// <summary>The ja twin of <see cref="WriteTcgdexMirrorAsync"/> — also
+    /// empty, so the sweep composes without any real ja fixture content. The
+    /// en manifest above deliberately has no Locale (a pre-locale manifest,
+    /// read as "en"); this one says "ja" outright, as every fetched ja
+    /// manifest does.</summary>
+    private async Task WriteTcgdexJaMirrorAsync()
+    {
+        Directory.CreateDirectory(Path.Combine(_tcgdexJaMirrorDirectory, "sets"));
+        await File.WriteAllTextAsync(
+            Path.Combine(_tcgdexJaMirrorDirectory, "manifest.json"),
+            """{ "FetchedAt": "2026-08-15T00:00:00+00:00", "ReleaseTag": "v-test", "SetCount": 0, "Locale": "ja" }""");
     }
 
     /// <summary>Every fixture species' icon pre-placed, so
@@ -166,10 +184,30 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
             PokedexMirrorDirectory = _pokeapiMirrorDirectory,
             SpeciesIconDirectory = _iconDirectory,
             TcgdexMirrorDirectory = _tcgdexMirrorDirectory,
+            TcgdexJaMirrorDirectory = _tcgdexJaMirrorDirectory,
             TcgdexSetAliasesPath = Path.Combine(_tcgdexMirrorDirectory, "no-aliases.json"),
+            TcgdexJaSetAliasesPath = Path.Combine(_tcgdexJaMirrorDirectory, "no-ja-aliases.json"),
             TcgdexSeriesEraPath = Path.Combine(_tcgdexMirrorDirectory, "no-eras.json"),
         }),
         logger ?? NullLogger<PokedexLane>.Instance);
+
+    [SkippableFact]
+    public async Task The_sweep_pins_a_ja_mirror_beside_the_english_one()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+        await WritePokeapiMirrorAsync();
+        await WriteTcgdexMirrorAsync();
+        await WriteIconsAsync();
+        // No ja mirror pre-placed: the sweep itself must pin one — this is
+        // the exact path a production deploy takes on its first sweep.
+
+        await NewLane().RunSweepAsync(CancellationToken.None);
+
+        Assert.True(TcgdexMirror.Exists(_tcgdexJaMirrorDirectory));
+        var (_, manifest) = await TcgdexMirror.LoadAsync(_tcgdexJaMirrorDirectory, CancellationToken.None);
+        Assert.Equal("ja", manifest.Locale);
+        Assert.Equal(0, manifest.SetCount);
+    }
 
     [SkippableFact]
     public async Task A_sweep_composes_every_stage_and_reports_the_receipt_counts()
@@ -177,6 +215,7 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WritePokeapiMirrorAsync();
         await WriteTcgdexMirrorAsync();
+        await WriteTcgdexJaMirrorAsync();
         await WriteIconsAsync();
         await SeedAsync();
 
@@ -242,6 +281,7 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WritePokeapiMirrorAsync();
         await WriteTcgdexMirrorAsync();
+        await WriteTcgdexJaMirrorAsync();
         await WriteIconsAsync();
         await SeedAsync();
         var lane = NewLane();
@@ -278,6 +318,7 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WritePokeapiMirrorAsync();
         await WriteTcgdexMirrorAsync();
+        await WriteTcgdexJaMirrorAsync();
         await WriteIconsAsync();
         await SeedAsync();
         var logger = new FakeLogger<PokedexLane>();
@@ -337,16 +378,33 @@ public class PokedexLaneTests : DatabaseTest, IDisposable
 
         private sealed class ThrowingHandler : HttpMessageHandler
         {
+            /// <summary>The three sanctioned requests: both locales' top-up
+            /// list checks (answered empty, matching the empty fixture
+            /// mirrors) and the GitHub release-tag lookup a first fetch makes
+            /// (metadata, not mirror data — sanctioning it lets the
+            /// ja-mirror-from-nothing test run this lane's real first-fetch
+            /// path). Everything else — any actual set document, dataset
+            /// file or icon — still throws.</summary>
+            private static readonly IReadOnlyDictionary<string, string> Sanctioned =
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["https://api.tcgdex.net/v2/en/sets"] = "[]",
+                    ["https://api.tcgdex.net/v2/ja/sets"] = "[]",
+                    ["https://api.github.com/repos/tcgdex/cards-database/releases/latest"] =
+                        """{ "tag_name": "v-test" }""",
+                };
+
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken) =>
-                request.RequestUri!.ToString() == "https://api.tcgdex.net/v2/en/sets"
+                Sanctioned.TryGetValue(request.RequestUri!.ToString(), out var body)
                     ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
                     {
-                        Content = new StringContent("[]"),
+                        Content = new StringContent(body),
                     })
                     : throw new InvalidOperationException(
                         $"Unexpected network request to {request.RequestUri} — every mirror and icon file is " +
-                        "pre-placed for this test, so the only sanctioned request is the top-up list check.");
+                        "pre-placed for this test, so only the top-up list checks and the release-tag lookup " +
+                        "are sanctioned.");
         }
     }
 }

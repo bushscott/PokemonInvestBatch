@@ -190,6 +190,18 @@ public sealed class PokedexLane(
             logger,
             ct);
 
+        // The Japanese shelf's mirror is pinned and topped up from the same
+        // sweep, one directory per locale — so the ja documents are already
+        // on disk for the ja alias join (ADR-0012).
+        await TcgdexMirror.EnsureAsync(
+            () => httpFactory.CreateClient(EnrichmentLane.HttpClientName),
+            scraper.TcgdexBaseUrl,
+            "ja",
+            scraper.TcgdexJaMirrorDirectory,
+            time,
+            logger,
+            ct);
+
         var (catalog, _) = await TcgdexMirror.LoadAsync(scraper.TcgdexMirrorDirectory, ct);
 
         // Same posture as EnrichmentLane's own read of this file:

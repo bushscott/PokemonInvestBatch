@@ -95,6 +95,21 @@ public sealed record ScraperOptions
     /// blacklist.json and re-read every sweep.</summary>
     public string TcgdexSetAliasesPath { get; init; } = "tcgdex-set-aliases.json";
 
+    /// <summary>Where the TCGdex ja-locale per-set mirror lives — the
+    /// Japanese shelf's counterpart to <see cref="TcgdexMirrorDirectory"/>,
+    /// same directory-is-the-pin convention, one directory per locale.
+    /// Deploys must exclude it from rsync --delete just like the English
+    /// mirror, or every deploy erases it.</summary>
+    public string TcgdexJaMirrorDirectory { get; init; } = "tcgdex-mirror-ja";
+
+    /// <summary>Hand-curated Japanese set aliases (PriceCharting slug →
+    /// TCGdex ja set ids) — the ONLY way a Japanese set maps (ADR-0012):
+    /// Japanese script defeats name matching by construction, so every row
+    /// here is a human's verdict. Same posture as
+    /// <see cref="TcgdexSetAliasesPath"/>: absent means empty, malformed
+    /// refuses loudly, re-read every sweep.</summary>
+    public string TcgdexJaSetAliasesPath { get; init; } = "tcgdex-ja-set-aliases.json";
+
     /// <summary>Cadence of the enrichment sweep. Daily is generous: inputs
     /// only move when enumeration discovers cards (weekly) or the operator
     /// re-pins the mirror, and a no-change sweep writes nothing.</summary>
