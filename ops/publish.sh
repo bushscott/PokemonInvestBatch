@@ -84,6 +84,7 @@ echo "  rsync -av --delete --exclude appsettings.Production.json --exclude black
 echo "        --exclude tcgdex-set-aliases.json --exclude tcgdex-ja-set-aliases.json \\"
 echo "        --exclude tcgdex-series-eras.json \\"
 echo "        --exclude pokeapi-mirror --exclude tcgdex-mirror --exclude tcgdex-mirror-ja \\"
+echo "        --exclude species-icons \\"
 echo "        publish/ pokemon@<pi-ip>:/opt/pokemon-invest-batch/"
 echo "  rsync -av blacklist.json tcgdex-set-aliases.json tcgdex-ja-set-aliases.json tcgdex-series-eras.json pokemon@<pi-ip>:/opt/pokemon-invest-batch/"
 echo "Then on the Pi: sudo systemctl restart pokemon-invest-batch"
