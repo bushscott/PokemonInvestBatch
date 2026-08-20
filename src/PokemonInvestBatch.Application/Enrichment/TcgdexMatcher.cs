@@ -41,7 +41,19 @@ public sealed record EnrichmentVerdict
 /// </summary>
 public static class TcgdexMatcher
 {
-    public static EnrichmentVerdict Match(string cardName, SetMapEntry entry, TcgdexCatalog catalog)
+    /// <summary>The Japanese card join's per-sweep inputs: the ja locale's
+    /// own catalog (aliased entries' ids live there, never in the English
+    /// one) and the species-agreement guard that replaces
+    /// <see cref="CardNameAgreement"/> across scripts (ADR-0012). Per-card
+    /// tagged species travel separately — they differ card to card.</summary>
+    public sealed record JapaneseCardJoin(TcgdexCatalog Catalog, SpeciesAgreement Guard);
+
+    public static EnrichmentVerdict Match(
+        string cardName,
+        SetMapEntry entry,
+        TcgdexCatalog catalog,
+        JapaneseCardJoin? japanese = null,
+        IReadOnlySet<int>? taggedSpeciesIds = null)
     {
         var parts = CardNameParser.Parse(cardName);
         if (parts.Number is null)
@@ -52,6 +64,21 @@ public static class TcgdexMatcher
         if (entry.Kind == SetMapKind.Unmapped)
         {
             return EnrichmentVerdict.Of(TcgdexMatchStatus.UnmappedSet);
+        }
+
+        if (entry.Partition == SetPartition.Japanese)
+        {
+            // A mapped Japanese entry can only exist through the curated
+            // alias table, and its join runs in its own lane: the ja
+            // catalog, no sibling/promo prefix routing (those rules are
+            // derived from folded English names and resolve to nothing
+            // against Japanese ones), and the species guard instead of the
+            // name gate — CardNameAgreement folds Japanese to nothing and
+            // would confirm anything against anything.
+            var ja = japanese ?? throw new InvalidOperationException(
+                $"Set map entry '{entry.Slug}' is a mapped Japanese set, but the caller wired no Japanese " +
+                "card join — refusing to guess.");
+            return MatchJapanese(parts, entry, ja, taggedSpeciesIds ?? new HashSet<int>());
         }
 
         var prefix = CollectorNumber.AlphaPrefix(parts.Number);
@@ -116,6 +143,83 @@ public static class TcgdexMatcher
 
         return MatchIn(routed, parts) ?? MatchIn(primaries, parts)
             ?? EnrichmentVerdict.Of(TcgdexMatchStatus.NumberNotFound);
+    }
+
+    /// <summary>The Japanese verdict: number join within the aliased ja
+    /// set(s) only, vouched for by species agreement. Every honest outcome
+    /// the English path has, plus <see cref="TcgdexMatchStatus.NoSpeciesGuard"/>
+    /// for the cards no cross-script guard can speak for.</summary>
+    private static EnrichmentVerdict MatchJapanese(
+        CardNameParts parts,
+        SetMapEntry entry,
+        JapaneseCardJoin japanese,
+        IReadOnlySet<int> taggedSpeciesIds)
+    {
+        var canonical = CollectorNumber.Canonical(parts.Number!);
+        var numberMatches = new List<(TcgdexSet Set, TcgdexCard Card)>();
+        foreach (var id in entry.TcgdexSetIds)
+        {
+            var set = japanese.Catalog.ById(id)
+                ?? throw new InvalidOperationException(
+                    $"Set map for '{entry.Slug}' names TCGdex ja set '{id}', which the ja mirror does not contain.");
+            foreach (var card in set.Cards)
+            {
+                if (CollectorNumber.Canonical(card.LocalId) == canonical)
+                {
+                    numberMatches.Add((set, card));
+                }
+            }
+        }
+
+        if (numberMatches.Count == 0)
+        {
+            return EnrichmentVerdict.Of(TcgdexMatchStatus.NumberNotFound);
+        }
+
+        if (taggedSpeciesIds.Count == 0)
+        {
+            return EnrichmentVerdict.Of(TcgdexMatchStatus.NoSpeciesGuard);
+        }
+
+        var agreeing = numberMatches
+            .Where(m => japanese.Guard.SpeciesNamed(m.Card.Name).Overlaps(taggedSpeciesIds))
+            .ToList();
+
+        if (agreeing.Count == 1)
+        {
+            var (set, card) = agreeing[0];
+            return new EnrichmentVerdict
+            {
+                Status = TcgdexMatchStatus.Confirmed,
+                CardNumber = card.LocalId,
+                SetOfficialSize = set.OfficialCount == 0 ? null : set.OfficialCount,
+                TcgdexSetId = set.Id,
+                TcgdexCardId = card.Id,
+                TcgdexName = card.Name,
+            };
+        }
+
+        if (agreeing.Count > 1)
+        {
+            return EnrichmentVerdict.Of(TcgdexMatchStatus.Ambiguous);
+        }
+
+        // No candidate agreed. If any candidate actually named a species,
+        // the disagreement is real evidence (the wrong-set collision catch);
+        // if none could, there was never a guard to satisfy.
+        if (numberMatches.Any(m => japanese.Guard.SpeciesNamed(m.Card.Name).Count > 0))
+        {
+            var (evidenceSet, evidenceCard) = numberMatches[0];
+            return new EnrichmentVerdict
+            {
+                Status = TcgdexMatchStatus.NameMismatch,
+                TcgdexSetId = evidenceSet.Id,
+                TcgdexCardId = evidenceCard.Id,
+                TcgdexName = evidenceCard.Name,
+            };
+        }
+
+        return EnrichmentVerdict.Of(TcgdexMatchStatus.NoSpeciesGuard);
     }
 
     /// <summary>Verdict from one candidate tier, or null when the number

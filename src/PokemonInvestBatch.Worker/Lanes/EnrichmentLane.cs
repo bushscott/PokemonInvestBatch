@@ -85,6 +85,20 @@ public sealed class EnrichmentLane(
 
         var (catalog, manifest) = await TcgdexMirror.LoadAsync(scraper.TcgdexMirrorDirectory, ct);
 
+        // The Japanese shelf's mirror, one directory per locale — the same
+        // coordinated ensure PokedexLane makes, so whichever lane sweeps
+        // first pins it for both.
+        await TcgdexMirror.EnsureAsync(
+            () => httpFactory.CreateClient(HttpClientName),
+            scraper.TcgdexBaseUrl,
+            "ja",
+            scraper.TcgdexJaMirrorDirectory,
+            time,
+            logger,
+            ct);
+
+        var (jaCatalog, jaManifest) = await TcgdexMirror.LoadAsync(scraper.TcgdexJaMirrorDirectory, ct);
+
         // Same posture as the blacklist: user-maintained JSON, absent means
         // empty, malformed refuses loudly (a silently dropped alias would
         // quietly unmap a curated set).
@@ -92,13 +106,38 @@ public sealed class EnrichmentLane(
             ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(scraper.TcgdexSetAliasesPath, ct))
             : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
 
+        var jaAliases = File.Exists(scraper.TcgdexJaSetAliasesPath)
+            ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(scraper.TcgdexJaSetAliasesPath, ct))
+            : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
         await using var db = await dbFactory.CreateDbContextAsync(ct);
 
         var sets = await db.Sets
             .Select(s => new { s.Id, s.Slug, s.Name })
             .ToListAsync(ct);
-        var map = SetMapper.Resolve(sets.Select(s => (s.Slug, s.Name)), catalog, aliases);
+        var map = SetMapper.Resolve(
+            sets.Select(s => (s.Slug, s.Name)),
+            catalog,
+            aliases,
+            new SetMapper.JapaneseShelf(jaCatalog, jaAliases));
         var entryBySetId = sets.ToDictionary(s => s.Id, s => map[s.Slug]);
+
+        // The ja join's guard inputs (ADR-0012): the imported Japanese
+        // species names build the cross-script guard, and each card's tagged
+        // species (ADR-0011) are what it vouches against.
+        var jaSpeciesNames = await db.SpeciesNames
+            .Where(n => n.Language == "ja" || n.Language == "ja-hrkt")
+            .Select(n => new { n.SpeciesId, n.Name })
+            .ToListAsync(ct);
+        var japaneseJoin = new TcgdexMatcher.JapaneseCardJoin(
+            jaCatalog,
+            SpeciesAgreement.Build(jaSpeciesNames.Select(n => (n.SpeciesId, n.Name))));
+        var taggedSpeciesByCard = (await db.CardSpecies
+                .Select(l => new { l.CardId, l.SpeciesId })
+                .ToListAsync(ct))
+            .GroupBy(l => l.CardId)
+            .ToDictionary(g => g.Key, g => (IReadOnlySet<int>)g.Select(l => l.SpeciesId).ToHashSet());
+        var noTaggedSpecies = (IReadOnlySet<int>)new HashSet<int>();
 
         // Not-a-card pages are consoles and accessories — there is nothing to
         // enrich. Delisted cards keep their history and stay enrichable.
@@ -115,7 +154,13 @@ public sealed class EnrichmentLane(
         foreach (var card in cards)
         {
             ct.ThrowIfCancellationRequested();
-            var verdict = TcgdexMatcher.Match(card.Name, entryBySetId[card.SetId], catalog);
+            var entry = entryBySetId[card.SetId];
+            var verdict = TcgdexMatcher.Match(
+                card.Name,
+                entry,
+                catalog,
+                japaneseJoin,
+                taggedSpeciesByCard.GetValueOrDefault(card.Id, noTaggedSpecies));
             verdictCounts[verdict.Status] = verdictCounts.GetValueOrDefault(verdict.Status) + 1;
 
             // Change-only: record equality over the six verdict fields is the
@@ -135,7 +180,9 @@ public sealed class EnrichmentLane(
                 TcgdexSetId = verdict.TcgdexSetId,
                 TcgdexCardId = verdict.TcgdexCardId,
                 TcgdexName = verdict.TcgdexName,
-                TcgdexVersion = manifest.Version,
+                // Provenance names the mirror that produced the verdict — a
+                // ja card's verdict came from the ja pin.
+                TcgdexVersion = entry.Partition == SetPartition.Japanese ? jaManifest.Version : manifest.Version,
             });
         }
 
@@ -149,7 +196,8 @@ public sealed class EnrichmentLane(
         logger.LogInformation(
             "Enrichment sweep over {Cards} cards against TCGdex {Version}: {Written} verdicts written; "
             + "confirmed {Confirmed}, name-mismatch {NameMismatch}, number-not-found {NumberNotFound}, "
-            + "ambiguous {Ambiguous}, no-number {NoNumber}, unmapped-set {UnmappedSet}",
+            + "ambiguous {Ambiguous}, no-number {NoNumber}, unmapped-set {UnmappedSet}, "
+            + "no-species-guard {NoSpeciesGuard}",
             cards.Count,
             manifest.Version,
             inserts.Count,
@@ -158,7 +206,8 @@ public sealed class EnrichmentLane(
             verdictCounts.GetValueOrDefault(TcgdexMatchStatus.NumberNotFound),
             verdictCounts.GetValueOrDefault(TcgdexMatchStatus.Ambiguous),
             verdictCounts.GetValueOrDefault(TcgdexMatchStatus.NoNumber),
-            verdictCounts.GetValueOrDefault(TcgdexMatchStatus.UnmappedSet));
+            verdictCounts.GetValueOrDefault(TcgdexMatchStatus.UnmappedSet),
+            verdictCounts.GetValueOrDefault(TcgdexMatchStatus.NoSpeciesGuard));
 
         return new EnrichmentSweepResult
         {

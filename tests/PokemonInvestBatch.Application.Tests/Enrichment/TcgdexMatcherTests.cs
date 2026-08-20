@@ -41,6 +41,123 @@ public class TcgdexMatcherTests
         Card("swsh7", "215", "Umbreon VMAX"),
         Card("swsh7", "235", "Lightning Energy"));
 
+    /// <summary>The ja join's fixtures: SV2a with values off the pinned ja
+    /// mirror (2026-08-19), a Japanese-partition mapped entry, and the
+    /// species guard built from real species_names rows.</summary>
+    private static readonly TcgdexSet Pokemon151Ja = new()
+    {
+        Id = "SV2a",
+        Name = "ポケモンカード151",
+        SerieId = "sv",
+        SerieName = "ポケモンカードゲーム スカーレット&バイオレット",
+        ReleaseDate = new DateOnly(2023, 6, 16),
+        OfficialCount = 165,
+        TotalCount = 210,
+        Cards =
+        [
+            new TcgdexCard { Id = "SV2a-025", LocalId = "025", Name = "ピカチュウ" },
+            new TcgdexCard { Id = "SV2a-006", LocalId = "006", Name = "リザードンex" },
+            new TcgdexCard { Id = "SV2a-159", LocalId = "159", Name = "ハイパーボール" },
+        ],
+    };
+
+    private static SetMapEntry JapaneseMapped(string slug, params string[] ids) =>
+        new()
+        {
+            Slug = slug,
+            Partition = SetPartition.Japanese,
+            Kind = SetMapKind.Mapped,
+            TcgdexSetIds = ids,
+        };
+
+    private static TcgdexMatcher.JapaneseCardJoin JaJoin() => new(
+        new TcgdexCatalog([Pokemon151Ja]),
+        SpeciesAgreement.Build([(25, "ピカチュウ"), (6, "リザードン"), (1, "フシギダネ")]));
+
+    [Fact]
+    public void A_japanese_number_match_with_species_agreement_confirms()
+    {
+        var verdict = TcgdexMatcher.Match(
+            "Pikachu #025",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([]),
+            JaJoin(),
+            new HashSet<int> { 25 });
+
+        Assert.Equal(TcgdexMatchStatus.Confirmed, verdict.Status);
+        Assert.Equal("025", verdict.CardNumber);
+        Assert.Equal(165, verdict.SetOfficialSize);
+        Assert.Equal("SV2a", verdict.TcgdexSetId);
+        Assert.Equal("SV2a-025", verdict.TcgdexCardId);
+        Assert.Equal("ピカチュウ", verdict.TcgdexName);
+    }
+
+    [Fact]
+    public void A_japanese_number_match_with_disagreeing_species_is_a_name_mismatch()
+    {
+        // The wrong-set collision catch: the PC title says Pikachu, the
+        // number lands on Charizard ex — species disagree, nothing written,
+        // evidence recorded for review.
+        var verdict = TcgdexMatcher.Match(
+            "Pikachu #6",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([]),
+            JaJoin(),
+            new HashSet<int> { 25 });
+
+        Assert.Equal(TcgdexMatchStatus.NameMismatch, verdict.Status);
+        Assert.Null(verdict.CardNumber);
+        Assert.Equal("SV2a-006", verdict.TcgdexCardId);
+        Assert.Equal("リザードンex", verdict.TcgdexName);
+    }
+
+    [Fact]
+    public void A_japanese_trainer_gets_the_no_guard_status_from_either_side()
+    {
+        // No species on the TCGdex side: the candidate is Ultra Ball.
+        var trainerCandidate = TcgdexMatcher.Match(
+            "Ultra Ball #159",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([]),
+            JaJoin(),
+            new HashSet<int> { 25 });
+        Assert.Equal(TcgdexMatchStatus.NoSpeciesGuard, trainerCandidate.Status);
+        Assert.Null(trainerCandidate.TcgdexCardId);
+
+        // No species on the PC side: the card carries no species tag.
+        var untaggedCard = TcgdexMatcher.Match(
+            "Pikachu #025",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([]),
+            JaJoin(),
+            new HashSet<int>());
+        Assert.Equal(TcgdexMatchStatus.NoSpeciesGuard, untaggedCard.Status);
+    }
+
+    [Fact]
+    public void A_japanese_number_missing_from_the_mapped_set_is_number_not_found()
+    {
+        var verdict = TcgdexMatcher.Match(
+            "Mew ex #205",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([]),
+            JaJoin(),
+            new HashSet<int> { 151 });
+
+        Assert.Equal(TcgdexMatchStatus.NumberNotFound, verdict.Status);
+    }
+
+    [Fact]
+    public void A_japanese_card_without_the_ja_join_wired_refuses_loudly()
+    {
+        // A Mapped Japanese entry reaching Match without the ja join is a
+        // wiring bug, not a verdict — same loudness as a dangling alias.
+        Assert.Throws<InvalidOperationException>(() => _ = TcgdexMatcher.Match(
+            "Pikachu #025",
+            JapaneseMapped("pokemon-japanese-scarlet-&-violet-151", "SV2a"),
+            new TcgdexCatalog([])));
+    }
+
     [Fact]
     public void A_number_hit_with_an_agreeing_name_confirms()
     {

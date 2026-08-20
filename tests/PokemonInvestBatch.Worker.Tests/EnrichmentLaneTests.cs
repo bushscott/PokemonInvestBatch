@@ -18,12 +18,47 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
     private readonly string _mirrorDirectory =
         Path.Combine(Path.GetTempPath(), $"tcgdex-mirror-{Guid.NewGuid():N}");
 
+    private readonly string _jaMirrorDirectory =
+        Path.Combine(Path.GetTempPath(), $"tcgdex-mirror-ja-{Guid.NewGuid():N}");
+
     public void Dispose()
     {
-        if (Directory.Exists(_mirrorDirectory))
+        foreach (var directory in new[] { _mirrorDirectory, _jaMirrorDirectory })
         {
-            Directory.Delete(_mirrorDirectory, recursive: true);
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
         }
+    }
+
+    /// <summary>An empty ja mirror by default — with no aliases, every
+    /// Japanese set stays UnmappedSet exactly as before the ja join.</summary>
+    private async Task WriteFixtureJaMirrorAsync(bool withPokemon151 = false)
+    {
+        Directory.CreateDirectory(Path.Combine(_jaMirrorDirectory, "sets"));
+        if (withPokemon151)
+        {
+            await File.WriteAllTextAsync(
+                Path.Combine(_jaMirrorDirectory, "sets", "SV2a.json"),
+                """
+                {
+                  "id": "SV2a",
+                  "name": "ポケモンカード151",
+                  "serie": { "id": "sv", "name": "ポケモンカードゲーム スカーレット&バイオレット" },
+                  "releaseDate": "2023-06-16",
+                  "cardCount": { "official": 165, "total": 210 },
+                  "cards": [
+                    { "id": "SV2a-025", "localId": "025", "name": "ピカチュウ" },
+                    { "id": "SV2a-159", "localId": "159", "name": "ハイパーボール" }
+                  ]
+                }
+                """);
+        }
+
+        await File.WriteAllTextAsync(
+            Path.Combine(_jaMirrorDirectory, "manifest.json"),
+            $$"""{ "FetchedAt": "2026-08-19T00:00:00+00:00", "ReleaseTag": "v-test-ja", "SetCount": {{(withPokemon151 ? 1 : 0)}}, "Locale": "ja" }""");
     }
 
     private async Task WriteFixtureMirrorAsync()
@@ -87,7 +122,9 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
         Options.Create(new ScraperOptions
         {
             TcgdexMirrorDirectory = _mirrorDirectory,
+            TcgdexJaMirrorDirectory = _jaMirrorDirectory,
             TcgdexSetAliasesPath = Path.Combine(_mirrorDirectory, "no-aliases.json"),
+            TcgdexJaSetAliasesPath = Path.Combine(_jaMirrorDirectory, "ja-aliases.json"),
         }),
         NullLogger<EnrichmentLane>.Instance);
 
@@ -96,6 +133,7 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WriteFixtureMirrorAsync();
+        await WriteFixtureJaMirrorAsync();
         await SeedAsync();
 
         var result = await NewLane().RunSweepAsync(CancellationToken.None);
@@ -131,6 +169,7 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WriteFixtureMirrorAsync();
+        await WriteFixtureJaMirrorAsync();
         await SeedAsync();
         var lane = NewLane();
 
@@ -147,6 +186,7 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
     {
         Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
         await WriteFixtureMirrorAsync();
+        await WriteFixtureJaMirrorAsync();
         await SeedAsync();
         var lane = NewLane();
         await lane.RunSweepAsync(CancellationToken.None);
@@ -172,6 +212,88 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
         Assert.Equal("95", trail[^1].CardNumber);
     }
 
+    [SkippableFact]
+    public async Task A_mapped_japanese_card_with_species_agreement_confirms_end_to_end()
+    {
+        Skip.If(!Available, "POKEMON_TEST_DB not set (needs a reachable PostgreSQL).");
+        await WriteFixtureMirrorAsync();
+        await WriteFixtureJaMirrorAsync(withPokemon151: true);
+        await File.WriteAllTextAsync(
+            Path.Combine(_jaMirrorDirectory, "ja-aliases.json"),
+            """[ { "slug": "pokemon-japanese-scarlet-&-violet-151", "tcgdex": ["SV2a"], "reason": "test" } ]""");
+        await SeedAsync();
+        await using (var seed = NewContext())
+        {
+            seed.Sets.Add(new CardSet
+            {
+                Id = 4,
+                Slug = "pokemon-japanese-scarlet-&-violet-151",
+                Name = "Pokemon Japanese Scarlet & Violet 151",
+                DiscoveredAt = DateTimeOffset.UtcNow,
+                LastSeenAt = DateTimeOffset.UtcNow,
+            });
+            seed.Cards.AddRange(
+                new Card
+                {
+                    Id = 106,
+                    SetId = 4,
+                    Url = "/game/pokemon-japanese-scarlet-%26-violet-151/pikachu-025",
+                    Name = "Pikachu #025",
+                    FirstSeenAt = DateTimeOffset.UtcNow,
+                    LastSeenAt = DateTimeOffset.UtcNow,
+                },
+                new Card
+                {
+                    Id = 107,
+                    SetId = 4,
+                    Url = "/game/pokemon-japanese-scarlet-%26-violet-151/ultra-ball-159",
+                    Name = "Ultra Ball #159",
+                    FirstSeenAt = DateTimeOffset.UtcNow,
+                    LastSeenAt = DateTimeOffset.UtcNow,
+                });
+            seed.SpeciesRows.Add(new Species
+            {
+                Id = 25,
+                Name = "Pikachu",
+                Slug = "pikachu",
+                Generation = 1,
+                Region = "Kanto",
+                Color = "yellow",
+                GradientStart = "#F5DA26",
+                GradientEnd = "#C5A812",
+            });
+            seed.SpeciesNames.Add(new SpeciesName { SpeciesId = 25, Language = "ja", Name = "ピカチュウ" });
+            seed.CardSpecies.Add(new CardSpeciesLink { CardId = 106, SpeciesId = 25 });
+            await seed.SaveChangesAsync();
+        }
+
+        await NewLane().RunSweepAsync(CancellationToken.None);
+
+        await using var db = NewContext();
+        var rows = await db.TcgdexEnrichments.ToListAsync();
+
+        // The guarded ja join: number + species agreement → Confirmed, with
+        // the ja mirror's own version as provenance.
+        var confirmed = rows.Single(r => r.CardId == 106);
+        Assert.Equal(TcgdexMatchStatus.Confirmed, confirmed.Status);
+        Assert.Equal("025", confirmed.CardNumber);
+        Assert.Equal(165, confirmed.SetOfficialSize);
+        Assert.Equal("SV2a", confirmed.TcgdexSetId);
+        Assert.Equal("SV2a-025", confirmed.TcgdexCardId);
+        Assert.Equal("ピカチュウ", confirmed.TcgdexName);
+        Assert.Equal("v-test-ja", confirmed.TcgdexVersion);
+
+        // The trainer: number matched, but no species on either side — the
+        // honest no-guard status, nothing written.
+        var trainer = rows.Single(r => r.CardId == 107);
+        Assert.Equal(TcgdexMatchStatus.NoSpeciesGuard, trainer.Status);
+        Assert.Null(trainer.CardNumber);
+        Assert.Null(trainer.TcgdexCardId);
+
+        // The unaliased Japanese set is untouched by the ja join existing.
+        Assert.Equal(TcgdexMatchStatus.UnmappedSet, rows.Single(r => r.CardId == 103).Status);
+    }
+
     private sealed class OptionsContextFactory(DbContextOptions<PokemonDbContext> options)
         : IDbContextFactory<PokemonDbContext>
     {
@@ -190,16 +312,27 @@ public class EnrichmentLaneTests : DatabaseTest, IDisposable
 
         private sealed class TopUpListOnlyHandler : HttpMessageHandler
         {
+            /// <summary>Both locales' list checks; each answers with ids the
+            /// fixture mirrors already pin (the ja list answers empty — the
+            /// directional load guard tolerates on-disk surplus), so nothing
+            /// is ever downloaded.</summary>
+            private static readonly IReadOnlyDictionary<string, string> Sanctioned =
+                new Dictionary<string, string>(StringComparer.Ordinal)
+                {
+                    ["https://api.tcgdex.net/v2/en/sets"] = """[ { "id": "swsh7" }, { "id": "cel25" } ]""",
+                    ["https://api.tcgdex.net/v2/ja/sets"] = "[]",
+                };
+
             protected override Task<HttpResponseMessage> SendAsync(
                 HttpRequestMessage request, CancellationToken cancellationToken) =>
-                request.RequestUri!.ToString() == "https://api.tcgdex.net/v2/en/sets"
+                Sanctioned.TryGetValue(request.RequestUri!.ToString(), out var body)
                     ? Task.FromResult(new HttpResponseMessage(System.Net.HttpStatusCode.OK)
                     {
-                        Content = new StringContent("""[ { "id": "swsh7" }, { "id": "cel25" } ]"""),
+                        Content = new StringContent(body),
                     })
                     : throw new InvalidOperationException(
                         $"Unexpected network request to {request.RequestUri} — the sweep's only sanctioned " +
-                        "request against a pre-placed mirror is the top-up list check.");
+                        "requests against pre-placed mirrors are the top-up list checks.");
         }
     }
 }

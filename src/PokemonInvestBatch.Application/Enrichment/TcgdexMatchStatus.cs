@@ -42,9 +42,19 @@ public enum TcgdexMatchStatus : short
     /// Excluded from every coverage denominator.</summary>
     NoNumber = 5,
 
-    /// <summary>The card's set has no TCGdex mapping: the Japanese, Chinese,
-    /// Korean, and Topps partitions (deliberately never name-matched), and
+    /// <summary>The card's set has no TCGdex mapping: the Chinese, Korean,
+    /// and Topps partitions (deliberately never name-matched), Japanese sets
+    /// no curated alias covers (ADR-0012 — the ja join is alias-only), and
     /// English products TCGdex does not carry (World Championships decks,
     /// merchandise lines).</summary>
     UnmappedSet = 6,
+
+    /// <summary>Japanese only: the collector number matched inside the
+    /// hand-aliased ja set, but the species-agreement guard (ADR-0012) has
+    /// nothing to vouch with — no species on the PriceCharting side (an
+    /// untagged card) or none derivable from the TCGdex ja name (trainers,
+    /// items, energy). Nothing is written: a wrong-set trainer collision
+    /// would slip through an absence-agreement silently, and guessing is
+    /// the one thing this join never does.</summary>
+    NoSpeciesGuard = 7,
 }
