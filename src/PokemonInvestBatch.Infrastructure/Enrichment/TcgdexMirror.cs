@@ -158,9 +158,12 @@ public static class TcgdexMirror
     }
 
     /// <summary>The freshness half of the pin: re-read the one-page set list
-    /// and download only sets the directory lacks. Pinned documents are never
-    /// re-fetched or compared — a set that changed upstream stays as pinned
-    /// until the operator deletes the directory. Best-effort by design: any
+    /// and download sets the directory lacks — plus any pinned document
+    /// whose card list is empty (TCGdex publishes some sets before
+    /// cataloguing their cards; an empty shelf is re-checked every sweep
+    /// until it stocks, then stays pinned forever). A stocked document is
+    /// never re-fetched or compared — a set that changed upstream stays as
+    /// pinned until the operator deletes the directory. Best-effort by design: any
     /// network trouble is a logged warning and the sweep proceeds on the
     /// existing mirror (a malformed shape still refuses loudly, same as
     /// everywhere else). The manifest is rewritten only when the directory's
@@ -186,18 +189,14 @@ public static class TcgdexMirror
                 $"up as '{locale}' — one directory holds one locale.");
         }
 
-        var onDisk = Directory.EnumerateFiles(Path.Combine(directory, SetsDirectory), "*.json")
-            .Select(Path.GetFileNameWithoutExtension)
-            .OfType<string>()
-            .ToHashSet(StringComparer.Ordinal);
-
         var http = newHttpClient();
         var downloaded = 0;
         try
         {
             foreach (var id in await FetchSetIdsAsync(http, baseUrl, locale, ct))
             {
-                if (onDisk.Contains(id))
+                var documentPath = Path.Combine(directory, SetsDirectory, $"{id}.json");
+                if (File.Exists(documentPath) && !await HasEmptyCardListAsync(documentPath, ct))
                 {
                     continue;
                 }
@@ -283,6 +282,25 @@ public static class TcgdexMirror
         await File.WriteAllTextAsync(
             Path.Combine(directory, ManifestFile), JsonSerializer.Serialize(manifest, ManifestJson), ct);
         return manifest;
+    }
+
+    /// <summary>True when the pinned document carries no cards — the shape
+    /// the top-up re-checks. A document that will not parse also reads as
+    /// empty, so a corrupted write heals itself on the next sweep instead of
+    /// poisoning every future load.</summary>
+    private static async Task<bool> HasEmptyCardListAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(await File.ReadAllTextAsync(path, ct));
+            return !document.RootElement.TryGetProperty("cards", out var cards)
+                   || cards.ValueKind != JsonValueKind.Array
+                   || cards.GetArrayLength() == 0;
+        }
+        catch (JsonException)
+        {
+            return true;
+        }
     }
 
     private static async Task<List<string>> FetchSetIdsAsync(

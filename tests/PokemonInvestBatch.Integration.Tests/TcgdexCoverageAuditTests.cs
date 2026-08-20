@@ -17,8 +17,14 @@ namespace PokemonInvestBatch.Integration.Tests;
 ///   ssh scott@&lt;pi-ip&gt; "sudo -u postgres psql -d pokemon -Atc \"copy (
 ///     select c.id, c.name, s.slug, s.name from cards c join sets s on s.id = c.set_id
 ///     where c.not_a_card_at is null) to stdout with (format csv)\"" &gt; cards.csv
-/// then TCGDEX_AUDIT_DIR=&lt;dir with cards.csv&gt; dotnet test --filter TcgdexCoverageAudit.
-/// The report lands in &lt;dir&gt;/audit-report.txt.
+/// and, for the Japanese join's guard (ADR-0012; both optional — absent
+/// means every ja card lands no-species-guard, an honest degraded audit):
+///   ... "copy (select card_id, species_id from card_species) to stdout ..." &gt; card-species.csv
+///   ... "copy (select species_id, name from species_names where language in ('ja','ja-hrkt'))
+///       to stdout ..." &gt; species-names-ja.csv
+/// Drop the repo's tcgdex-set-aliases.json and tcgdex-ja-set-aliases.json in
+/// the same directory, then TCGDEX_AUDIT_DIR=&lt;dir&gt; dotnet test --filter
+/// TcgdexCoverageAudit. The report lands in &lt;dir&gt;/audit-report.txt.
 /// </summary>
 public class TcgdexCoverageAuditTests(ITestOutputHelper output)
 {
@@ -43,10 +49,67 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
 
         var (catalog, manifest) = await TcgdexMirror.LoadAsync(mirrorDirectory, CancellationToken.None);
 
+        var jaMirrorDirectory = Path.Combine(directory, "mirror-ja");
+        if (!TcgdexMirror.Exists(jaMirrorDirectory))
+        {
+            using var http = new HttpClient();
+            http.DefaultRequestHeaders.UserAgent.ParseAdd("PokemonInvestBatch-coverage-audit/1.0");
+            await TcgdexMirror.FetchAsync(
+                http, "https://api.tcgdex.net", "ja", jaMirrorDirectory, TimeProvider.System, CancellationToken.None);
+        }
+
+        var (jaCatalog, _) = await TcgdexMirror.LoadAsync(jaMirrorDirectory, CancellationToken.None);
+
         var aliasPath = Path.Combine(directory, "tcgdex-set-aliases.json");
         var aliases = File.Exists(aliasPath)
             ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(aliasPath))
             : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+        var jaAliasPath = Path.Combine(directory, "tcgdex-ja-set-aliases.json");
+        var jaAliases = File.Exists(jaAliasPath)
+            ? TcgdexSetAliases.Parse(await File.ReadAllTextAsync(jaAliasPath))
+            : new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
+
+        var taggedSpeciesByCard = new Dictionary<long, HashSet<int>>();
+        var cardSpeciesPath = Path.Combine(directory, "card-species.csv");
+        if (File.Exists(cardSpeciesPath))
+        {
+            foreach (var line in await File.ReadAllLinesAsync(cardSpeciesPath))
+            {
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                var fields = SplitCsv(line);
+                var cardId = long.Parse(fields[0]);
+                if (!taggedSpeciesByCard.TryGetValue(cardId, out var ids))
+                {
+                    taggedSpeciesByCard[cardId] = ids = [];
+                }
+
+                ids.Add(int.Parse(fields[1]));
+            }
+        }
+
+        var jaSpeciesNames = new List<(int SpeciesId, string Name)>();
+        var jaNamesPath = Path.Combine(directory, "species-names-ja.csv");
+        if (File.Exists(jaNamesPath))
+        {
+            foreach (var line in await File.ReadAllLinesAsync(jaNamesPath))
+            {
+                if (line.Length == 0)
+                {
+                    continue;
+                }
+
+                var fields = SplitCsv(line);
+                jaSpeciesNames.Add((int.Parse(fields[0]), fields[1]));
+            }
+        }
+
+        var japaneseJoin = new TcgdexMatcher.JapaneseCardJoin(jaCatalog, SpeciesAgreement.Build(jaSpeciesNames));
+        var noTaggedSpecies = new HashSet<int>();
 
         var cards = new List<(long Id, string Name, string SetSlug, string SetName)>();
         foreach (var line in await File.ReadAllLinesAsync(cardsPath))
@@ -63,7 +126,8 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
         var map = SetMapper.Resolve(
             cards.Select(c => (c.SetSlug, c.SetName)).Distinct(),
             catalog,
-            aliases);
+            aliases,
+            new SetMapper.JapaneseShelf(jaCatalog, jaAliases));
 
         var byPartition = new SortedDictionary<string, Dictionary<TcgdexMatchStatus, int>>(StringComparer.Ordinal);
         var mismatches = new List<string>();
@@ -71,7 +135,12 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
         foreach (var card in cards)
         {
             var entry = map[card.SetSlug];
-            var verdict = TcgdexMatcher.Match(card.Name, entry, catalog);
+            var verdict = TcgdexMatcher.Match(
+                card.Name,
+                entry,
+                catalog,
+                japaneseJoin,
+                taggedSpeciesByCard.GetValueOrDefault(card.Id, noTaggedSpecies));
             var partition = entry.Partition.ToString();
             if (!byPartition.TryGetValue(partition, out var counts))
             {
@@ -94,7 +163,7 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
         var report = new StringBuilder();
         report.AppendLine($"TCGdex coverage audit — {cards.Count} cards (not-a-card excluded), mirror {manifest.Version}");
         report.AppendLine();
-        report.AppendLine("partition        confirmed  name-mism  num-not-found  ambiguous  no-number  unmapped-set  total");
+        report.AppendLine("partition        confirmed  name-mism  num-not-found  ambiguous  no-number  unmapped-set  no-guard  total");
         foreach (var (partition, counts) in byPartition)
         {
             var total = counts.Values.Sum();
@@ -104,7 +173,8 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
                 $"{Count(counts, TcgdexMatchStatus.NumberNotFound),15}" +
                 $"{Count(counts, TcgdexMatchStatus.Ambiguous),11}" +
                 $"{Count(counts, TcgdexMatchStatus.NoNumber),11}" +
-                $"{Count(counts, TcgdexMatchStatus.UnmappedSet),14}{total,7}");
+                $"{Count(counts, TcgdexMatchStatus.UnmappedSet),14}" +
+                $"{Count(counts, TcgdexMatchStatus.NoSpeciesGuard),10}{total,7}");
         }
 
         var all = byPartition.Values.SelectMany(c => c).GroupBy(kv => kv.Key)
@@ -120,6 +190,15 @@ public class TcgdexCoverageAuditTests(ITestOutputHelper output)
             report.AppendLine(
                 $"confirmed {Count(english, TcgdexMatchStatus.Confirmed)} of {englishNumberable} numbered English cards " +
                 $"({100.0 * Count(english, TcgdexMatchStatus.Confirmed) / englishNumberable:F1}%)");
+        }
+
+        var japanese = byPartition.GetValueOrDefault(nameof(SetPartition.Japanese));
+        if (japanese is not null)
+        {
+            var japaneseNumberable = japanese.Values.Sum() - Count(japanese, TcgdexMatchStatus.NoNumber);
+            report.AppendLine(
+                $"confirmed {Count(japanese, TcgdexMatchStatus.Confirmed)} of {japaneseNumberable} numbered Japanese cards " +
+                $"({100.0 * Count(japanese, TcgdexMatchStatus.Confirmed) / japaneseNumberable:F1}%)");
         }
 
         report.AppendLine();

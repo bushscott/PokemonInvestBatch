@@ -354,6 +354,21 @@ public class TcgdexMirrorTests : IDisposable
         Assert.Equal(manifestBefore, await File.ReadAllTextAsync(manifestPath));
     }
 
+    /// <summary>Like PocketJson but with a card, so the empty-shelf re-check
+    /// leaves it pinned — this test is about the count heal alone.</summary>
+    private const string PocketWithCardJson = """
+        {
+          "id": "A3b",
+          "name": "Eevee Grove",
+          "serie": { "id": "tcgp", "name": "Pokémon TCG Pocket" },
+          "releaseDate": "2025-06-26",
+          "cardCount": { "official": 69, "total": 107 },
+          "cards": [
+            { "id": "A3b-1", "localId": "1", "name": "Exeggcute" }
+          ]
+        }
+        """;
+
     [Fact]
     public async Task An_interrupted_topup_heals_on_the_next_ensure()
     {
@@ -363,7 +378,7 @@ public class TcgdexMirrorTests : IDisposable
         await WriteMirrorAsync(
             """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "SetCount": 1, "Locale": "en" }""",
             ("swsh7", EvolvingSkiesJson),
-            ("A3b", PocketJson));
+            ("A3b", PocketWithCardJson));
 
         var (catalog, manifest) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
         Assert.Equal(1, manifest.SetCount);
@@ -384,6 +399,36 @@ public class TcgdexMirrorTests : IDisposable
         Assert.Equal(0, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/A3b"));
         var (_, healed) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
         Assert.Equal(2, healed.SetCount);
+    }
+
+    [Fact]
+    public async Task A_pinned_document_with_an_empty_card_list_is_re_checked_by_the_topup()
+    {
+        // TCGdex ja ships some sets before cataloguing their cards (92 of
+        // the 161 aliased sets on 2026-08-19). An empty shelf is re-checked
+        // every sweep until it stocks; a stocked shelf stays pinned forever.
+        await WriteMirrorAsync(
+            """{ "FetchedAt": "2026-08-13T00:00:00+00:00", "SetCount": 2, "Locale": "en" }""",
+            ("swsh7", EvolvingSkiesJson),
+            ("A3b", PocketJson));
+        var handler = new GatedCountingHandler(
+            new Dictionary<string, string>(StringComparer.Ordinal)
+            {
+                ["https://api.tcgdex.example/v2/en/sets"] =
+                    """[ { "id": "swsh7", "name": "Evolving Skies" }, { "id": "A3b", "name": "Eevee Grove" } ]""",
+                ["https://api.tcgdex.example/v2/en/sets/A3b"] = PocketWithCardJson,
+            },
+            CompletedGate());
+        using var http = new HttpClient(handler);
+
+        await TcgdexMirror.EnsureAsync(
+            () => http, "https://api.tcgdex.example", "en", _directory, TimeProvider.System,
+            NullLogger.Instance, CancellationToken.None);
+
+        Assert.Equal(0, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/swsh7"));
+        Assert.Equal(1, handler.CallCounts.GetValueOrDefault("https://api.tcgdex.example/v2/en/sets/A3b"));
+        var (catalog, _) = await TcgdexMirror.LoadAsync(_directory, CancellationToken.None);
+        Assert.Equal("Exeggcute", Assert.Single(catalog.ById("A3b")!.Cards).Name);
     }
 
     [Fact]

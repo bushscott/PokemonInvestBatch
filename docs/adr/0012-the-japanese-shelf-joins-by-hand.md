@@ -51,7 +51,12 @@ exact name translation with release-date and card-count coherence.
    production run died at document 103 of 177 on one stalled TLS read
    (2026-08-19, 11:14) and cost the sweep a day — so per-document downloads
    retry once on transport trouble, and an interrupted first fetch resumes past
-   every document that already landed instead of starting over.
+   every document that already landed instead of starting over. One more
+   top-up clause from the card audit: TCGdex publishes some sets before
+   cataloguing their cards (92 of the 161 aliased ja sets on 2026-08-19), so a
+   pinned document with an empty card list is re-checked every sweep until it
+   stocks — their catalogue filling in confirms our cards automatically, with
+   no manual re-pin.
 4. **Japanese eras pool into the existing era codes** via new ordinal-exact
    Japanese serie-name keys in `tcgdex-series-eras.json` (剣と盾 → SWSH,
    サン＆ムーン → SM, PCG/ADV → EX, LEGEND → DP, neo/e/VS/web and the original
