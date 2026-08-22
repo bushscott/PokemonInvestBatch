@@ -18,7 +18,7 @@ cd "$(dirname "$0")/.."
 # The oldest runtime we are willing to put on the Pi. Raise it whenever a
 # servicing release fixes something that matters; the build then refuses to
 # produce a bundle below the line rather than shipping one quietly.
-MIN_RUNTIME=10.0.10
+MIN_RUNTIME=10.0.11
 
 # Every plausible SDK location on a dev machine, not just whatever PATH found.
 # Newest SDK wins.
