@@ -226,11 +226,24 @@ public sealed class CardVisitor(
             db, card, page, fingerprintHash, now, options.Value.NearMissMargin, ct);
         metrics.RecordRowsAppended(written.NewPriceRows, written.NewPopulationCells, written.NewSales);
 
+        // What kind of turnover emptied the bucket decides everything said
+        // about it below: the label on the summary line, and — on a fresh
+        // cap — whether the alert may claim sales were lost at all. Of the
+        // first eight cap alerts (Aug 2026), four were bulk dumps or site-
+        // side rewrites: caps where nothing organic was missed, mailed under
+        // a subject that said money was.
+        CapClass? capClass = null;
+        if (written.Observation.CappedTier is { } cappedTier)
+        {
+            capClass = CapClassification.Classify(
+                page.Sales.Where(s => s.GradeTier == cappedTier).ToArray());
+        }
+
         logger.Log(
-            written.Observation.AnyBucketAtCap ? LogLevel.Warning : LogLevel.Information,
+            capClass is not null ? LogLevel.Warning : LogLevel.Information,
             "Card {CardId} ({Name}): +{Prices} price rows, +{Pops} pop cells, +{Sales} sales, churn {Churn:F2}/d{Cap}",
             card.Id, card.Name, written.NewPriceRows, written.NewPopulationCells, written.NewSales,
-            written.Observation.SalesPerDay, written.Observation.AnyBucketAtCap ? ", AT CAP" : "");
+            written.Observation.SalesPerDay, capClass is { } label ? $", AT CAP ({Label(label)})" : "");
 
         if (page.Population is not null)
         {
@@ -240,19 +253,41 @@ public sealed class CardVisitor(
         // Naming the bucket is the difference between an alert someone can act
         // on and one they have to go query for — and buckets are not all the
         // same size, so "which grade" is also the only honest way to say how
-        // much is gone.
-        if (written.NewlyAtCap
-            && written.Observation.CappedTier is { } cappedTier
-            && throttle.ShouldAlert("sales-lost", now))
+        // much is gone. Each subject throttles on its own key: a benign roll
+        // must not spend the loss alert's window, or a dump could shadow a
+        // real burst for six hours (and did, 2026-08-21).
+        if (written.NewlyAtCap && written.Observation.CappedTier is { } tier && capClass is { } kind)
         {
-            await alerter.RaiseAsync(
-                "Sales lost to a hot card",
-                $"Card {card.Id} ({card.Name}) is missing sales data because it outsold our visit "
-                + $"pace: its {cappedTier} sale page turned over completely between visits — not "
-                + $"one row we already held is still on it, so everything in between is gone for "
-                + $"good. It is fast-tracked until its buckets calm down.\n"
-                + $"https://www.pricecharting.com{card.Url}",
-                ct);
+            if (kind is CapClass.OrganicBurst && throttle.ShouldAlert("sales-lost", now))
+            {
+                await alerter.RaiseAsync(
+                    "Sales lost to a hot card",
+                    $"Card {card.Id} ({card.Name}) is missing sales data because it outsold our visit "
+                    + $"pace: its {tier} sale page turned over completely between visits — not "
+                    + $"one row we already held is still on it, so everything in between is gone for "
+                    + $"good. It is fast-tracked until its buckets calm down.\n"
+                    + $"https://www.pricecharting.com{card.Url}",
+                    ct);
+            }
+            else if (kind is not CapClass.OrganicBurst && throttle.ShouldAlert("page-rolled", now))
+            {
+                // Still worth telling — a roll is a real event and the fast-
+                // track still confirms it — but under a subject that says what
+                // the rows say, not what the worst case would have been.
+                var explanation = kind is CapClass.BulkLiquidation
+                    ? "its rows carry a liquidation signature (sequential listing blocks, or one "
+                      + "price sold in one day): one seller cleared inventory. That is a step, not "
+                      + "a pace — the few organic rows around it were likely captured."
+                    : "the page is not full, and a page the site is not truncating cannot lose "
+                      + "rows to velocity — the site rewrote or re-sourced it. The rows we held "
+                      + "are still stored; expected loss none.";
+                await alerter.RaiseAsync(
+                    "Sale page rolled — no loss expected",
+                    $"Card {card.Id} ({card.Name}): its {tier} sale page shares no row with our "
+                    + $"records, but {explanation} It is fast-tracked to confirm.\n"
+                    + $"https://www.pricecharting.com{card.Url}",
+                    ct);
+            }
         }
 
         // The graduated warning. A cap hit only speaks once the rows are gone,
@@ -451,6 +486,16 @@ public sealed class CardVisitor(
             + "parse — pricecharting.com has probably changed its markup. See parse_failures and fingerprints/.",
             ct);
     }
+
+    /// <summary>The journal's words for a cap class — appended inside the
+    /// summary line's ", AT CAP" suffix, which triage greps by that exact
+    /// substring, so the label extends it and never replaces it.</summary>
+    private static string Label(CapClass capClass) => capClass switch
+    {
+        CapClass.BulkLiquidation => "bulk liquidation",
+        CapClass.PageRecomposed => "page recomposed",
+        _ => "organic burst",
+    };
 
     private static PageVisit NewVisit(Card card, int status, VisitOutcome outcome, string? fingerprintHash, DateTimeOffset now) =>
         new()
